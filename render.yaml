@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: todotime
+    runtime: static
+    buildCommand: npm run build
+    staticPublishPath: dist
+    env: []
