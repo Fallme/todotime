@@ -108,8 +108,8 @@ export default function App() {
   const handleClear = () => { localStorage.clear(); window.location.reload(); };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
 
-  const handleDragAdjust = (newSeconds: number) => {
-    timer.setTotalTime(newSeconds);
+  const handleDragAdjust = (newTimeLeft: number, _newTotalTime: number) => {
+    timer.setTotalTime(newTimeLeft);
   };
 
   return (
@@ -140,7 +140,7 @@ export default function App() {
                   totalTime={timer.totalTime}
                   mode={timer.mode}
                   isRunning={timer.isRunning}
-                  onAdjust={handleDragAdjust}
+                  onDragAdjust={handleDragAdjust}
                 />
               )}
 

@@ -18,7 +18,6 @@ interface UseTimerReturn {
   workMinutes: number;
   breakMinutes: number;
   pendingAssignment: PendingAssignment | null;
-  // Task focus mode (unlimited timer)
   taskFocusMode: boolean;
   taskFocusElapsed: number;
   start: () => void;
@@ -42,21 +41,21 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
   const [currentCycle, setCurrentCycle] = useState(0);
   const [completedPomodoros, setCompletedPomodoros] = useState(0);
   const [pendingAssignment, setPendingAssignment] = useState<PendingAssignment | null>(null);
-
-  // Task focus mode
   const [taskFocusMode, setTaskFocusMode] = useState(false);
   const [taskFocusElapsed, setTaskFocusElapsed] = useState(0);
-  const taskFocusStartRef = useRef<string>('');
 
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string>('');
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
+  const taskFocusStartRef = useRef<string>('');
   const workMinRef = useRef(workMinutes);
   workMinRef.current = workMinutes;
   const breakMinRef = useRef(breakMinutes);
   breakMinRef.current = breakMinutes;
   const cycleRef = useRef(currentCycle);
   cycleRef.current = currentCycle;
+  const timeLeftRef = useRef(timeLeft);
+  timeLeftRef.current = timeLeft;
 
   const setOnComplete = useCallback((cb: (record: PomodoroRecord) => void) => {
     onCompleteRef.current = cb;
@@ -88,7 +87,7 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
     setTimeLeft(seconds);
   }, []);
 
-  // Default focus mode timer
+  // Work mode timer (countdown)
   useEffect(() => {
     if (!isRunning || mode !== 'work') return;
     if (!startTimeRef.current) startTimeRef.current = formatTime(new Date());
@@ -121,7 +120,7 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
     return clearTimer;
   }, [isRunning, mode, soundEnabled, clearTimer]);
 
-  // Task focus mode timer (unlimited)
+  // Task focus mode timer (unlimited, counts up)
   useEffect(() => {
     if (!taskFocusMode || !isRunning) return;
     if (!taskFocusStartRef.current) taskFocusStartRef.current = formatTime(new Date());
@@ -161,53 +160,42 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
     onCompleteRef.current?.(record);
     setPendingAssignment(null);
     const nextCycle = cycleRef.current + 1;
-    const longBreakInterval = 4;
-    if (nextCycle % longBreakInterval === 0) {
+    if (nextCycle % 4 === 0) {
       switchToBreak(true);
     } else {
       switchToBreak(false);
     }
   }, [pendingAssignment, switchToBreak]);
 
+  // Default focus: start countdown
   const start = useCallback(() => {
     setTaskFocusMode(false);
     setIsRunning(true);
   }, []);
 
-  // Pause resets timer for default focus mode
+  // Pause: JUST PAUSE. Don't reset anything.
   const pause = useCallback(() => {
     setIsRunning(false);
     clearTimer();
-    if (!taskFocusMode && mode === 'work') {
-      // Reset the timer
-      setTimeLeft(workMinRef.current * 60);
-      setTotalTimeState(workMinRef.current * 60);
-      startTimeRef.current = '';
-    }
-  }, [taskFocusMode, mode, clearTimer]);
+    // Keep timeLeft as is - that's the whole point of pause
+  }, [clearTimer]);
 
+  // Reset: go back to full duration
   const reset = useCallback(() => {
     setIsRunning(false);
     clearTimer();
-    if (taskFocusMode) {
-      // Don't reset task focus - just stop
-    } else {
-      setTimeLeft(workMinRef.current * 60);
-      setTotalTimeState(workMinRef.current * 60);
-      startTimeRef.current = '';
-    }
-  }, [taskFocusMode, clearTimer]);
+    setTimeLeft(workMinRef.current * 60);
+    setTotalTimeState(workMinRef.current * 60);
+    startTimeRef.current = '';
+  }, [clearTimer]);
 
   const skip = useCallback(() => {
     if (taskFocusMode) {
-      // End task focus, show assignment
       setTaskFocusMode(false);
       setIsRunning(false);
       clearTimer();
-      setPendingAssignment({
-        start: taskFocusStartRef.current,
-        duration: Math.floor(taskFocusElapsed / 60),
-      });
+      const dur = Math.max(1, Math.floor(taskFocusElapsed / 60));
+      setPendingAssignment({ start: taskFocusStartRef.current, duration: dur });
       setCompletedPomodoros(p => p + 1);
       taskFocusStartRef.current = '';
       if (soundEnabled) playWorkComplete();
@@ -224,7 +212,6 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
     }
   }, [taskFocusMode, mode, taskFocusElapsed, handleWorkEnd, clearTimer, soundEnabled]);
 
-  // Task focus: start unlimited timer
   const startTaskFocus = useCallback(() => {
     setTaskFocusMode(true);
     setTaskFocusElapsed(0);
@@ -236,19 +223,14 @@ export function useTimer(workMinutesSetting: number, soundEnabled: boolean): Use
     setIsRunning(false);
     clearTimer();
     setTaskFocusMode(false);
-    const elapsedMinutes = Math.floor(taskFocusElapsed / 60);
-    if (elapsedMinutes > 0) {
-      setPendingAssignment({
-        start: taskFocusStartRef.current,
-        duration: elapsedMinutes,
-      });
+    const dur = Math.max(1, Math.floor(taskFocusElapsed / 60));
+    if (dur > 0) {
+      setPendingAssignment({ start: taskFocusStartRef.current, duration: dur });
       setCompletedPomodoros(p => p + 1);
       taskFocusStartRef.current = '';
       if (soundEnabled) playWorkComplete();
     }
     setTaskFocusElapsed(0);
-    setTimeLeft(workMinRef.current * 60);
-    setTotalTimeState(workMinRef.current * 60);
   }, [taskFocusElapsed, clearTimer, soundEnabled]);
 
   return {
