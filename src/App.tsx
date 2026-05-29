@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { AppSettings, PomodoroRecord, Category } from './types';
+import type { AppSettings, PomodoroRecord, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
 import { Header } from './components/Layout/Header';
@@ -79,6 +79,12 @@ export default function App() {
 
   const handleSaveSettings = (newSettings: AppSettings) => setSettings(newSettings);
 
+  const handleQuickStart = (todo: Todo) => {
+    todosHook.selectTodo(todo.id);
+    timer.setTotalTime(settings.workMinutes * 60);
+    timer.start();
+  };
+
   const handleAssignPomodoro = (taskId: string | null, taskTitle: string, category: Category) => {
     timer.assignPomodoro(taskId, taskTitle, category);
   };
@@ -108,8 +114,8 @@ export default function App() {
   const handleClear = () => { localStorage.clear(); window.location.reload(); };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
 
-  const handleDragAdjust = (newTimeLeft: number, _newTotalTime: number) => {
-    timer.setTotalTime(newTimeLeft);
+  const handleDragAdjust = (newSeconds: number) => {
+    timer.setTotalTime(newSeconds);
   };
 
   return (
@@ -167,7 +173,9 @@ export default function App() {
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo}
               onDelete={todosHook.deleteTodo}
+              onAbandon={todosHook.abandonTodo}
               onSelect={todosHook.selectTodo}
+              onQuickStart={handleQuickStart}
             />
           </div>
         )}

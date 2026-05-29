@@ -265,6 +265,24 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 .todo-delete:hover { color: #e74c3c; background: #ffe0e0; }
 
+/* Todo actions */
+.todo-actions { display: flex; gap: 2px; align-items: center; }
+.todo-action-btn {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  background: none; color: var(--text-muted); transition: all 0.15s;
+}
+.todo-action-btn.start { color: var(--accent); }
+.todo-action-btn.start:hover { background: var(--accent-bg); }
+.todo-action-btn.delete:hover { color: #e74c3c; background: #ffe0e0; }
+.todo-action-btn.abandon { color: #e17055; }
+.todo-action-btn.abandon:hover { background: rgba(225,112,85,0.1); }
+
+/* Fail marker */
+.fail-marker { color: #e17055; font-size: 14px; margin-right: 2px; }
+.todo-item.abandoned .todo-title { text-decoration: line-through; color: var(--text-muted); opacity: 0.7; }
+.todo-item.abandoned .category-badge { opacity: 0.5; }
+
 /* Category badges */
 .category-badge {
   display: inline-flex; align-items: center;

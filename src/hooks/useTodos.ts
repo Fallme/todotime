@@ -6,6 +6,7 @@ interface UseTodosReturn {
   todos: Todo[];
   addTodo: (title: string, priority: Priority, category: Category) => void;
   toggleTodo: (id: string) => void;
+  abandonTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
   updateTodoPomodoros: (id: string) => void;
   selectedTodoId: string | null;
@@ -19,15 +20,15 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
       const stored = localStorage.getItem('todotime_todos');
       if (stored) {
         const parsed = JSON.parse(stored);
-        // Migrate old todos without category/timer fields
         return parsed.map((t: Record<string, unknown>) => ({
           id: t.id,
           title: t.title,
           priority: t.priority || 'medium',
           category: t.category || '其他',
-          estimatedPomodoros: t.estimatedPomodoros || 1,
+          estimatedPomodoros: t.estimatedPomodoros || 0,
           completedPomodoros: t.completedPomodoros || 0,
           done: t.done || false,
+          abandoned: t.abandoned || false,
           createdAt: t.createdAt || '',
         }));
       }
@@ -46,21 +47,22 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
   const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
     const newTodo: Todo = {
       id: generateId(),
-      title,
-      priority,
-      category,
+      title, priority, category,
       estimatedPomodoros: 0,
       completedPomodoros: 0,
       done: false,
+      abandoned: false,
       createdAt: formatTime(new Date()),
     };
     setTodos(prev => [newTodo, ...prev]);
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
-    setTodos(prev =>
-      prev.map(t => t.id === id ? { ...t, done: !t.done } : t)
-    );
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  }, []);
+
+  const abandonTodo = useCallback((id: string) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true } : t));
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
@@ -69,9 +71,7 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
   }, [selectedTodoId]);
 
   const updateTodoPomodoros = useCallback((id: string) => {
-    setTodos(prev =>
-      prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t)
-    );
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t));
   }, []);
 
   const selectTodo = useCallback((id: string | null) => {
@@ -79,7 +79,7 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
   }, []);
 
   return {
-    todos, addTodo, toggleTodo, deleteTodo,
+    todos, addTodo, toggleTodo, abandonTodo, deleteTodo,
     updateTodoPomodoros, selectedTodoId, selectTodo,
   };
 }

@@ -11,50 +11,41 @@ interface TodoListProps {
   onAdd: (title: string, priority: Priority, category: Category) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  onAbandon: (id: string) => void;
   onSelect: (id: string | null) => void;
+  onQuickStart: (todo: Todo) => void;
 }
 
-const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onSelect }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onAbandon, onSelect, onQuickStart }: TodoListProps) {
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
   const filtered = todos.filter(t => filterCategory === 'all' || t.category === filterCategory);
+  // Sort: active → abandoned → done
   const sorted = [...filtered].sort((a, b) => {
+    if (a.abandoned !== b.abandoned) return a.abandoned ? 1 : -1;
     if (a.done !== b.done) return a.done ? 1 : -1;
-    return priorityOrder[a.priority] - priorityOrder[b.priority];
+    return 0;
   });
 
-  const activeCount = todos.filter(t => !t.done).length;
-
-  // Count active tasks per category (only for categories that have tasks)
-  const usedCategories = [...new Set(todos.filter(t => !t.done).map(t => t.category))];
+  const activeCount = todos.filter(t => !t.done && !t.abandoned).length;
+  const usedCategories = [...new Set(todos.filter(t => !t.done && !t.abandoned).map(t => t.category))];
 
   return (
     <div className="todo-list-container">
       <div className="todo-list-header">
         <ListTodo size={20} />
         <span>任务清单</span>
-        <span className="todo-count">{activeCount} 项待完成</span>
+        <span className="todo-count">{activeCount} 项</span>
       </div>
 
       {usedCategories.length > 0 && (
         <div className="category-filter-bar">
-          <button
-            className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
-            onClick={() => setFilterCategory('all')}
-          >
-            全部
-          </button>
+          <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>全部</button>
           {usedCategories.map(cat => (
-            <button
-              key={cat}
-              className={`category-filter-chip ${filterCategory === cat ? 'active' : ''}`}
+            <button key={cat} className={`category-filter-chip ${filterCategory === cat ? 'active' : ''}`}
               style={filterCategory === cat ? { background: CATEGORY_COLORS[cat], color: 'white', borderColor: CATEGORY_COLORS[cat] } : { borderColor: CATEGORY_COLORS[cat] }}
               onClick={() => setFilterCategory(filterCategory === cat ? 'all' : cat)}
-            >
-              {cat}
-            </button>
+            >{cat}</button>
           ))}
         </div>
       )}
@@ -62,18 +53,16 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onS
       <AddTodo onAdd={onAdd} />
       <div className="todo-list-items">
         {sorted.length === 0 ? (
-          <div className="todo-empty">
-            {filterCategory === 'all' ? '还没有任务，添加一个吧' : `"${filterCategory}" 下没有任务`}
-          </div>
+          <div className="todo-empty">{filterCategory === 'all' ? '添加一个任务开始吧' : `"${filterCategory}" 下没有任务`}</div>
         ) : (
           sorted.map(todo => (
-            <TodoItem
-              key={todo.id}
-              todo={todo}
+            <TodoItem key={todo.id} todo={todo}
               isSelected={todo.id === selectedTodoId}
               onToggle={() => onToggle(todo.id)}
               onDelete={() => onDelete(todo.id)}
+              onAbandon={() => onAbandon(todo.id)}
               onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
+              onQuickStart={() => onQuickStart(todo)}
             />
           ))
         )}

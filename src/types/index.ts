@@ -32,6 +32,7 @@ export interface Todo {
   estimatedPomodoros: number;
   completedPomodoros: number;
   done: boolean;
+  abandoned: boolean;
   createdAt: string;
 }
 
