@@ -142,7 +142,10 @@ body { background: var(--bg); min-height: 100dvh; }
   letter-spacing: 2px; color: var(--text);
 }
 .timer-mode-label { font-size: 14px; font-weight: 500; }
-.timer-drag-hint { font-size: 12px; color: var(--text-muted); margin-top: -8px; }
+.timer-task-name {
+  font-size: 13px; color: var(--text-secondary);
+  max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 
 /* Timer controls */
 .timer-controls {
