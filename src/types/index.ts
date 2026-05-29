@@ -29,7 +29,6 @@ export interface Todo {
   title: string;
   priority: Priority;
   category: Category;
-  pomodoroMinutes: number; // 每个任务独立的番茄时长
   estimatedPomodoros: number;
   completedPomodoros: number;
   done: boolean;
@@ -40,6 +39,7 @@ export interface PomodoroRecord {
   start: string;
   end: string;
   duration: number;
+  taskId: string | null;
   taskTitle: string;
   category: Category;
   completed: boolean;

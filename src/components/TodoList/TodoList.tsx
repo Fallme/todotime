@@ -8,8 +8,7 @@ import { ListTodo } from 'lucide-react';
 interface TodoListProps {
   todos: Todo[];
   selectedTodoId: string | null;
-  defaultPomodoroMinutes: number;
-  onAdd: (title: string, priority: Priority, category: Category, pomodoroMinutes: number, estimatedPomodoros: number) => void;
+  onAdd: (title: string, priority: Priority, category: Category, estimatedPomodoros: number) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onSelect: (id: string | null) => void;
@@ -17,7 +16,7 @@ interface TodoListProps {
 
 const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
 
-export function TodoList({ todos, selectedTodoId, defaultPomodoroMinutes, onAdd, onToggle, onDelete, onSelect }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onSelect }: TodoListProps) {
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
   const filtered = todos.filter(t => filterCategory === 'all' || t.category === filterCategory);
@@ -60,7 +59,7 @@ export function TodoList({ todos, selectedTodoId, defaultPomodoroMinutes, onAdd,
         </div>
       )}
 
-      <AddTodo onAdd={onAdd} defaultPomodoroMinutes={defaultPomodoroMinutes} />
+      <AddTodo onAdd={onAdd} />
       <div className="todo-list-items">
         {sorted.length === 0 ? (
           <div className="todo-empty">

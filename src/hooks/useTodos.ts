@@ -4,7 +4,7 @@ import { generateId, formatTime } from '../utils/dateUtils';
 
 interface UseTodosReturn {
   todos: Todo[];
-  addTodo: (title: string, priority: Priority, category: Category, pomodoroMinutes: number, estimatedPomodoros: number) => void;
+  addTodo: (title: string, priority: Priority, category: Category, estimatedPomodoros: number) => void;
   toggleTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
   updateTodoPomodoros: (id: string) => void;
@@ -25,7 +25,6 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
           title: t.title,
           priority: t.priority || 'medium',
           category: t.category || '其他',
-          pomodoroMinutes: t.pomodoroMinutes || 25,
           estimatedPomodoros: t.estimatedPomodoros || 1,
           completedPomodoros: t.completedPomodoros || 0,
           done: t.done || false,
@@ -44,13 +43,12 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
     localStorage.setItem('todotime_todos', JSON.stringify(todos));
   }, [todos]);
 
-  const addTodo = useCallback((title: string, priority: Priority, category: Category, pomodoroMinutes: number, estimatedPomodoros: number) => {
+  const addTodo = useCallback((title: string, priority: Priority, category: Category, estimatedPomodoros: number) => {
     const newTodo: Todo = {
       id: generateId(),
       title,
       priority,
       category,
-      pomodoroMinutes,
       estimatedPomodoros,
       completedPomodoros: 0,
       done: false,
