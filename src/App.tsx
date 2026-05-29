@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import type { AppSettings, PomodoroRecord, Priority, Category } from './types';
+import type { AppSettings, PomodoroRecord, Category } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
 import { Header } from './components/Layout/Header';
@@ -30,6 +30,12 @@ function loadSettings(): AppSettings {
   }
 }
 
+function formatTaskFocusTime(seconds: number): string {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [tab, setTab] = useState<TabId>('timer');
@@ -51,7 +57,6 @@ export default function App() {
 
   const todosHook = useTodos();
   const { todos, selectedTodoId } = todosHook;
-  const selectedTodo = todos.find(t => t.id === selectedTodoId);
 
   const handlePomodoroComplete = useCallback((record: PomodoroRecord) => {
     setTodayPomodoros(prev => {
@@ -59,15 +64,13 @@ export default function App() {
       syncDayData(today, updated, todos);
       return updated;
     });
-    // Update task's completed pomodoro count
     if (record.taskId) {
       todosHook.updateTodoPomodoros(record.taskId);
     }
   }, [today, todos, todosHook, syncDayData]);
 
-  const timer = useTimer(settings, settings.soundEnabled);
+  const timer = useTimer(settings.workMinutes, settings.soundEnabled);
 
-  // Wire up the onComplete callback
   useEffect(() => {
     timer.setOnComplete(handlePomodoroComplete);
   }, [timer.setOnComplete, handlePomodoroComplete]);
@@ -75,10 +78,6 @@ export default function App() {
   const stats = useStats(dayDataMap, todayPomodoros, today);
 
   const handleSaveSettings = (newSettings: AppSettings) => setSettings(newSettings);
-
-  const handleAddTodo = (title: string, priority: Priority, category: Category, estimatedPomodoros: number) => {
-    todosHook.addTodo(title, priority, category, estimatedPomodoros);
-  };
 
   const handleAssignPomodoro = (taskId: string | null, taskTitle: string, category: Category) => {
     timer.assignPomodoro(taskId, taskTitle, category);
@@ -101,15 +100,17 @@ export default function App() {
       try {
         const data = JSON.parse(e.target?.result as string);
         if (data.settings) setSettings({ ...DEFAULT_SETTINGS, ...data.settings });
-      } catch {
-        alert('导入失败：文件格式不正确');
-      }
+      } catch { alert('导入失败'); }
     };
     reader.readAsText(file);
   };
 
   const handleClear = () => { localStorage.clear(); window.location.reload(); };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
+
+  const handleDragAdjust = (newSeconds: number) => {
+    timer.setTotalTime(newSeconds);
+  };
 
   return (
     <div className="app">
@@ -119,48 +120,51 @@ export default function App() {
         {tab === 'timer' && (
           <div className="timer-page">
             <div className="timer-section">
+              {/* Completed pomodoro dots */}
               <div className="cycle-indicator">
-                {Array.from({ length: settings.longBreakInterval }, (_, i) => (
-                  <div key={i} className={`cycle-dot ${i < timer.completedPomodoros % settings.longBreakInterval ? 'filled' : ''}`} />
+                {Array.from({ length: 4 }, (_, i) => (
+                  <div key={i} className={`cycle-dot ${i < timer.completedPomodoros % 4 ? 'filled' : ''}`} />
                 ))}
               </div>
-              <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} />
 
-              {/* Quick adjust controls */}
-              {timer.mode === 'work' && !timer.isRunning && !timer.pendingAssignment && (
-                <div className="quick-adjust">
-                  <button className="quick-adjust-btn" onClick={() => timer.adjustWorkMinutes(-5)} disabled={timer.workMinutes <= 1}>−5</button>
-                  <span className="quick-adjust-label">{timer.workMinutes} 分钟</span>
-                  <button className="quick-adjust-btn" onClick={() => timer.adjustWorkMinutes(5)} disabled={timer.workMinutes >= 90}>+5</button>
+              {timer.taskFocusMode ? (
+                <div className="timer-ring-container">
+                  <div className="task-focus-display">
+                    <div className="task-focus-time">{formatTaskFocusTime(timer.taskFocusElapsed)}</div>
+                    <div className="task-focus-label">任务专注中</div>
+                  </div>
                 </div>
-              )}
-              {(timer.mode === 'shortBreak' || timer.mode === 'longBreak') && !timer.isRunning && (
-                <div className="quick-adjust">
-                  <button className="quick-adjust-btn" onClick={() => timer.adjustBreakMinutes(-1)} disabled={timer.breakMinutes <= 1}>−1</button>
-                  <span className="quick-adjust-label">{timer.breakMinutes} 分钟休息</span>
-                  <button className="quick-adjust-btn" onClick={() => timer.adjustBreakMinutes(1)} disabled={timer.breakMinutes >= 30}>+1</button>
-                </div>
+              ) : (
+                <TimerRing
+                  timeLeft={timer.timeLeft}
+                  totalTime={timer.totalTime}
+                  mode={timer.mode}
+                  isRunning={timer.isRunning}
+                  onAdjust={handleDragAdjust}
+                />
               )}
 
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onReset={timer.reset} onSkip={timer.skip} />
-
-              {selectedTodo && !timer.pendingAssignment && (
-                <div className="active-task-badge">
-                  正在专注: {selectedTodo.title}
-                  <span className="active-task-meta">{selectedTodo.category}</span>
-                </div>
-              )}
+              <TimerControls
+                isRunning={timer.isRunning}
+                taskFocusMode={timer.taskFocusMode}
+                onStart={timer.start}
+                onPause={timer.pause}
+                onReset={timer.reset}
+                onSkip={timer.skip}
+                onStartTaskFocus={timer.startTaskFocus}
+                onStopTaskFocus={timer.stopTaskFocus}
+              />
 
               <div className="today-summary">
-                今日已完成 <strong>{todayPomodoros.length}</strong> 个番茄
-                {stats.todayFocusMinutes > 0 && <> · {stats.todayFocusMinutes} 分钟</>}
+                今日 <strong>{timer.completedPomodoros}</strong> 番茄
+                {stats.todayFocusMinutes > 0 && <> · {stats.todayFocusMinutes}min</>}
               </div>
             </div>
 
             <TodoList
               todos={todos}
               selectedTodoId={selectedTodoId}
-              onAdd={handleAddTodo}
+              onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo}
               onDelete={todosHook.deleteTodo}
               onSelect={todosHook.selectTodo}
@@ -185,7 +189,6 @@ export default function App() {
 
       <TabNav active={tab} onChange={setTab} />
 
-      {/* Assignment modal */}
       {timer.pendingAssignment && (
         <TaskAssignModal
           duration={timer.pendingAssignment.duration}

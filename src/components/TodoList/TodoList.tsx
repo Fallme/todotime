@@ -8,7 +8,7 @@ import { ListTodo } from 'lucide-react';
 interface TodoListProps {
   todos: Todo[];
   selectedTodoId: string | null;
-  onAdd: (title: string, priority: Priority, category: Category, estimatedPomodoros: number) => void;
+  onAdd: (title: string, priority: Priority, category: Category) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onSelect: (id: string | null) => void;
