@@ -481,16 +481,27 @@ body { background: var(--bg); min-height: 100dvh; }
   position: fixed; inset: 0; background: rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center;
   z-index: 100; padding: 20px;
-  animation: fadeIn 0.2s ease;
 }
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 .modal-content {
   background: var(--bg-card); border-radius: 16px; padding: 24px;
-  max-width: 400px; width: 100%; box-shadow: var(--shadow-lg);
+  max-width: 420px; width: 100%; box-shadow: var(--shadow-lg);
   max-height: 80vh; overflow-y: auto;
 }
 .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+
+/* Batch assign */
+.batch-assign-all { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
+.batch-label { font-size: 12px; color: var(--text-muted); }
+.batch-chip { padding: 3px 10px; border: 1px solid var(--border); border-radius: 8px; font-size: 12px; background: var(--bg); color: var(--text-secondary); cursor: pointer; }
+.batch-chip:hover { background: var(--bg-hover); }
+
+/* Per-pomodoro assignment */
+.modal-pom-item { display: flex; align-items: center; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--border); }
+.modal-pom-item:last-child { border-bottom: none; }
+.modal-pom-num { font-size: 12px; color: var(--text-muted); font-weight: 600; min-width: 24px; }
+.modal-pom-time { font-size: 12px; color: var(--text-secondary); min-width: 36px; }
+.modal-pom-select { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text); font-size: 13px; }
 .modal-todo-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
 .modal-todo-item {
   display: flex; align-items: center; gap: 8px;

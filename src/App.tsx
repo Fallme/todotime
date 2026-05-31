@@ -65,8 +65,8 @@ export default function App() {
   };
 
   // Manual assign from timer (when no task pre-selected)
-  const handleAssignPomodoro = (taskId: string | null, taskTitle: string, category: Category) => {
-    timer.assignPomodoro(taskId, taskTitle, category);
+  const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
+    timer.assignAll(results);
   };
 
   const handleExport = () => {
@@ -143,8 +143,8 @@ export default function App() {
         )}
       </main>
       <TabNav active={tab} onChange={setTab} />
-      {timer.pendingAssignment && (
-        <TaskAssignModal duration={timer.pendingAssignment.duration} todos={todos} onAssign={handleAssignPomodoro} />
+      {timer.pendingAssignments.length > 0 && (
+        <TaskAssignModal assignments={timer.pendingAssignments} todos={todos} onAssignAll={handleAssignAll} />
       )}
     </div>
   );
