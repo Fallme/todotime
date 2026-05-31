@@ -59,7 +59,7 @@ export default function App() {
   // Quick start from task list: select task + start timer
   const handleQuickStart = (todo: Todo) => {
     setCurrentTaskId(todo.id);
-    todosHook.selectTodo(todo.id);
+    timer.setTaskInfo(todo.id, todo.title, todo.category);
     timer.setTotalTime(settings.workMinutes * 60);
     timer.start();
   };
