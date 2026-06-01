@@ -118,12 +118,12 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 
 /* Cycle dots */
-.cycle-indicator { display: flex; gap: 8px; }
+.cycle-indicator { display: flex; gap: 6px; align-items: center; }
 .cycle-dot {
   width: 10px; height: 10px; border-radius: 50%;
-  background: var(--border); transition: background 0.3s;
+  background: var(--border); transition: all 0.3s;
 }
-.cycle-dot.filled { background: var(--accent); }
+.cycle-dot.filled { background: var(--accent); transform: scale(1.2); }
 
 /* Timer ring */
 .timer-ring-container {

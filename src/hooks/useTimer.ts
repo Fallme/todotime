@@ -13,8 +13,8 @@ interface UseTimerReturn {
   timeLeft: number;
   totalTime: number;
   isRunning: boolean;
-  currentCycle: number;
-  completedPomodoros: number;
+  cycleCount: number;          // 0-3, dots filled this cycle
+  totalPomodoros: number;      // lifetime count
   pendingAssignments: PendingAssignment[];
   start: () => void;
   pause: () => void;
@@ -22,7 +22,7 @@ interface UseTimerReturn {
   skip: () => void;
   setTotalTime: (seconds: number) => void;
   setTaskInfo: (id: string | null, title: string, category: Category) => void;
-  assignAll: (assignments: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
+  assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
@@ -31,15 +31,15 @@ export function useTimer(): UseTimerReturn {
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalTime, setTotalTimeState] = useState(25 * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [currentCycle, setCurrentCycle] = useState(0);
-  const [completedPomodoros, setCompletedPomodoros] = useState(0);
+  const [cycleCount, setCycleCount] = useState(0);       // 0-3 dots
+  const [totalPomodoros, setTotalPomodoros] = useState(0);
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
 
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string>('');
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
-  const cycleRef = useRef(currentCycle);
-  cycleRef.current = currentCycle;
+  const cycleCountRef = useRef(cycleCount);
+  cycleCountRef.current = cycleCount;
   const totalTimeRef = useRef(totalTime);
   totalTimeRef.current = totalTime;
   const timeLeftRef = useRef(timeLeft);
@@ -53,9 +53,9 @@ export function useTimer(): UseTimerReturn {
   const setTotalTime = useCallback((s: number) => { setTotalTimeState(s); setTimeLeft(s); }, []);
   const setTaskInfo = useCallback((id: string | null, title: string, category: Category) => { currentTaskRef.current = { id, title, category }; }, []);
 
-  const startBreak = useCallback(() => {
-    const nextCycle = cycleRef.current + 1;
-    if (nextCycle % 4 === 0) {
+  // Start break after cycle complete (4 dots filled)
+  const startBreak = useCallback((long: boolean) => {
+    if (long) {
       setMode('longBreak'); setTimeLeft(15 * 60); setTotalTimeState(15 * 60);
     } else {
       setMode('shortBreak'); setTimeLeft(5 * 60); setTotalTimeState(5 * 60);
@@ -63,29 +63,48 @@ export function useTimer(): UseTimerReturn {
     setIsRunning(true);
   }, []);
 
-  const completeWork = useCallback((interrupted = false) => {
+  // Complete one work pomodoro
+  const completeOneWork = useCallback((interrupted = false) => {
     clearTimer();
     setIsRunning(false);
-    // Calculate actual elapsed time, not total
-    const elapsed = interrupted ? Math.max(1, Math.round((totalTimeRef.current - timeLeftRef.current) / 60)) : Math.round(totalTimeRef.current / 60);
+
+    const elapsed = interrupted
+      ? Math.max(1, Math.round((totalTimeRef.current - timeLeftRef.current) / 60))
+      : Math.round(totalTimeRef.current / 60);
+
     const task = currentTaskRef.current;
-    if (!interrupted) setCompletedPomodoros(p => p + 1);
-    setCurrentCycle(c => c + 1);
-    playWorkComplete();
+    const nextCycleDot = interrupted ? cycleCountRef.current : cycleCountRef.current + 1;
+
+    // Play sound
+    if (!interrupted) playWorkComplete();
+
     startTimeRef.current = '';
 
     if (task) {
-      // Task selected → auto-record
+      // Task selected → auto-record immediately
       const record: PomodoroRecord = {
-        start: startTimeRef.current, end: formatTime(new Date()),
-        duration: elapsed,
-        taskId: task.id, taskTitle: task.title, category: task.category, completed: !interrupted,
+        start: '', end: formatTime(new Date()),
+        duration: elapsed, taskId: task.id, taskTitle: task.title,
+        category: task.category, completed: !interrupted,
       };
       onCompleteRef.current?.(record);
-      startBreak();
     } else {
-      // No task → queue for batch assignment
-      setPendingAssignments(prev => [...prev, { start: startTimeRef.current, duration: elapsed }]);
+      // No task → accumulate for batch assignment
+      setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
+    }
+
+    if (!interrupted) {
+      setTotalPomodoros(p => p + 1);
+      setCycleCount(nextCycleDot);
+    }
+
+    // After 4 dots: cycle complete → break
+    if (nextCycleDot >= 4 && !interrupted) {
+      setCycleCount(0);  // reset for next cycle
+      const isLong = true; // 4 done = long break
+      startBreak(isLong);
+    } else if (!interrupted) {
+      startBreak(false); // short break between pomodoros
     }
   }, [clearTimer, startBreak]);
 
@@ -94,10 +113,10 @@ export function useTimer(): UseTimerReturn {
     if (!isRunning || mode !== 'work') return;
     if (!startTimeRef.current) startTimeRef.current = formatTime(new Date());
     intervalRef.current = window.setInterval(() => {
-      setTimeLeft(prev => { if (prev <= 1) { completeWork(); return 0; } return prev - 1; });
+      setTimeLeft(prev => { if (prev <= 1) { completeOneWork(false); return 0; } return prev - 1; });
     }, 1000);
     return clearTimer;
-  }, [isRunning, mode, clearTimer, completeWork]);
+  }, [isRunning, mode, clearTimer, completeOneWork]);
 
   // Break countdown
   useEffect(() => {
@@ -117,41 +136,45 @@ export function useTimer(): UseTimerReturn {
     return clearTimer;
   }, [isRunning, mode, clearTimer]);
 
+  // Title
   useEffect(() => {
-    const prefix = mode === 'work' ? '' : '休息 - ';
-    document.title = isRunning ? `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} - ${prefix}番茄钟` : '番茄钟';
+    if (mode === 'work') {
+      document.title = isRunning ? `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} - 番茄钟` : '番茄钟';
+    } else {
+      document.title = isRunning ? `${Math.floor(timeLeft / 60)}:${String(timeLeft % 60).padStart(2, '0')} - 休息` : '番茄钟';
+    }
   }, [timeLeft, isRunning, mode]);
 
-  // Batch assign all pending pomodoros
-  const assignAll = useCallback((assignments: { taskId: string | null; taskTitle: string; category: Category }[]) => {
+  // Batch assign
+  const assignAll = useCallback((results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
     pendingAssignments.forEach((pa, i) => {
-      const a = assignments[i] || assignments[assignments.length - 1]; // fallback to last assignment
-      const record: PomodoroRecord = {
-        start: pa.start, end: formatTime(new Date()),
-        duration: pa.duration,
+      const a = results[i] || results[results.length - 1];
+      onCompleteRef.current?.({
+        start: pa.start, end: formatTime(new Date()), duration: pa.duration,
         taskId: a.taskId, taskTitle: a.taskTitle || '未分类专注', category: a.category, completed: true,
-      };
-      onCompleteRef.current?.(record);
+      });
     });
     setPendingAssignments([]);
-    startBreak();
-  }, [pendingAssignments, startBreak]);
+  }, [pendingAssignments]);
 
   const start = useCallback(() => setIsRunning(true), []);
   const pause = useCallback(() => { setIsRunning(false); clearTimer(); }, [clearTimer]);
   const reset = useCallback(() => {
     setIsRunning(false); clearTimer();
-    setTimeLeft(totalTimeRef.current || 25 * 60);
-    setTotalTimeState(totalTimeRef.current || 25 * 60);
+    setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
     startTimeRef.current = '';
   }, [clearTimer]);
   const skip = useCallback(() => {
-    if (mode === 'work') { completeWork(true); }
-    else { clearTimer(); setIsRunning(false); setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60); startTimeRef.current = ''; }
-  }, [mode, clearTimer, completeWork]);
+    if (mode === 'work') { completeOneWork(true); }
+    else {
+      clearTimer(); setIsRunning(false);
+      setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+      startTimeRef.current = '';
+    }
+  }, [mode, clearTimer, completeOneWork]);
 
   return {
-    mode, timeLeft, totalTime, isRunning, currentCycle, completedPomodoros, pendingAssignments,
+    mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, pendingAssignments,
     start, pause, reset, skip, setTotalTime, setTaskInfo, assignAll, setOnComplete,
   };
 }

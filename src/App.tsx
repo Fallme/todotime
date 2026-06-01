@@ -95,7 +95,7 @@ export default function App() {
             <div className="timer-section">
               <div className="cycle-indicator">
                 {Array.from({ length: 4 }, (_, i) => (
-                  <div key={i} className={`cycle-dot ${i < timer.completedPomodoros % 4 ? 'filled' : ''}`} />
+                  <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                 ))}
               </div>
 
@@ -114,7 +114,7 @@ export default function App() {
 
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
-              todayPomodoros={timer.completedPomodoros}
+              todayPomodoros={timer.totalPomodoros}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo}
               onDelete={todosHook.deleteTodo}
