@@ -190,6 +190,7 @@ export function useTimer(): UseTimerReturn {
   const reset = useCallback(() => {
     setIsRunning(false); clearTimer();
     setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setCycleCount(0); setGroupPhase('working');
     startTimeRef.current = '';
   }, [clearTimer]);
   // Skip = complete immediately (counts as a tomato!)
