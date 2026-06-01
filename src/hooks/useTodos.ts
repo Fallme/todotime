@@ -7,6 +7,7 @@ interface UseTodosReturn {
   addTodo: (title: string, priority: Priority, category: Category) => void;
   toggleTodo: (id: string) => void;
   abandonTodo: (id: string) => void;
+  restoreTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
   updateTodoPomodoros: (id: string) => void;
   selectedTodoId: string | null;
@@ -65,6 +66,10 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true } : t));
   }, []);
 
+  const restoreTodo = useCallback((id: string) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: false } : t));
+  }, []);
+
   const deleteTodo = useCallback((id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
     if (selectedTodoId === id) setSelectedTodoId(null);
@@ -79,7 +84,7 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
   }, []);
 
   return {
-    todos, addTodo, toggleTodo, abandonTodo, deleteTodo,
+    todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
     updateTodoPomodoros, selectedTodoId, selectTodo,
   };
 }

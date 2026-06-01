@@ -124,6 +124,7 @@ export default function App() {
               onToggle={todosHook.toggleTodo}
               onDelete={todosHook.deleteTodo}
               onAbandon={todosHook.abandonTodo}
+              onRestore={todosHook.restoreTodo}
               onSelect={todosHook.selectTodo}
               onQuickStart={handleQuickStart}
             />

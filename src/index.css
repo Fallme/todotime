@@ -283,6 +283,13 @@ body { background: var(--bg); min-height: 100dvh; }
 .todo-action-btn.abandon { color: #e17055; }
 .todo-action-btn.abandon:hover { background: rgba(225,112,85,0.1); }
 .fail-marker { color: #e17055; font-size: 13px; flex-shrink: 0; }
+.abandoned-label {
+  display: inline-block; font-size: 10px; font-weight: 600; color: white;
+  background: #e17055; padding: 1px 6px; border-radius: 4px;
+  margin-right: 4px; flex-shrink: 0;
+}
+.todo-action-btn.restore { color: #00b894; }
+.todo-action-btn.restore:hover { background: rgba(0,184,148,0.1); }
 
 /* Category badges */
 .category-badge {

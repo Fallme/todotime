@@ -12,17 +12,18 @@ interface TodoListProps {
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onAbandon: (id: string) => void;
+  onRestore: (id: string) => void;
   onSelect: (id: string | null) => void;
   onQuickStart: (todo: Todo) => void;
 }
 
-export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onAbandon, onSelect, onQuickStart }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart }: TodoListProps) {
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
   const filtered = todos.filter(t => filterCategory === 'all' || t.category === filterCategory);
-  // Sort: active → abandoned → done
+  // Sort: abandoned (top) → active → done
   const sorted = [...filtered].sort((a, b) => {
-    if (a.abandoned !== b.abandoned) return a.abandoned ? 1 : -1;
+    if (a.abandoned !== b.abandoned) return a.abandoned ? -1 : 1;
     if (a.done !== b.done) return a.done ? 1 : -1;
     return 0;
   });
@@ -61,6 +62,7 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onA
               onToggle={() => onToggle(todo.id)}
               onDelete={() => onDelete(todo.id)}
               onAbandon={() => onAbandon(todo.id)}
+              onRestore={() => onRestore(todo.id)}
               onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
               onQuickStart={() => onQuickStart(todo)}
             />
