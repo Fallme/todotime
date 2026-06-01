@@ -123,7 +123,7 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} />
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} onAddTestData={(records) => { timer.addTestPomodoros(records); }} />
           </div>
         )}
         {tab === 'settings' && (
