@@ -1,8 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
-import { CATEGORY_COLORS, type Category } from '../../types';
-import type { DayData, PomodoroRecord } from '../../types';
+import { CATEGORY_COLORS, type Category, type DayData, type PomodoroRecord } from '../../types';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
@@ -11,20 +10,16 @@ type Period = 'day' | 'week' | 'month';
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
   todayPomodoros: PomodoroRecord[];
-  onAddTestData?: (dayDataMap: Map<string, DayData>) => void;
+  onAddTestData?: (data: Map<string, DayData>) => void;
 }
 
 function genTestData(): Map<string, DayData> {
   const cats: Category[] = ['数学', 'AI', '英语', '物理', '嵌入式', '游戏', '音乐', '运动'];
   const tasks: Record<string, string[]> = {
-    '数学': ['刷高数真题', '线性代数'],
-    'AI': ['学习Transformer', '调模型'],
-    '英语': ['背单词', '阅读理解'],
-    '物理': ['力学复习', '电磁学'],
-    '嵌入式': ['STM32项目', 'RTOS'],
-    '游戏': ['Unity开发', '算法'],
-    '音乐': ['练琴', '乐理'],
-    '运动': ['跑步', '健身'],
+    '数学': ['刷高数真题', '线性代数'], 'AI': ['学习Transformer', '调模型'],
+    '英语': ['背单词', '阅读理解'], '物理': ['力学复习', '电磁学'],
+    '嵌入式': ['STM32项目', 'RTOS'], '游戏': ['Unity开发', '算法'],
+    '音乐': ['练琴', '乐理'], '运动': ['跑步', '健身'],
   };
   const map = new Map<string, DayData>();
   const now = new Date();
@@ -59,12 +54,14 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
     let totalPomodoros = 0;
     let totalMinutes = 0;
     let totalTasks = 0;
+    let totalTasksCompleted = 0;
     const categoryMinutes: Record<string, number> = {};
 
     const daily = days.map(date => {
       const dayData = dayDataMap.get(date);
       let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
       let tasksDone = dayData?.tasks?.filter(t => t.done).length ?? 0;
+      const totalTasksDay = dayData?.tasks?.length ?? 0;
 
       if (date === today) {
         const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
@@ -74,38 +71,52 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
       const mins = poms.reduce((s, p) => s + p.duration, 0);
       totalPomodoros += poms.length;
       totalMinutes += mins;
-      totalTasks += tasksDone;
+      totalTasks += totalTasksDay;
+      totalTasksCompleted += tasksDone;
       poms.forEach(p => { categoryMinutes[p.category] = (categoryMinutes[p.category] || 0) + p.duration; });
-      return { date, minutes: mins, pomodoros: poms.length, tasksDone };
+      return { date, minutes: mins, pomodoros: poms.length, tasksDone, totalTasks: totalTasksDay };
     });
 
-    return { daily, totalPomodoros, totalMinutes, totalTasks, categoryMinutes };
+    return { daily, totalPomodoros, totalMinutes, totalTasks, totalTasksCompleted, categoryMinutes };
   }, [dayDataMap, todayPomodoros, period, today]);
 
-  const handleTest = useCallback(() => {
-    onAddTestData?.(genTestData());
-  }, [onAddTestData]);
+  const handleTest = useCallback(() => { onAddTestData?.(genTestData()); }, [onAddTestData]);
 
   const periodLabel = period === 'day' ? '今日' : period === 'week' ? '本周' : '本月';
   const maxMin = Math.max(...data.daily.map(d => d.minutes), 1);
+  const completionRate = data.totalTasks > 0 ? Math.round(data.totalTasksCompleted / data.totalTasks * 100) : 0;
 
+  // Bar chart - minutes with pomodoro count labels
   const barData = {
     labels: data.daily.map(d => d.date.slice(5)),
     datasets: [{
+      label: '专注(分钟)',
       data: data.daily.map(d => d.minutes),
       backgroundColor: data.daily.map(d => d.date === today ? '#FF6B6B' : 'rgba(255,107,107,0.5)'),
-      borderRadius: 6, maxBarThickness: 28,
+      borderRadius: 6, maxBarThickness: 36,
     }],
   };
   const barOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => `${(ctx as { parsed: { y: number } }).parsed.y} 分钟` } } },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx: unknown) => {
+            const i = (ctx as { dataIndex: number }).dataIndex;
+            const d = data.daily[i];
+            return ` 🍅${d.pomodoros}个番茄 · ${d.minutes}分钟`;
+          },
+        },
+      },
+    },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 10 } } },
       y: { beginAtZero: true, suggestedMax: maxMin * 1.2, grid: { color: 'var(--border)' }, ticks: { color: '#999', callback: (v: string | number) => `${v}m` } },
     },
   };
 
+  // Pie chart
   const cats = Object.entries(data.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const pieData = cats.length > 0 ? {
     labels: cats.map(([k]) => k),
@@ -124,6 +135,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
 
   return (
     <div className="stats-overview">
+      {/* Top summary */}
       <div className="stats-top-row">
         <div className="stats-top-item accent">
           <span className="stats-top-val">{data.totalPomodoros}</span>
@@ -134,8 +146,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
           <span className="stats-top-label">⏱ 时长</span>
         </div>
         <div className="stats-top-item">
-          <span className="stats-top-val">{data.totalTasks}</span>
-          <span className="stats-top-label">✅ 任务</span>
+          <span className="stats-top-val">{data.totalTasksCompleted}/{data.totalTasks}</span>
+          <span className="stats-top-label">✅ 完成率{completionRate > 0 ? ` ${completionRate}%` : ''}</span>
         </div>
         <div className="stats-period-toggle">
           <button className={`period-btn ${period === 'day' ? 'active' : ''}`} onClick={() => setPeriod('day')}>日</button>
@@ -144,37 +156,36 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
         </div>
       </div>
 
-      <div className="stats-charts-row">
-        <div className="stats-chart-left">
-          <h4 className="chart-sub-title">{periodLabel}时长</h4>
-          <div className="chart-wrapper-sm"><Bar data={barData} options={barOptions} /></div>
-        </div>
-        <div className="stats-chart-right">
-          <h4 className="chart-sub-title">板块占比</h4>
-          {pieData ? (
-            <>
-              <div className="chart-wrapper-pie"><Doughnut data={pieData} options={pieOptions} /></div>
-              <div className="pie-legend">
-                {cats.map(([cat, mins]) => {
-                  const t = cats.reduce((s, [, m]) => s + m, 0);
-                  return (
-                    <div key={cat} className="pie-legend-item">
-                      <span className="pie-dot" style={{ background: (CATEGORY_COLORS as Record<string, string>)[cat] }} />
-                      <span>{cat}</span>
-                      <span className="pie-legend-val">{Math.round(mins / t * 100)}%</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </>
-          ) : <div className="chart-empty">暂无数据</div>}
-        </div>
+      {/* Bar chart */}
+      <div className="stats-card-full">
+        <h4 className="chart-sub-title">{periodLabel}每日数据</h4>
+        <div className="chart-wrapper-lg"><Bar data={barData} options={barOptions} /></div>
+      </div>
+
+      {/* Pie chart */}
+      <div className="stats-card-full">
+        <h4 className="chart-sub-title">板块占比</h4>
+        {pieData ? (
+          <div className="pie-layout">
+            <div className="chart-wrapper-pie"><Doughnut data={pieData} options={pieOptions} /></div>
+            <div className="pie-legend">
+              {cats.map(([cat, mins]) => {
+                const t = cats.reduce((s, [, m]) => s + m, 0);
+                return (
+                  <div key={cat} className="pie-legend-item">
+                    <span className="pie-dot" style={{ background: (CATEGORY_COLORS as Record<string, string>)[cat] }} />
+                    <span>{cat}</span>
+                    <span className="pie-legend-val">{Math.round(mins / t * 100)}%</span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ) : <div className="chart-empty">暂无数据</div>}
       </div>
 
       {data.totalPomodoros === 0 && (
-        <button className="btn secondary" style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }} onClick={handleTest}>
-          🧪 注入测试数据
-        </button>
+        <button className="btn secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleTest}>🧪 注入测试数据</button>
       )}
     </div>
   );
