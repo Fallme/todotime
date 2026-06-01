@@ -139,7 +139,7 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} />
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={todayPomodoros} />
           </div>
         )}
         {tab === 'settings' && (

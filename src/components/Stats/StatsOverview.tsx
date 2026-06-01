@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { CATEGORY_COLORS } from '../../types';
-import type { DayData } from '../../types';
+import type { DayData, PomodoroRecord } from '../../types';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
@@ -10,10 +10,12 @@ type Period = 'day' | 'week' | 'month';
 
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
+  todayPomodoros: PomodoroRecord[];
 }
 
-export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
+export function StatsOverview({ dayDataMap, todayPomodoros }: StatsOverviewProps) {
   const [period, setPeriod] = useState<Period>('week');
+  const today = new Date().toISOString().slice(0, 10);
 
   const data = useMemo(() => {
     const now = new Date();
@@ -32,8 +34,14 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
 
     const daily = days.map(date => {
       const dayData = dayDataMap.get(date);
-      const poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
-      const tasksDone = dayData?.tasks?.filter(t => t.done).length ?? 0;
+      let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
+      let tasksDone = dayData?.tasks?.filter(t => t.done).length ?? 0;
+
+      // Merge today's live pomodoros
+      if (date === today) {
+        poms = [...poms, ...todayPomodoros.filter(p => p.completed && !poms.some(lp => lp.end === p.end && lp.start === p.start))];
+      }
+
       const mins = poms.reduce((s, p) => s + p.duration, 0);
       totalPomodoros += poms.length;
       totalMinutes += mins;
@@ -46,31 +54,31 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
     });
 
     return { daily, totalPomodoros, totalMinutes, totalTasks, categoryMinutes, categoryPomodoros };
-  }, [dayDataMap, period]);
+  }, [dayDataMap, todayPomodoros, period, today]);
+
+  const periodLabel = period === 'day' ? '今日' : period === 'week' ? '本周' : '本月';
+  const maxMinutes = Math.max(...data.daily.map(d => d.minutes), 1);
 
   // Bar chart - minutes
   const barData = {
-    labels: data.daily.map(d => period === 'day' ? d.date.slice(5) : d.date.slice(5)),
+    labels: data.daily.map(d => d.date.slice(5)),
     datasets: [{
-      label: '专注(分钟)',
       data: data.daily.map(d => d.minutes),
-      backgroundColor: 'rgba(255, 107, 107, 0.7)',
+      backgroundColor: data.daily.map(d => d.date === today ? '#FF6B6B' : 'rgba(255,107,107,0.5)'),
       borderRadius: 6,
-      maxBarThickness: period === 'day' ? 40 : 24,
+      maxBarThickness: 28,
     }],
   };
   const barOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false },
-      tooltip: { callbacks: { label: (ctx: unknown) => `${(ctx as { parsed: { y: number } }).parsed.y} 分钟` } },
-    },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => `${(ctx as { parsed: { y: number } }).parsed.y} 分钟` } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 10 } } },
-      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999', callback: (v: string | number) => `${v}m` } },
+      y: { beginAtZero: true, suggestedMax: maxMinutes * 1.2, grid: { color: 'var(--border)' }, ticks: { color: '#999', callback: (v: string | number) => `${v}m` } },
     },
   };
 
-  // Pie chart - category breakdown
+  // Pie chart
   const cats = Object.entries(data.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
   const pieData = cats.length > 0 ? {
     labels: cats.map(([k]) => k),
@@ -81,39 +89,16 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
     }],
   } : null;
   const pieOptions = {
-    responsive: true, maintainAspectRatio: false,
-    cutout: '60%',
+    responsive: true, maintainAspectRatio: false, cutout: '55%',
     plugins: {
       legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx: unknown) => {
-            const v = (ctx as { parsed: number }).parsed;
-            const total = cats.reduce((s, [, m]) => s + m, 0);
-            return ` ${v}分钟 (${Math.round(v / total * 100)}%)`;
-          },
-        },
-      },
+      tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; const total = cats.reduce((s, [, m]) => s + m, 0); return ` ${v}分钟 (${Math.round(v / total * 100)}%)`; } } },
     },
   };
 
-  // Task completion bar
-  const tasksBarData = {
-    labels: data.daily.map(d => d.date.slice(5)),
-    datasets: [{
-      label: '完成任务',
-      data: data.daily.map(d => d.tasksDone),
-      backgroundColor: 'rgba(0, 184, 148, 0.7)',
-      borderRadius: 6,
-      maxBarThickness: period === 'day' ? 40 : 24,
-    }],
-  };
-
-  const periodLabel = period === 'day' ? '今日' : period === 'week' ? '本周' : '本月';
-
   return (
     <div className="stats-overview">
-      {/* Top: period toggle + summary */}
+      {/* Top summary */}
       <div className="stats-top-row">
         <div className="stats-top-item accent">
           <span className="stats-top-val">{data.totalPomodoros}</span>
@@ -134,7 +119,7 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
         </div>
       </div>
 
-      {/* Charts: bar left + pie right */}
+      {/* Charts row */}
       <div className="stats-charts-row">
         <div className="stats-chart-left">
           <h4 className="chart-sub-title">{periodLabel}时长</h4>
@@ -163,14 +148,6 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
           )}
         </div>
       </div>
-
-      {/* Task completion bar */}
-      {data.totalTasks > 0 && (
-        <div className="stats-task-bar">
-          <h4 className="chart-sub-title">{periodLabel}完成任务</h4>
-          <div className="chart-wrapper-sm"><Bar data={tasksBarData} options={{ ...barOptions, plugins: { ...barOptions.plugins, legend: { display: false } } }} /></div>
-        </div>
-      )}
     </div>
   );
 }
