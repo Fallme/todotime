@@ -9,12 +9,7 @@ import { TimerRing } from './components/Timer/TimerRing';
 import { TimerControls } from './components/Timer/TimerControls';
 import { TaskAssignModal } from './components/Timer/TaskAssignModal';
 import { TodoList } from './components/TodoList/TodoList';
-import { StatsPanel } from './components/Stats/StatsPanel';
-import { WeeklyChart } from './components/Stats/WeeklyChart';
-import { HeatMap } from './components/Stats/HeatMap';
-import { StreakCard } from './components/Stats/StreakCard';
-import { CategoryChart } from './components/Stats/CategoryChart';
-import { DailyReport } from './components/Stats/DailyReport';
+import { StatsOverview } from './components/Stats/StatsOverview';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
@@ -54,7 +49,7 @@ export default function App() {
   const timer = useTimer();
   useEffect(() => { timer.setOnComplete(handlePomodoroComplete); }, [timer.setOnComplete, handlePomodoroComplete]);
 
-  const stats = useStats(dayDataMap, todayPomodoros, today);
+  useStats(dayDataMap, todayPomodoros, today);
 
   const handleSaveSettings = (s: AppSettings) => setSettings(s);
 
@@ -144,12 +139,7 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsPanel stats={stats} />
-            <StreakCard streak={stats.streak} totalPomodoros={stats.totalPomodoros} totalFocusHours={stats.totalFocusHours} />
-            <CategoryChart dayDataMap={dayDataMap} todayPomodoros={todayPomodoros} />
-            <DailyReport dayDataMap={dayDataMap} />
-            <WeeklyChart data={stats.weeklyData} />
-            <HeatMap data={stats.monthlyData} />
+            <StatsOverview dayDataMap={dayDataMap} />
           </div>
         )}
         {tab === 'settings' && (
