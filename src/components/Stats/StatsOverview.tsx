@@ -6,16 +6,18 @@ import type { DayData } from '../../types';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
+type Period = 'day' | 'week' | 'month';
+
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
 }
 
 export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
-  const [period, setPeriod] = useState<'week' | 'month'>('week');
+  const [period, setPeriod] = useState<Period>('week');
 
   const data = useMemo(() => {
     const now = new Date();
-    const count = period === 'week' ? 7 : 30;
+    const count = period === 'day' ? 1 : period === 'week' ? 7 : 30;
     const days: string[] = [];
     for (let i = count - 1; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
@@ -24,106 +26,136 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
 
     let totalPomodoros = 0;
     let totalMinutes = 0;
+    let totalTasks = 0;
     const categoryMinutes: Record<string, number> = {};
+    const categoryPomodoros: Record<string, number> = {};
 
     const daily = days.map(date => {
       const dayData = dayDataMap.get(date);
       const poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
+      const tasksDone = dayData?.tasks?.filter(t => t.done).length ?? 0;
       const mins = poms.reduce((s, p) => s + p.duration, 0);
       totalPomodoros += poms.length;
       totalMinutes += mins;
+      totalTasks += tasksDone;
       poms.forEach(p => {
         categoryMinutes[p.category] = (categoryMinutes[p.category] || 0) + p.duration;
+        categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + 1;
       });
-      return { date, minutes: mins, pomodoros: poms.length };
+      return { date, minutes: mins, pomodoros: poms.length, tasksDone };
     });
 
-    return { daily, totalPomodoros, totalMinutes, categoryMinutes };
+    return { daily, totalPomodoros, totalMinutes, totalTasks, categoryMinutes, categoryPomodoros };
   }, [dayDataMap, period]);
 
-  // Bar chart
+  // Bar chart - minutes
   const barData = {
-    labels: data.daily.map(d => d.date.slice(5)),
+    labels: data.daily.map(d => period === 'day' ? d.date.slice(5) : d.date.slice(5)),
     datasets: [{
+      label: '专注(分钟)',
       data: data.daily.map(d => d.minutes),
       backgroundColor: 'rgba(255, 107, 107, 0.7)',
-      borderRadius: 4,
-      maxBarThickness: 20,
+      borderRadius: 6,
+      maxBarThickness: period === 'day' ? 40 : 24,
     }],
   };
   const barOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => `${(ctx as { parsed: { y: number } }).parsed.y} 分钟` } } },
+    plugins: { legend: { display: false },
+      tooltip: { callbacks: { label: (ctx: unknown) => `${(ctx as { parsed: { y: number } }).parsed.y} 分钟` } },
+    },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 10 } } },
       y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999', callback: (v: string | number) => `${v}m` } },
     },
   };
 
-  // Pie chart
+  // Pie chart - category breakdown
   const cats = Object.entries(data.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-  const pieData = {
+  const pieData = cats.length > 0 ? {
     labels: cats.map(([k]) => k),
     datasets: [{
       data: cats.map(([, v]) => v),
       backgroundColor: cats.map(([k]) => (CATEGORY_COLORS as Record<string, string>)[k] || '#636e72'),
-      borderWidth: 2, borderColor: 'var(--bg-card)',
+      borderWidth: 3, borderColor: 'var(--bg-card)',
     }],
-  };
+  } : null;
   const pieOptions = {
     responsive: true, maintainAspectRatio: false,
+    cutout: '60%',
     plugins: {
       legend: { display: false },
-      tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; const total = cats.reduce((s, [, m]) => s + m, 0); return ` ${v}分钟 (${Math.round(v / total * 100)}%)`; } } },
+      tooltip: {
+        callbacks: {
+          label: (ctx: unknown) => {
+            const v = (ctx as { parsed: number }).parsed;
+            const total = cats.reduce((s, [, m]) => s + m, 0);
+            return ` ${v}分钟 (${Math.round(v / total * 100)}%)`;
+          },
+        },
+      },
     },
   };
 
-  const reportText = useMemo(() => {
-    const lines = [`📊 ${period === 'week' ? '周报' : '月报'}`, ''];
-    lines.push(`🍅 番茄: ${data.totalPomodoros}`);
-    lines.push(`⏱ 专注: ${data.totalMinutes}分钟 (${(data.totalMinutes / 60).toFixed(1)}h)`);
-    lines.push('');
-    cats.forEach(([cat, mins]) => lines.push(`  ${cat}: ${mins}分钟`));
-    return lines.join('\n');
-  }, [data, period, cats]);
+  // Task completion bar
+  const tasksBarData = {
+    labels: data.daily.map(d => d.date.slice(5)),
+    datasets: [{
+      label: '完成任务',
+      data: data.daily.map(d => d.tasksDone),
+      backgroundColor: 'rgba(0, 184, 148, 0.7)',
+      borderRadius: 6,
+      maxBarThickness: period === 'day' ? 40 : 24,
+    }],
+  };
+
+  const periodLabel = period === 'day' ? '今日' : period === 'week' ? '本周' : '本月';
 
   return (
     <div className="stats-overview">
-      {/* Top: summary numbers */}
+      {/* Top: period toggle + summary */}
       <div className="stats-top-row">
         <div className="stats-top-item accent">
           <span className="stats-top-val">{data.totalPomodoros}</span>
           <span className="stats-top-label">🍅 番茄</span>
         </div>
         <div className="stats-top-item">
-          <span className="stats-top-val">{(data.totalMinutes / 60).toFixed(1)}h</span>
+          <span className="stats-top-val">{data.totalMinutes}m</span>
           <span className="stats-top-label">⏱ 时长</span>
         </div>
+        <div className="stats-top-item">
+          <span className="stats-top-val">{data.totalTasks}</span>
+          <span className="stats-top-label">✅ 任务</span>
+        </div>
         <div className="stats-period-toggle">
+          <button className={`period-btn ${period === 'day' ? 'active' : ''}`} onClick={() => setPeriod('day')}>日</button>
           <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>周</button>
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>月</button>
         </div>
       </div>
 
-      {/* Middle: bar chart left + pie chart right */}
+      {/* Charts: bar left + pie right */}
       <div className="stats-charts-row">
         <div className="stats-chart-left">
-          <h4 className="chart-sub-title">每日时长</h4>
+          <h4 className="chart-sub-title">{periodLabel}时长</h4>
           <div className="chart-wrapper-sm"><Bar data={barData} options={barOptions} /></div>
         </div>
         <div className="stats-chart-right">
-          <h4 className="chart-sub-title">类别占比</h4>
-          {cats.length > 0 ? (
+          <h4 className="chart-sub-title">板块占比</h4>
+          {pieData ? (
             <>
               <div className="chart-wrapper-pie"><Doughnut data={pieData} options={pieOptions} /></div>
               <div className="pie-legend">
-                {cats.map(([cat, mins]) => (
-                  <div key={cat} className="pie-legend-item">
-                    <span className="pie-dot" style={{ background: (CATEGORY_COLORS as Record<string, string>)[cat] }} />
-                    <span>{cat}</span>
-                    <span className="pie-legend-val">{mins}m</span>
-                  </div>
-                ))}
+                {cats.map(([cat, mins]) => {
+                  const total = cats.reduce((s, [, m]) => s + m, 0);
+                  return (
+                    <div key={cat} className="pie-legend-item">
+                      <span className="pie-dot" style={{ background: (CATEGORY_COLORS as Record<string, string>)[cat] }} />
+                      <span>{cat}</span>
+                      <span className="pie-legend-val">{Math.round(mins / total * 100)}%</span>
+                    </div>
+                  );
+                })}
               </div>
             </>
           ) : (
@@ -132,11 +164,13 @@ export function StatsOverview({ dayDataMap }: StatsOverviewProps) {
         </div>
       </div>
 
-      {/* Bottom: copy report */}
-      <button className="btn secondary" style={{ width: '100%', justifyContent: 'center', marginTop: '8px' }}
-        onClick={() => navigator.clipboard.writeText(reportText)}>
-        📋 复制报告
-      </button>
+      {/* Task completion bar */}
+      {data.totalTasks > 0 && (
+        <div className="stats-task-bar">
+          <h4 className="chart-sub-title">{periodLabel}完成任务</h4>
+          <div className="chart-wrapper-sm"><Bar data={tasksBarData} options={{ ...barOptions, plugins: { ...barOptions.plugins, legend: { display: false } } }} /></div>
+        </div>
+      )}
     </div>
   );
 }

@@ -174,49 +174,49 @@ body { background: var(--bg); min-height: 100dvh; }
 
 /* Countdown */
 .countdown-card {
-  background: var(--bg-card); border: 1px solid var(--border);
-  border-radius: 16px; padding: 16px 20px;
-  cursor: pointer; transition: transform 0.15s, box-shadow 0.2s;
-  box-shadow: var(--shadow);
+  background: var(--bg-card); border-radius: 16px; padding: 18px 20px;
+  cursor: pointer; transition: box-shadow 0.2s;
+  box-shadow: var(--shadow); border: 1px solid var(--border);
 }
-.countdown-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-lg); }
+.countdown-card:hover { box-shadow: var(--shadow-lg); }
 .countdown-card.editing { cursor: default; }
-.cd-top { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+.cd-top { display: flex; align-items: center; gap: 6px; margin-bottom: 12px; }
+.cd-icon { font-size: 16px; }
 .cd-title { font-size: 15px; font-weight: 700; color: var(--accent); }
-.cd-edit-icon { font-size: 12px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; }
-.countdown-card:hover .cd-edit-icon { opacity: 1; }
-.cd-blocks { display: flex; align-items: center; justify-content: center; gap: 6px; }
-.cd-block { text-align: center; min-width: 56px; }
+.cd-edit-hint { font-size: 11px; color: var(--text-muted); margin-left: auto; opacity: 0; transition: opacity 0.15s; }
+.countdown-card:hover .cd-edit-hint { opacity: 1; }
+.cd-blocks { display: flex; justify-content: center; gap: 0; }
+.cd-block {
+  text-align: center; padding: 8px 14px;
+  background: var(--bg); border-radius: 12px; min-width: 60px;
+}
 .cd-num {
-  display: block; font-size: 32px; font-weight: 800;
-  font-variant-numeric: tabular-nums; line-height: 1;
+  display: block; font-size: 30px; font-weight: 800;
+  font-variant-numeric: tabular-nums; line-height: 1.1;
   color: var(--text);
 }
 .cd-unit { font-size: 11px; color: var(--text-muted); font-weight: 500; }
-.cd-sep {
-  font-size: 22px; font-weight: 700; color: var(--accent);
-  margin-top: -10px; opacity: 0.6;
-}
 .cd-passed { text-align: center; font-size: 16px; font-weight: 600; color: var(--green); padding: 8px 0; }
 
 /* Edit mode */
-.countdown-card.editing { padding: 12px 16px; }
+.countdown-card.editing { padding: 14px 16px; }
+.cd-edit-row { display: flex; gap: 8px; margin-bottom: 10px; }
 .cd-input {
-  width: 100%; padding: 8px 10px; border: 1px solid var(--border);
-  border-radius: 8px; font-size: 14px; background: var(--bg); color: var(--text);
-  outline: none; margin-bottom: 8px;
+  flex: 1; padding: 8px 10px; border: 1px solid var(--border);
+  border-radius: 10px; font-size: 14px; background: var(--bg); color: var(--text);
+  outline: none;
 }
 .cd-input:focus { border-color: var(--accent); }
 .cd-edit-btns { display: flex; gap: 8px; }
 .cd-btn {
-  flex: 1; padding: 8px; border: none; border-radius: 8px;
-  font-size: 13px; font-weight: 600; cursor: pointer;
+  flex: 1; padding: 10px; border: none; border-radius: 10px;
+  font-size: 14px; font-weight: 600; cursor: pointer;
 }
 .cd-btn.save {
   background: linear-gradient(135deg, var(--accent), var(--accent-light));
-  color: white;
+  color: white; box-shadow: 0 2px 8px rgba(255,107,107,0.25);
 }
-.cd-btn.cancel { background: var(--bg-hover); color: var(--text-secondary); }
+.cd-btn.cancel { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
 
 /* Cycle dots */
 .cycle-indicator { display: flex; gap: 6px; align-items: center; }
