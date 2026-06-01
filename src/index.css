@@ -39,7 +39,7 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-body { background: var(--bg); min-height: 100dvh; }
+body { background: var(--bg); margin: 0; }
 
 /* App layout */
 .app {
@@ -49,6 +49,7 @@ body { background: var(--bg); min-height: 100dvh; }
   display: flex;
   flex-direction: column;
   position: relative;
+  overflow-x: hidden;
 }
 
 /* Header */
@@ -104,7 +105,7 @@ body { background: var(--bg); min-height: 100dvh; }
 .main-content {
   flex: 1;
   padding: 0 20px 80px;
-  overflow-y: auto;
+  overflow: visible;
 }
 
 /* Timer page */
@@ -164,7 +165,7 @@ body { background: var(--bg); min-height: 100dvh; }
 .report-stat { text-align: center; }
 .report-stat-val { display: block; font-size: 18px; font-weight: 700; color: var(--text); }
 .report-stat-label { font-size: 11px; color: var(--text-muted); }
-.report-bar-list { display: flex; flex-direction: column; gap: 4px; max-height: 200px; overflow-y: auto; }
+.report-bar-list { display: flex; flex-direction: column; gap: 4px; }
 .report-bar-row { display: flex; align-items: center; gap: 6px; }
 .report-bar-date { font-size: 11px; color: var(--text-muted); min-width: 36px; }
 .report-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
