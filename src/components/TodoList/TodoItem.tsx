@@ -41,22 +41,22 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
 
       <div className="todo-col todo-actions">
         {todo.abandoned ? (
-          <button className="todo-action-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复任务">
+          <button className="todo-action-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复">
             <RotateCcw size={14} />
           </button>
-        ) : (
+        ) : !todo.done ? (
           <button className="todo-action-btn start" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄">
             <Play size={14} />
           </button>
-        )}
-        <button className="todo-action-btn delete" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除">
-          <Trash2 size={14} />
-        </button>
+        ) : null}
         {!todo.abandoned && !todo.done && (
           <button className="todo-action-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">
             <X size={14} />
           </button>
         )}
+        <button className="todo-action-btn delete" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除">
+          <Trash2 size={14} />
+        </button>
       </div>
     </div>
   );

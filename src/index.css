@@ -289,6 +289,20 @@ body { background: var(--bg); min-height: 100dvh; }
 .todo-action-btn.restore { color: #00b894; }
 .todo-action-btn.restore:hover { background: rgba(0,184,148,0.1); }
 
+/* Status tabs */
+.status-tabs {
+  display: flex; gap: 0; margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.status-tab {
+  flex: 1; padding: 8px 0; border: none; background: none;
+  font-size: 13px; font-weight: 500; color: var(--text-muted);
+  cursor: pointer; border-bottom: 2px solid transparent;
+  transition: all 0.15s;
+}
+.status-tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+.status-tab:hover { color: var(--text-secondary); }
+
 /* Category badges */
 .category-badge {
   display: inline-flex; align-items: center;

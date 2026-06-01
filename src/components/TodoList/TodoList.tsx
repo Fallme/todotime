@@ -5,6 +5,8 @@ import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
 import { ListTodo } from 'lucide-react';
 
+type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
+
 interface TodoListProps {
   todos: Todo[];
   selectedTodoId: string | null;
@@ -17,15 +19,32 @@ interface TodoListProps {
   onQuickStart: (todo: Todo) => void;
 }
 
+const STATUS_TABS: { id: StatusTab; label: string }[] = [
+  { id: 'all', label: '全部' },
+  { id: 'active', label: '进行中' },
+  { id: 'done', label: '已完成' },
+  { id: 'abandoned', label: '已放弃' },
+];
+
 export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart }: TodoListProps) {
+  const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
-  const filtered = todos.filter(t => filterCategory === 'all' || t.category === filterCategory);
-  // Sort: abandoned (top) → active → done
+  // Filter by status
+  let filtered = todos;
+  if (statusTab === 'active') filtered = todos.filter(t => !t.done && !t.abandoned);
+  else if (statusTab === 'done') filtered = todos.filter(t => t.done && !t.abandoned);
+  else if (statusTab === 'abandoned') filtered = todos.filter(t => t.abandoned);
+
+  // Filter by category
+  if (filterCategory !== 'all') {
+    filtered = filtered.filter(t => t.category === filterCategory);
+  }
+
+  // Sort: active top → done → abandoned bottom (within same status)
   const sorted = [...filtered].sort((a, b) => {
-    if (a.abandoned !== b.abandoned) return a.abandoned ? -1 : 1;
-    if (a.done !== b.done) return a.done ? 1 : -1;
-    return 0;
+    const order = (t: Todo) => t.abandoned ? 2 : t.done ? 1 : 0;
+    return order(a) - order(b);
   });
 
   const activeCount = todos.filter(t => !t.done && !t.abandoned).length;
@@ -39,9 +58,20 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onA
         <span className="todo-count">{activeCount} 项</span>
       </div>
 
-      {usedCategories.length > 0 && (
+      {/* Status tabs */}
+      <div className="status-tabs">
+        {STATUS_TABS.map(tab => (
+          <button key={tab.id} className={`status-tab ${statusTab === tab.id ? 'active' : ''}`}
+            onClick={() => setStatusTab(tab.id)}
+          >{tab.label}</button>
+        ))}
+      </div>
+
+      {/* Category filter (only show for active/all) */}
+      {(statusTab === 'all' || statusTab === 'active') && usedCategories.length > 0 && (
         <div className="category-filter-bar">
-          <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>全部</button>
+          <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`}
+            onClick={() => setFilterCategory('all')}>全部</button>
           {usedCategories.map(cat => (
             <button key={cat} className={`category-filter-chip ${filterCategory === cat ? 'active' : ''}`}
               style={filterCategory === cat ? { background: CATEGORY_COLORS[cat], color: 'white', borderColor: CATEGORY_COLORS[cat] } : { borderColor: CATEGORY_COLORS[cat] }}
@@ -54,7 +84,9 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onA
       <AddTodo onAdd={onAdd} />
       <div className="todo-list-items">
         {sorted.length === 0 ? (
-          <div className="todo-empty">{filterCategory === 'all' ? '添加一个任务开始吧' : `"${filterCategory}" 下没有任务`}</div>
+          <div className="todo-empty">
+            {statusTab === 'active' ? '没有进行中的任务' : statusTab === 'done' ? '还没有完成的任务' : statusTab === 'abandoned' ? '没有放弃的任务' : '添加一个任务开始吧'}
+          </div>
         ) : (
           sorted.map(todo => (
             <TodoItem key={todo.id} todo={todo}
