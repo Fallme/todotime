@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
-import { CATEGORY_COLORS, type Category, type DayData, type PomodoroRecord } from '../../types';
+import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord } from '../../types';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
 
@@ -10,6 +10,7 @@ type Period = 'day' | 'week' | 'month';
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
   todayPomodoros: PomodoroRecord[];
+  categories: CategoryItem[];
   onAddTestData?: (data: Map<string, DayData>) => void;
 }
 
@@ -39,7 +40,7 @@ function genTestData(): Map<string, DayData> {
   return map;
 }
 
-export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: StatsOverviewProps) {
+export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTestData }: StatsOverviewProps) {
   const [period, setPeriod] = useState<Period>('week');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
@@ -158,7 +159,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
 
   const pieData = cats.length > 0 ? {
     labels: cats.map(([k]) => k),
-    datasets: [{ data: cats.map(([, v]) => v), backgroundColor: cats.map(([k]) => (CATEGORY_COLORS as Record<string, string>)[k] || '#636e72'), borderWidth: 3, borderColor: 'var(--bg-card)' }],
+    datasets: [{ data: cats.map(([, v]) => v), backgroundColor: cats.map(([k]) => getCategoryColor(categories, k)), borderWidth: 3, borderColor: 'var(--bg-card)' }],
   } : null;
   const pieOptions = {
     responsive: true, maintainAspectRatio: false, cutout: '55%',
@@ -215,7 +216,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
           <div className="agg-item"><span className="agg-val">{aggregates.activeDays}/{data.daily.length}</span><span className="agg-label">活跃天数</span></div>
           <div className="agg-item"><span className="agg-val">🍅{aggregates.avgDaily}/天</span><span className="agg-label">日均番茄</span></div>
           <div className="agg-item"><span className="agg-val">{aggregates.avgMinutes}m/天</span><span className="agg-label">日均时长</span></div>
-          {aggregates.topCat && <div className="agg-item"><span className="agg-val" style={{ color: (CATEGORY_COLORS as Record<string, string>)[aggregates.topCat[0]] }}>{aggregates.topCat[0]}</span><span className="agg-label">最常学习({aggregates.topCatPomos}个🍅)</span></div>}
+          {aggregates.topCat && <div className="agg-item"><span className="agg-val" style={{ color: getCategoryColor(categories, aggregates.topCat[0]) }}>{aggregates.topCat[0]}</span><span className="agg-label">最常学习({aggregates.topCatPomos}个🍅)</span></div>}
           {aggregates.bestDay.minutes > 0 && <div className="agg-item"><span className="agg-val">{aggregates.bestDay.date.slice(5)}</span><span className="agg-label">最佳({aggregates.bestDay.minutes}m)</span></div>}
         </div>
       )}
@@ -238,7 +239,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
             <div className="pie-legend">
               {cats.map(([cat, mins]) => (
                 <div key={cat} className="pie-legend-item">
-                  <span className="pie-dot" style={{ background: (CATEGORY_COLORS as Record<string, string>)[cat] }} />
+                  <span className="pie-dot" style={{ background: getCategoryColor(categories, cat) }} />
                   <span>{cat}</span>
                   <span className="pie-legend-val">{Math.round(mins / pieTotal * 100)}% ({mins}m)</span>
                 </div>

@@ -5,24 +5,33 @@ export type Category =
   | '英语' | '政治' | '音乐' | '画画' | '运动'
   | '其他';
 
-export const CATEGORIES: Category[] = [
-  '嵌入式', 'AI', '游戏', '数学', '物理',
-  '英语', '政治', '音乐', '画画', '运动', '其他',
+export interface CategoryItem {
+  name: string;
+  color: string;
+}
+
+export const DEFAULT_CATEGORIES: CategoryItem[] = [
+  { name: '嵌入式', color: '#e17055' },
+  { name: 'AI', color: '#6c5ce7' },
+  { name: '游戏', color: '#00b894' },
+  { name: '数学', color: '#0984e3' },
+  { name: '物理', color: '#fdcb6e' },
+  { name: '英语', color: '#e84393' },
+  { name: '政治', color: '#d63031' },
+  { name: '音乐', color: '#a29bfe' },
+  { name: '画画', color: '#fd79a8' },
+  { name: '运动', color: '#00cec9' },
+  { name: '其他', color: '#636e72' },
 ];
 
-export const CATEGORY_COLORS: Record<Category, string> = {
-  '嵌入式': '#e17055',
-  'AI':    '#6c5ce7',
-  '游戏':  '#00b894',
-  '数学':  '#0984e3',
-  '物理':  '#fdcb6e',
-  '英语':  '#e84393',
-  '政治':  '#d63031',
-  '音乐':  '#a29bfe',
-  '画画':  '#fd79a8',
-  '运动':  '#00cec9',
-  '其他':  '#636e72',
-};
+export function getCategoryColor(categories: CategoryItem[], name: string): string {
+  return categories.find(c => c.name === name)?.color || '#636e72';
+}
+
+export function getRandomColor(): string {
+  const hue = Math.floor(Math.random() * 360);
+  return `hsl(${hue}, 65%, 50%)`;
+}
 
 export interface SubTask {
   id: string;
@@ -80,7 +89,7 @@ export interface AppSettings extends TimerSettings {
   githubRepo: string;
   countdownTitle: string;
   countdownDate: string;
-  categories: Category[];
+  categories: CategoryItem[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -94,5 +103,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   githubRepo: 'Fallme/todotime',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',
-  categories: [...CATEGORIES],
+  categories: [...DEFAULT_CATEGORIES],
 };

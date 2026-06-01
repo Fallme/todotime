@@ -1,32 +1,39 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
-import type { Priority, Category } from '../../types';
-import { CATEGORY_COLORS } from '../../types';
+import type { Priority, Category, CategoryItem } from '../../types';
 
 interface AddTodoProps {
   onAdd: (title: string, priority: Priority, category: Category) => void;
-  categories: Category[];
-  onAddCategory: (name: string) => void;
+  categories: CategoryItem[];
+  onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
+  onChangeCategoryColor: (name: string, color: string) => void;
 }
 
-export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory }: AddTodoProps) {
+function getRandomHSL(): string {
+  const h = Math.floor(Math.random() * 360);
+  return `hsl(${h}, 65%, 50%)`;
+}
+
+export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, onChangeCategoryColor }: AddTodoProps) {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<Category>('其他');
+  const [category, setCategory] = useState<string>('其他');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const [showCatAdd, setShowCatAdd] = useState(false);
   const [newCatName, setNewCatName] = useState('');
 
+  const currentCat = categories.find(c => c.name === category);
+
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onAdd(title.trim(), 'medium', category);
+    onAdd(title.trim(), 'medium', category as Category);
     setTitle('');
   };
 
   const handleAddCat = () => {
     if (!newCatName.trim()) return;
-    onAddCategory(newCatName.trim());
+    onAddCategory(newCatName.trim(), getRandomHSL());
     setNewCatName('');
     setShowCatAdd(false);
   };
@@ -40,7 +47,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory }: 
     <form className="add-todo" onSubmit={handleAddTask}>
       <div className="add-todo-row">
         <button type="button" className="category-badge-add"
-          style={{ background: CATEGORY_COLORS[category] || '#636e72' }}
+          style={{ background: currentCat?.color || '#636e72' }}
           onClick={() => { setShowCatPicker(!showCatPicker); setShowCatAdd(false); }}>
           {category}
         </button>
@@ -55,13 +62,17 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory }: 
         <div className="category-picker">
           <div className="category-chips-row">
             {categories.map(cat => (
-              <div key={cat} className="category-chip-wrapper">
-                <button type="button" className={`category-chip ${cat === category ? 'active' : ''}`}
-                  style={cat === category ? { background: CATEGORY_COLORS[cat] || '#636e72', color: 'white', borderColor: CATEGORY_COLORS[cat] } : { borderColor: CATEGORY_COLORS[cat] || '#636e72' }}
-                  onClick={() => { setCategory(cat); setShowCatPicker(false); }}>
-                  {cat}
+              <div key={cat.name} className="category-chip-wrapper">
+                <button type="button" className={`category-chip ${cat.name === category ? 'active' : ''}`}
+                  style={cat.name === category ? { background: cat.color, color: 'white', borderColor: cat.color } : { borderColor: cat.color }}
+                  onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}>
+                  {cat.name}
                 </button>
-                <button type="button" className="cat-del-btn" onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat); }}>×</button>
+                <button type="button" className="cat-color-btn" title="修改颜色"
+                  onClick={(e) => { e.stopPropagation(); onChangeCategoryColor(cat.name, getRandomHSL()); }}>
+                  <span className="cat-color-dot" style={{ background: cat.color }} />
+                </button>
+                <button type="button" className="cat-del-btn" onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); }}>×</button>
               </div>
             ))}
             <button type="button" className="category-chip add" onClick={(e) => { e.stopPropagation(); setShowCatAdd(!showCatAdd); }}>+</button>

@@ -601,6 +601,13 @@ body { background: var(--bg); margin: 0; }
 }
 .category-chip-wrapper:hover .cat-del-btn { opacity: 1; }
 .cat-del-btn:hover { color: #e74c3c; }
+.cat-color-btn {
+  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  padding: 0; margin-left: -2px; background: none; transition: transform 0.15s;
+}
+.cat-color-btn:hover { transform: scale(1.2); }
+.cat-color-dot { width: 10px; height: 10px; border-radius: 50%; }
 .category-add-row { display: flex; gap: 6px; margin-top: 8px; }
 .cat-add-input {
   flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;

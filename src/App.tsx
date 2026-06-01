@@ -81,13 +81,16 @@ export default function App() {
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
   const handleCountdownUpdate = (title: string, date: string) => setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
 
-  const handleAddCategory = (name: string) => {
-    if (!settings.categories.includes(name as Category)) {
-      setSettings(s => ({ ...s, categories: [...s.categories, name as Category] }));
+  const handleAddCategory = (name: string, color: string) => {
+    if (!settings.categories.find(c => c.name === name)) {
+      setSettings(s => ({ ...s, categories: [...s.categories, { name, color }] }));
     }
   };
   const handleDeleteCategory = (name: string) => {
-    setSettings(s => ({ ...s, categories: s.categories.filter(c => c !== name) }));
+    setSettings(s => ({ ...s, categories: s.categories.filter(c => c.name !== name) }));
+  };
+  const handleChangeCategoryColor = (name: string, color: string) => {
+    setSettings(s => ({ ...s, categories: s.categories.map(c => c.name === name ? { ...c, color } : c) }));
   };
 
   return (
@@ -118,12 +121,13 @@ export default function App() {
               onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
+              onChangeCategoryColor={handleChangeCategoryColor}
             />
           </div>
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros}
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories}
               onAddTestData={(testMap) => {
                 setDayDataMap(prev => {
                   const merged = new Map(prev);
