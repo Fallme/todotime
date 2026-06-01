@@ -200,9 +200,48 @@ export function useTimer(): UseTimerReturn {
     startTimeRef.current = '';
   }, [clearTimer]);
   const skip = useCallback(() => {
-    if (mode === 'work') { completeOne(); }
-    else { clearTimer(); setIsRunning(false); setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60); startTimeRef.current = ''; }
-  }, [mode, clearTimer, completeOne]);
+    if (mode === 'work') {
+      clearTimer();
+      const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
+      const elapsed = Math.round(elapsedSeconds / 60);
+      const task = currentTaskRef.current;
+      const nextDot = cycleCountRef.current + 1;
+
+      if (elapsedSeconds >= 60) {
+        if (task) {
+          setTodayPomodoros(prev => [...prev, {
+            start: '', end: formatTime(new Date()), duration: elapsed,
+            taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
+          }]);
+        } else {
+          setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
+        }
+        setTotalPomodoros(p => p + 1);
+        playWorkComplete();
+      }
+
+      setIsRunning(false);
+      setCycleCount(nextDot);
+      startTimeRef.current = '';
+
+      if (nextDot >= 4) {
+        setCycleCount(0);
+        setGroupPhase('groupDone');
+      } else {
+        setMode('shortBreak');
+        setTimeLeft(5 * 60);
+        setTotalTimeState(5 * 60);
+        setTimeout(() => setIsRunning(true), 100);
+      }
+    } else {
+      clearTimer();
+      setIsRunning(false);
+      setMode('work');
+      setTimeLeft(25 * 60);
+      setTotalTimeState(25 * 60);
+      startTimeRef.current = '';
+    }
+  }, [mode, clearTimer]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
