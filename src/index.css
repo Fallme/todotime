@@ -125,13 +125,11 @@ body { background: var(--bg); min-height: 100dvh; }
 .timer-ring-container {
   position: relative; display: flex; align-items: center;
   justify-content: center;
-  min-height: 260px; /* Fixed height prevents layout jump */
+  min-height: 260px;
 }
-.timer-ring-svg { transform: rotate(-90deg); }
-.timer-ring-svg.draggable { cursor: grab; }
-.timer-ring-svg.draggable:active { cursor: grabbing; }
-.timer-ring-progress { transition: stroke-dashoffset 0.3s ease; }
-.timer-ring-handle { transition: opacity 0.2s; }
+.timer-ring-svg { display: block; }
+.timer-ring-progress { transition: stroke-dashoffset 0.2s ease; }
+.timer-ring-handle { pointer-events: none; }
 .timer-ring-text {
   position: absolute; text-align: center;
   display: flex; flex-direction: column; align-items: center;

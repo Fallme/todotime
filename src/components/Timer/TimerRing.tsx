@@ -1,4 +1,4 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import type { TimerMode } from '../../types';
 
 interface TimerRingProps {
@@ -24,8 +24,8 @@ const MODE_LABELS: Record<TimerMode, string> = {
 
 export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskName, onDragAdjust }: TimerRingProps) {
   const svgRef = useRef<SVGSVGElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const isDraggingRef = useRef(false);
+  const [dragging, setDragging] = useState(false);
+  const draggingRef = useRef(false);
 
   const R = 130, STROKE = 8, NR = R - STROKE / 2;
   const CIRC = NR * 2 * Math.PI;
@@ -35,54 +35,78 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
   const mm = String(Math.floor(Math.max(0, timeLeft) / 60)).padStart(2, '0');
   const ss = String(Math.max(0, timeLeft) % 60).padStart(2, '0');
 
-  const getAngle = useCallback((cx: number, cy: number): number => {
+  // Calculate angle from screen coordinates to center
+  const screenToAngle = useCallback((sx: number, sy: number): number => {
     if (!svgRef.current) return 0;
-    const r = svgRef.current.getBoundingClientRect();
-    let a = Math.atan2(cx - (r.left + r.width / 2), -(cy - (r.top + r.height / 2))) * (180 / Math.PI);
-    if (a < 0) a += 360;
-    return a;
+    const rect = svgRef.current.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // atan2(dx, -dy): 0=12 o'clock, clockwise
+    let angle = Math.atan2(sx - cx, -(sy - cy)) * (180 / Math.PI);
+    if (angle < 0) angle += 360;
+    return angle;
   }, []);
 
-  const angleToSec = useCallback((a: number): number => {
+  // Angle → seconds (round to 5s)
+  const angleToSec = useCallback((angle: number): number => {
     const max = Math.max(60, totalTime || 1500);
-    return Math.max(30, Math.min(max, Math.round((a / 360) * max / 5) * 5));
+    const raw = (angle / 360) * max;
+    return Math.max(30, Math.min(max, Math.round(raw / 5) * 5));
   }, [totalTime]);
 
+  // Handle position
   const handleAngle = progress * 360;
   const hx = R + NR * Math.sin((handleAngle * Math.PI) / 180);
   const hy = R - NR * Math.cos((handleAngle * Math.PI) / 180);
 
-  const onMouseDown = useCallback((e: React.MouseEvent) => {
-    e.preventDefault(); e.stopPropagation();
-    setIsDragging(true); isDraggingRef.current = true;
-    onDragAdjust(angleToSec(getAngle(e.clientX, e.clientY)));
-  }, [getAngle, angleToSec, onDragAdjust]);
+  // Grab handle
+  const handlePointerDown = useCallback((e: React.PointerEvent) => {
+    if (isRunning) return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+    draggingRef.current = true;
+    onDragAdjust(angleToSec(screenToAngle(e.clientX, e.clientY)));
+  }, [isRunning, screenToAngle, angleToSec, onDragAdjust]);
 
-  useEffect(() => {
-    if (!isDragging) return;
-    const onMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      onDragAdjust(angleToSec(getAngle(e.clientX, e.clientY)));
-    };
-    const onUp = () => { setIsDragging(false); isDraggingRef.current = false; };
-    window.addEventListener('mousemove', onMove);
-    window.addEventListener('mouseup', onUp);
-    return () => { window.removeEventListener('mousemove', onMove); window.removeEventListener('mouseup', onUp); };
-  }, [isDragging, getAngle, angleToSec, onDragAdjust]);
+  // Track pointer move via capture
+  const handlePointerMove = useCallback((e: React.PointerEvent) => {
+    if (!draggingRef.current) return;
+    e.preventDefault();
+    onDragAdjust(angleToSec(screenToAngle(e.clientX, e.clientY)));
+  }, [screenToAngle, angleToSec, onDragAdjust]);
+
+  const handlePointerUp = useCallback((e: React.PointerEvent) => {
+    e.currentTarget.releasePointerCapture(e.pointerId);
+    setDragging(false);
+    draggingRef.current = false;
+  }, []);
 
   return (
     <div className="timer-ring-container">
       <svg ref={svgRef} height={R * 2} width={R * 2} className="timer-ring-svg">
+        {/* Background */}
         <circle stroke="var(--ring-bg)" fill="transparent" strokeWidth={STROKE} r={NR} cx={R} cy={R} />
+        {/* Progress */}
         <circle stroke={color} fill="transparent" strokeWidth={STROKE} strokeLinecap="round"
           strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={offset}
           r={NR} cx={R} cy={R} className="timer-ring-progress"
           style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
-        <circle cx={hx} cy={hy} r={isDragging ? 10 : 8}
+        {/* Invisible large hit area */}
+        <circle cx={hx} cy={hy} r={16} fill="transparent"
+          style={{ cursor: isRunning ? 'default' : 'grab', touchAction: 'none' }}
+          onPointerDown={handlePointerDown}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerCancel={handlePointerUp}
+        />
+        {/* Visible handle */}
+        <circle cx={hx} cy={hy} r={dragging ? 10 : 7}
           fill={color} stroke="white" strokeWidth={3}
           className="timer-ring-handle"
-          style={{ cursor: isRunning ? 'default' : 'grab', transition: isDragging ? 'none' : 'r 0.15s' }}
-          onMouseDown={!isRunning ? onMouseDown : undefined} />
+          style={{ pointerEvents: 'none', transition: dragging ? 'none' : 'r 0.15s' }}
+        />
       </svg>
       <div className="timer-ring-text">
         <div className="timer-time">{mm}:{ss}</div>
