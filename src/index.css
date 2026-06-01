@@ -52,15 +52,19 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 
 /* Header */
+.header-wrapper {
+  position: sticky; top: 0; z-index: 10;
+  background: var(--bg);
+}
 .header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
-  position: sticky;
-  top: 0;
-  background: var(--bg);
-  z-index: 10;
+  padding: 16px 20px 0;
+}
+.header-quote {
+  text-align: center; font-size: 13px; color: var(--text-muted);
+  padding: 4px 20px 12px; font-style: italic;
 }
 .header-left { display: flex; align-items: center; gap: 8px; }
 .header-icon { color: var(--accent); }
@@ -191,10 +195,6 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 .task-focus-label { font-size: 14px; font-weight: 500; color: #6c5ce7; }
 
-.today-summary {
-  font-size: 14px; color: var(--text-secondary);
-}
-.today-summary strong { color: var(--accent); }
 
 /* Todo list */
 .todo-list-container {

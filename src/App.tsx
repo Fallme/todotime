@@ -110,11 +110,6 @@ export default function App() {
                 onStart={timer.start} onPause={timer.pause}
                 onReset={timer.reset} onSkip={timer.skip}
               />
-
-              <div className="today-summary">
-                今日 <strong>{timer.completedPomodoros}</strong> 番茄
-                {stats.todayFocusMinutes > 0 && <> · {stats.todayFocusMinutes}min</>}
-              </div>
             </div>
 
             <TodoList
