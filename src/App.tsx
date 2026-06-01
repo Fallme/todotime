@@ -107,7 +107,7 @@ export default function App() {
 
               <TimerRing
                 timeLeft={timer.timeLeft} totalTime={timer.totalTime}
-                mode={timer.mode}
+                mode={timer.mode} isRunning={timer.isRunning}
                 currentTaskName={currentTask?.title ?? null}
                 currentCategory={currentTask?.category ?? null}
               />

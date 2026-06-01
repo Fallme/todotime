@@ -63,9 +63,8 @@ export function useTimer(): UseTimerReturn {
   const setTaskInfo = useCallback((id: string | null, title: string, category: Category) => { currentTaskRef.current = { id, title, category }; }, []);
 
   // Start break then auto-continue
-  const startBreakAndContinue = useCallback(() => {
-    const nextDot = cycleCountRef.current;
-    const isLongBreak = nextDot >= 4;
+  const startBreakAndContinue = useCallback((dotCount: number) => {
+    const isLongBreak = dotCount >= 4;
     if (isLongBreak) {
       setMode('longBreak'); setTimeLeft(15 * 60); setTotalTimeState(15 * 60);
     } else {
@@ -112,7 +111,7 @@ export function useTimer(): UseTimerReturn {
       setGroupPhase('groupDone');
       setIsRunning(false);
     } else {
-      startBreakAndContinue();
+      startBreakAndContinue(nextDot);
     }
   }, [clearTimer, startBreakAndContinue]);
 
@@ -208,11 +207,17 @@ export function useTimer(): UseTimerReturn {
     startTimeRef.current = '';
   }, [clearTimer]);
   // Skip = complete immediately (counts as a tomato!)
+  // Skip = complete immediately (counts as a tomato!)
   const skip = useCallback(() => {
-    if (mode === 'work') { completeOne(); }
-    else {
-      clearTimer(); setIsRunning(false);
-      setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    if (mode === 'work') {
+      completeOne();
+    } else {
+      // Skip break → back to work
+      clearTimer();
+      setIsRunning(false);
+      setMode('work');
+      setTimeLeft(25 * 60);
+      setTotalTimeState(25 * 60);
       startTimeRef.current = '';
     }
   }, [mode, clearTimer, completeOne]);
