@@ -137,15 +137,15 @@ body { background: var(--bg); margin: 0; }
 .period-btn.active { background: var(--accent); color: white; }
 
 .stats-charts-row {
-  display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 12px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
 .stats-chart-left, .stats-chart-right {
   background: var(--bg-card); border-radius: 14px; padding: 14px;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow); min-width: 0;
 }
 .chart-sub-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 8px; }
 .chart-wrapper-sm { height: 160px; }
-.chart-wrapper-pie { height: 130px; width: 100%; }
+.chart-wrapper-pie { width: 120px; height: 120px; margin: 0 auto 8px; }
 .chart-empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
 .pie-legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }

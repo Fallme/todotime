@@ -5,6 +5,7 @@ import { formatDate } from '../utils/dateUtils';
 
 interface UseGithubSyncReturn {
   dayDataMap: Map<string, DayData>;
+  setDayDataMap: React.Dispatch<React.SetStateAction<Map<string, DayData>>>;
   syncing: boolean;
   syncError: string | null;
   syncDayData: (date: string, pomodoros: PomodoroRecord[], tasks: Todo[]) => Promise<void>;
@@ -88,5 +89,5 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
     }
   }, [token, repo, loadWeekData]);
 
-  return { dayDataMap, syncing, syncError, syncDayData, loadWeekData };
+  return { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, loadWeekData };
 }

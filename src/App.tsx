@@ -34,7 +34,7 @@ export default function App() {
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
   useEffect(() => { localStorage.setItem('todotime_settings', JSON.stringify(settings)); }, [settings]);
 
-  const { dayDataMap, syncing, syncError, syncDayData } = useGithubSync(settings.githubRepo, settings.githubToken);
+  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData } = useGithubSync(settings.githubRepo, settings.githubToken);
   const todosHook = useTodos();
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
@@ -123,7 +123,14 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} onAddTestData={(records) => { timer.addTestPomodoros(records); }} />
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros}
+              onAddTestData={(testMap) => {
+                setDayDataMap(prev => {
+                  const merged = new Map(prev);
+                  testMap.forEach((v, k) => merged.set(k, v));
+                  return merged;
+                });
+              }} />
           </div>
         )}
         {tab === 'settings' && (

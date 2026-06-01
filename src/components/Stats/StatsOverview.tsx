@@ -11,10 +11,10 @@ type Period = 'day' | 'week' | 'month';
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
   todayPomodoros: PomodoroRecord[];
-  onAddTestData?: (records: PomodoroRecord[]) => void;
+  onAddTestData?: (dayDataMap: Map<string, DayData>) => void;
 }
 
-function genTestData(): PomodoroRecord[] {
+function genTestData(): Map<string, DayData> {
   const cats: Category[] = ['数学', 'AI', '英语', '物理', '嵌入式', '游戏', '音乐', '运动'];
   const tasks: Record<string, string[]> = {
     '数学': ['刷高数真题', '线性代数'],
@@ -26,24 +26,21 @@ function genTestData(): PomodoroRecord[] {
     '音乐': ['练琴', '乐理'],
     '运动': ['跑步', '健身'],
   };
-  const records: PomodoroRecord[] = [];
+  const map = new Map<string, DayData>();
+  const now = new Date();
   for (let i = 6; i >= 0; i--) {
+    const d = new Date(now); d.setDate(d.getDate() - i);
+    const date = d.toISOString().slice(0, 10);
     const count = Math.floor(Math.random() * 5) + 1;
+    const pomodoros: PomodoroRecord[] = [];
     for (let j = 0; j < count; j++) {
       const cat = cats[Math.floor(Math.random() * cats.length)];
       const task = tasks[cat][Math.floor(Math.random() * tasks[cat].length)];
-      records.push({
-        start: `${9 + j}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-        end: `${9 + j}:${String(Math.floor(Math.random() * 60)).padStart(2, '0')}`,
-        duration: 25,
-        taskId: null,
-        taskTitle: task,
-        category: cat,
-        completed: true,
-      });
+      pomodoros.push({ start: '', end: '', duration: 25, taskId: null, taskTitle: task, category: cat, completed: true });
     }
+    map.set(date, { date, pomodoros, tasks: [], totalFocusMinutes: pomodoros.length * 25, totalPomodoros: pomodoros.length, totalTasksCompleted: 0, streak: 0 });
   }
-  return records;
+  return map;
 }
 
 export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: StatsOverviewProps) {
