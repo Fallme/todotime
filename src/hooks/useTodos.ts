@@ -14,6 +14,7 @@ interface UseTodosReturn {
   toggleSubtask: (todoId: string, subId: string) => void;
   abandonSubtask: (todoId: string, subId: string) => void;
   deleteSubtask: (todoId: string, subId: string) => void;
+  changeCategory: (id: string, category: Category) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
 }
@@ -101,9 +102,13 @@ export function useTodos(): UseTodosReturn {
 
   const selectTodo = useCallback((id: string | null) => setSelectedTodoId(id), []);
 
+  const changeCategory = useCallback((id: string, category: Category) => {
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, category } : t));
+  }, []);
+
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask,
+    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory,
     selectedTodoId, selectTodo,
   };
 }

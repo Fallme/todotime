@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
-import type { Todo } from '../../types';
-import { CATEGORY_COLORS } from '../../types';
+import type { Todo, Category } from '../../types';
+import { CATEGORIES, CATEGORY_COLORS } from '../../types';
 
 interface TodoItemProps {
   todo: Todo;
@@ -16,11 +16,13 @@ interface TodoItemProps {
   onToggleSubtask: (subId: string) => void;
   onAbandonSubtask: (subId: string) => void;
   onDeleteSubtask: (subId: string) => void;
+  onChangeCategory: (category: Category) => void;
 }
 
-export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
+  const [showCatPicker, setShowCatPicker] = useState(false);
   const isActive = !todo.done && !todo.abandoned;
   const doneCount = todo.subtasks.filter(s => s.done).length;
 
@@ -32,19 +34,20 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
     setSubTitle('');
   };
 
+  const handleCatChange = (cat: Category) => {
+    onChangeCategory(cat);
+    setShowCatPicker(false);
+  };
+
   return (
     <div className={`todo-item-wrapper ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
       <div className="todo-item-main">
-        {/* Col 1: Status - NO nested buttons */}
+        {/* Col 1: Status */}
         <div className="todo-col todo-col-status">
           {todo.done ? (
-            <button className="status-btn done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成">
-              <Check size={16} />
-            </button>
+            <button className="status-btn done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={16} /></button>
           ) : todo.abandoned ? (
-            <button className="status-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复">
-              <RotateCcw size={14} />
-            </button>
+            <button className="status-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={14} /></button>
           ) : (
             <>
               <button className="status-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
@@ -53,11 +56,25 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
           )}
         </div>
 
-        {/* Col 2: Title + Badge */}
+        {/* Col 2: Title + Category (clickable) */}
         <div className="todo-col todo-content" onClick={onSelect}>
           {todo.abandoned && <span className="abandoned-label">已放弃</span>}
           <span className="todo-title">{todo.title}</span>
-          <span className="category-badge" style={{ background: CATEGORY_COLORS[todo.category] }}>{todo.category}</span>
+          <span className="category-badge clickable" style={{ background: CATEGORY_COLORS[todo.category] }}
+            onClick={e => { e.stopPropagation(); if (isActive) setShowCatPicker(!showCatPicker); }}>
+            {todo.category}
+          </span>
+          {showCatPicker && isActive && (
+            <div className="cat-picker-popup" onClick={e => e.stopPropagation()}>
+              {CATEGORIES.map(cat => (
+                <button key={cat} className={`cat-pick-btn ${cat === todo.category ? 'active' : ''}`}
+                  style={cat === todo.category ? { background: CATEGORY_COLORS[cat], color: 'white' } : { borderColor: CATEGORY_COLORS[cat] }}
+                  onClick={() => handleCatChange(cat)}>
+                  {cat}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Col 3: Count */}
@@ -84,7 +101,7 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
         </form>
       )}
 
-      {/* Inline subtask list */}
+      {/* Subtask list */}
       {todo.subtasks.length > 0 && (
         <div className="subtask-list-inline">
           {todo.subtasks.map(sub => (

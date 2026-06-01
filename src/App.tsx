@@ -126,6 +126,7 @@ export default function App() {
               onToggleSubtask={todosHook.toggleSubtask}
               onAbandonSubtask={todosHook.abandonSubtask}
               onDeleteSubtask={todosHook.deleteSubtask}
+              onChangeCategory={todosHook.changeCategory}
             />
           </div>
         )}

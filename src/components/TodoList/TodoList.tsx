@@ -22,6 +22,7 @@ interface TodoListProps {
   onToggleSubtask: (todoId: string, subId: string) => void;
   onAbandonSubtask: (todoId: string, subId: string) => void;
   onDeleteSubtask: (todoId: string, subId: string) => void;
+  onChangeCategory: (todoId: string, category: Category) => void;
 }
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
@@ -31,7 +32,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -108,6 +109,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggl
               onToggleSubtask={(subId) => onToggleSubtask(todo.id, subId)}
               onAbandonSubtask={(subId) => onAbandonSubtask(todo.id, subId)}
               onDeleteSubtask={(subId) => onDeleteSubtask(todo.id, subId)}
+              onChangeCategory={(cat) => onChangeCategory(todo.id, cat)}
             />
           ))
         )}
