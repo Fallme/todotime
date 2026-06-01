@@ -42,6 +42,8 @@ export function useTimer(): UseTimerReturn {
   cycleRef.current = currentCycle;
   const totalTimeRef = useRef(totalTime);
   totalTimeRef.current = totalTime;
+  const timeLeftRef = useRef(timeLeft);
+  timeLeftRef.current = timeLeft;
   const modeRef = useRef(mode);
   modeRef.current = mode;
   const currentTaskRef = useRef<{ id: string | null; title: string; category: Category } | null>(null);
@@ -61,12 +63,13 @@ export function useTimer(): UseTimerReturn {
     setIsRunning(true);
   }, []);
 
-  const completeWork = useCallback(() => {
+  const completeWork = useCallback((interrupted = false) => {
     clearTimer();
     setIsRunning(false);
-    const duration = Math.round(totalTimeRef.current / 60);
+    // Calculate actual elapsed time, not total
+    const elapsed = interrupted ? Math.max(1, Math.round((totalTimeRef.current - timeLeftRef.current) / 60)) : Math.round(totalTimeRef.current / 60);
     const task = currentTaskRef.current;
-    setCompletedPomodoros(p => p + 1);
+    if (!interrupted) setCompletedPomodoros(p => p + 1);
     setCurrentCycle(c => c + 1);
     playWorkComplete();
     startTimeRef.current = '';
@@ -75,13 +78,14 @@ export function useTimer(): UseTimerReturn {
       // Task selected → auto-record
       const record: PomodoroRecord = {
         start: startTimeRef.current, end: formatTime(new Date()),
-        duration, taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
+        duration: elapsed,
+        taskId: task.id, taskTitle: task.title, category: task.category, completed: !interrupted,
       };
       onCompleteRef.current?.(record);
       startBreak();
     } else {
       // No task → queue for batch assignment
-      setPendingAssignments(prev => [...prev, { start: startTimeRef.current, duration }]);
+      setPendingAssignments(prev => [...prev, { start: startTimeRef.current, duration: elapsed }]);
     }
   }, [clearTimer, startBreak]);
 
@@ -142,7 +146,7 @@ export function useTimer(): UseTimerReturn {
     startTimeRef.current = '';
   }, [clearTimer]);
   const skip = useCallback(() => {
-    if (mode === 'work') { completeWork(); }
+    if (mode === 'work') { completeWork(true); }
     else { clearTimer(); setIsRunning(false); setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60); startTimeRef.current = ''; }
   }, [mode, clearTimer, completeWork]);
 
