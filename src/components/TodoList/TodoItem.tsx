@@ -50,8 +50,8 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
             <button className="status-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={14} /></button>
           ) : (
             <>
-              <button className="status-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
               <button className="status-btn check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
+              <button className="status-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
             </>
           )}
         </div>
