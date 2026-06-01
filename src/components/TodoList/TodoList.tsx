@@ -10,6 +10,7 @@ type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
 interface TodoListProps {
   todos: Todo[];
   selectedTodoId: string | null;
+  todayPomodoros: number;
   onAdd: (title: string, priority: Priority, category: Category) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
@@ -26,7 +27,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -47,7 +48,6 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onA
     return order(a) - order(b);
   });
 
-  const activeCount = todos.filter(t => !t.done && !t.abandoned).length;
   const usedCategories = [...new Set(todos.filter(t => !t.done && !t.abandoned).map(t => t.category))];
 
   return (
@@ -55,7 +55,10 @@ export function TodoList({ todos, selectedTodoId, onAdd, onToggle, onDelete, onA
       <div className="todo-list-header">
         <ListTodo size={20} />
         <span>任务清单</span>
-        <span className="todo-count">{activeCount} 项</span>
+        <div className="todo-header-stats">
+          <span className="todo-stat-done">{todos.filter(t => t.done).length}/{todos.filter(t => !t.abandoned).length}</span>
+          <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
+        </div>
       </div>
 
       {/* Status tabs */}

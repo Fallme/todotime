@@ -206,7 +206,9 @@ body { background: var(--bg); min-height: 100dvh; }
   font-size: 16px; font-weight: 600; color: var(--text);
   margin-bottom: 12px;
 }
-.todo-count { margin-left: auto; font-size: 13px; color: var(--text-muted); font-weight: 400; }
+.todo-header-stats { margin-left: auto; display: flex; gap: 10px; font-size: 13px; font-weight: 400; }
+.todo-stat-done { color: var(--text-secondary); }
+.todo-stat-pom { color: var(--accent); }
 
 /* Add todo */
 .add-todo { margin-bottom: 12px; }
@@ -234,27 +236,38 @@ body { background: var(--bg); min-height: 100dvh; }
 .add-todo-label { font-size: 13px; color: var(--text-muted); }
 
 /* Todo items */
-.todo-list-items { display: flex; flex-direction: column; gap: 2px; }
+.todo-list-items { display: flex; flex-direction: column; gap: 2px; transition: all 0.3s; }
 .todo-empty {
   text-align: center; padding: 24px; color: var(--text-muted); font-size: 14px;
 }
 .todo-item {
   display: flex; align-items: center;
   padding: 8px 4px; border-radius: 10px;
-  transition: background 0.15s; min-height: 44px;
+  transition: background 0.2s, opacity 0.3s; min-height: 44px;
 }
 .todo-item:hover { background: var(--bg-hover); }
 .todo-item.selected { background: var(--accent-bg); }
+.todo-item.done { opacity: 0.55; }
 .todo-item.done .todo-title { text-decoration: line-through; color: var(--text-muted); }
-.todo-item.abandoned .todo-title { text-decoration: line-through; color: var(--text-muted); opacity: 0.6; }
+.todo-item.abandoned { opacity: 0.45; }
+.todo-item.abandoned .todo-title { text-decoration: line-through; color: var(--text-muted); }
 .todo-item.abandoned .category-badge { opacity: 0.5; }
 
 .todo-col { display: flex; align-items: center; }
-.todo-check {
+.todo-col-status {
   width: 32px; min-width: 32px; height: 32px; border: none; background: none;
   cursor: pointer; color: var(--text-muted); display: flex; align-items: center;
   justify-content: center; padding: 0;
 }
+.abandon-dot {
+  width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border);
+  background: none; color: var(--text-muted); font-size: 12px; font-weight: 700;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.abandon-dot:hover { border-color: #e17055; color: #e17055; background: rgba(225,112,85,0.08); }
+.restore-dot { color: #00b894; cursor: pointer; }
+.restore-dot:hover { opacity: 0.7; }
 .check-done { color: var(--green); }
 .todo-content {
   flex: 1; min-width: 0; cursor: pointer; gap: 6px;

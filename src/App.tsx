@@ -103,7 +103,6 @@ export default function App() {
                 timeLeft={timer.timeLeft} totalTime={timer.totalTime}
                 mode={timer.mode} isRunning={timer.isRunning}
                 currentTaskName={currentTask?.title ?? null}
-                onDragAdjust={(s) => timer.setTotalTime(s)}
               />
 
               <TimerControls
@@ -120,6 +119,7 @@ export default function App() {
 
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
+              todayPomodoros={timer.completedPomodoros}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo}
               onDelete={todosHook.deleteTodo}
