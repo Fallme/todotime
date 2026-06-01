@@ -362,6 +362,17 @@ body { background: var(--bg); min-height: 100dvh; }
   font-size: 9px; color: #e17055; background: rgba(225,112,85,0.1);
   padding: 1px 5px; border-radius: 3px;
 }
+/* Single assign */
+.modal-single-assign {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px; background: var(--bg); border-radius: 10px;
+  margin-bottom: 16px;
+}
+.modal-assign-label { font-size: 14px; color: var(--text-secondary); white-space: nowrap; }
+.modal-assign-select {
+  flex: 1; padding: 8px 10px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg-card); color: var(--text); font-size: 14px;
+}
 .modal-btn.accent { background: #6c5ce7; color: white; }
 .modal-btn.accent:hover { opacity: 0.9; }
 .subtask-check {

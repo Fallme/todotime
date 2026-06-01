@@ -12,27 +12,18 @@ interface TaskAssignModalProps {
 
 export function TaskAssignModal({ assignments, todos, onAssignAll, onStartNextGroup }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.done && !t.abandoned);
-  const [selections, setSelections] = useState<(string | null)[]>(() => assignments.map(() => null));
+  const [selectedTodoId, setSelectedTodoId] = useState<string>('');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
-  const setSelection = (index: number, todoId: string | null) => {
-    setSelections(prev => { const n = [...prev]; n[index] = todoId; return n; });
-  };
-
-  const setAllTo = (todoId: string | null) => {
-    setSelections(assignments.map(() => todoId));
-  };
-
   const handleConfirm = () => {
-    const results = selections.map((todoId) => {
-      const todo = todoId ? activeTodos.find(t => t.id === todoId) : null;
-      return {
-        taskId: todo?.id ?? null,
-        taskTitle: todo?.title ?? '未分类专注',
-        category: (todo?.category ?? '其他') as Category,
-      };
-    });
-    onAssignAll(results);
+    const todo = selectedTodoId ? activeTodos.find(t => t.id === selectedTodoId) : null;
+    const result = {
+      taskId: todo?.id ?? null,
+      taskTitle: todo?.title ?? '未分类专注',
+      category: (todo?.category ?? '其他') as Category,
+    };
+    // Assign all pomodoros to the same task
+    onAssignAll(assignments.map(() => result));
   };
 
   return (
@@ -41,39 +32,25 @@ export function TaskAssignModal({ assignments, todos, onAssignAll, onStartNextGr
         <h3 className="modal-title">🍅 一组完成！</h3>
         <p className="modal-desc">{assignments.length} 个番茄 · 共 {totalMinutes} 分钟</p>
 
-        {assignments.length > 1 && (
-          <div className="batch-assign-all">
-            <span className="batch-label">统一分配：</span>
-            {activeTodos.slice(0, 4).map(t => (
-              <button key={t.id} className="batch-chip"
-                style={{ borderColor: CATEGORY_COLORS[t.category] }}
-                onClick={() => setAllTo(t.id)}
-              >{t.title}</button>
+        <div className="modal-single-assign">
+          <label className="modal-assign-label">分配给：</label>
+          <select className="modal-assign-select" value={selectedTodoId} onChange={e => setSelectedTodoId(e.target.value)}>
+            <option value="">选择一个任务...</option>
+            {activeTodos.map(t => (
+              <option key={t.id} value={t.id}>{t.title} ({t.category})</option>
             ))}
-            <button className="batch-chip" onClick={() => setAllTo(null)}>未分类</button>
-          </div>
-        )}
-
-        <div className="modal-pom-list">
-          {assignments.map((pa, i) => (
-            <div key={i} className="modal-pom-item">
-              <span className="modal-pom-num">#{i + 1}</span>
-              <span className="modal-pom-time">{pa.duration}min</span>
-              <select className="modal-pom-select" value={selections[i] || ''} onChange={e => setSelection(i, e.target.value || null)}>
-                <option value="">选择任务...</option>
-                {activeTodos.map(t => (
-                  <option key={t.id} value={t.id}>{t.title} ({t.category})</option>
-                ))}
-              </select>
-            </div>
-          ))}
+          </select>
+          {selectedTodoId && (() => {
+            const todo = activeTodos.find(t => t.id === selectedTodoId);
+            return todo ? <span className="category-badge" style={{ background: CATEGORY_COLORS[todo.category] }}>{todo.category}</span> : null;
+          })()}
         </div>
 
         <div className="modal-actions">
-          <button className="modal-btn primary" onClick={handleConfirm}>分配并休息</button>
+          <button className="modal-btn primary" onClick={handleConfirm}>分配</button>
           <button className="modal-btn secondary" onClick={() => {
             onAssignAll(assignments.map(() => ({ taskId: null, taskTitle: '未分类专注', category: '其他' as Category })));
-          }}>全部跳过</button>
+          }}>跳过分配</button>
         </div>
         <div className="modal-actions" style={{ marginTop: '8px' }}>
           <button className="modal-btn accent" onClick={onStartNextGroup}>再来一轮</button>
