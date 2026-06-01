@@ -766,6 +766,7 @@ body { background: var(--bg); margin: 0; }
   background: var(--bg); color: var(--text); font-size: 13px;
 }
 .modal-actions { display: flex; gap: 8px; }
+.modal-actions-secondary { margin-top: 8px; border-top: 1px solid var(--border); padding-top: 10px; }
 .modal-btn {
   flex: 1; padding: 10px; border: none; border-radius: 10px;
   font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.15s;

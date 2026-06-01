@@ -28,6 +28,7 @@ interface UseTimerReturn {
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   startNextGroup: () => void;
   stop: () => void;
+  resetCycle: () => void;
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
@@ -78,12 +79,20 @@ export function useTimer(): UseTimerReturn {
     clearTimer();
     setIsRunning(false);
 
-    const elapsed = Math.max(1, Math.round((totalTimeRef.current - timeLeftRef.current) / 60));
+    const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
+    const elapsed = Math.round(elapsedSeconds / 60);
+    startTimeRef.current = '';
+
+    // Don't record if < 1 minute
+    if (elapsedSeconds < 60) {
+      setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+      return;
+    }
+
     const task = currentTaskRef.current;
     const nextDot = cycleCountRef.current + 1;
 
     playWorkComplete();
-    startTimeRef.current = '';
 
     if (task) {
       onCompleteRef.current?.({
@@ -102,9 +111,7 @@ export function useTimer(): UseTimerReturn {
       setCycleCount(0);
       setGroupPhase('groupDone');
       setIsRunning(false);
-      // Don't auto-continue → show assignment modal
     } else {
-      // Still in group → short break then auto-continue
       startBreakAndContinue();
     }
   }, [clearTimer, startBreakAndContinue]);
@@ -182,6 +189,13 @@ export function useTimer(): UseTimerReturn {
     startTimeRef.current = '';
   }, [clearTimer]);
 
+  // Reset cycle: clear cycle dots, keep timer
+  const resetCycle = useCallback(() => {
+    setCycleCount(0);
+    setGroupPhase('working');
+    setPendingAssignments([]);
+  }, []);
+
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
@@ -207,6 +221,6 @@ export function useTimer(): UseTimerReturn {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros,
     pendingAssignments, groupPhase,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, stop, setOnComplete,
+    assignAll, startNextGroup, stop, resetCycle, setOnComplete,
   };
 }

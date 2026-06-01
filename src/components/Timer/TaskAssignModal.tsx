@@ -9,58 +9,40 @@ interface TaskAssignModalProps {
   onAssignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   onStartNextGroup: () => void;
   onStop: () => void;
+  onResetCycle: () => void;
 }
 
-export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop }: TaskAssignModalProps) {
+export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop, onResetCycle }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.done && !t.abandoned);
   const [selectedTodoId, setSelectedTodoId] = useState('');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
-  const handleContinue = () => {
-    // Assign to current task or selected task
+  const doAssign = (todoId: string | null) => {
+    const todo = todoId ? activeTodos.find(t => t.id === todoId) : null;
+    const result = {
+      taskId: todo?.id ?? null,
+      taskTitle: todo?.title ?? '未分配',
+      category: (todo?.category ?? '其他') as Category,
+    };
+    onAssignAll(assignments.map(() => result));
+  };
+
+  const handleAssign = () => {
     if (currentTaskName) {
       const todo = activeTodos.find(t => t.title === currentTaskName);
-      onAssignAll(assignments.map(() => ({
-        taskId: todo?.id ?? null,
-        taskTitle: currentTaskName,
-        category: (todo?.category ?? '其他') as Category,
-      })));
-    } else if (selectedTodoId) {
-      const todo = activeTodos.find(t => t.id === selectedTodoId);
-      onAssignAll(assignments.map(() => ({
-        taskId: todo?.id ?? null,
-        taskTitle: todo?.title ?? '未分配',
-        category: (todo?.category ?? '其他') as Category,
-      })));
+      doAssign(todo?.id ?? null);
     } else {
-      onAssignAll(assignments.map(() => ({
-        taskId: null, taskTitle: '未分配', category: '其他' as Category,
-      })));
+      doAssign(selectedTodoId || null);
     }
+  };
+
+  const handleContinue = () => {
+    handleAssign();
     onStartNextGroup();
   };
 
-  const handleRest = () => {
-    // Assign to current task or selected task, then stop
-    if (currentTaskName) {
-      const todo = activeTodos.find(t => t.title === currentTaskName);
-      onAssignAll(assignments.map(() => ({
-        taskId: todo?.id ?? null,
-        taskTitle: currentTaskName,
-        category: (todo?.category ?? '其他') as Category,
-      })));
-    } else if (selectedTodoId) {
-      const todo = activeTodos.find(t => t.id === selectedTodoId);
-      onAssignAll(assignments.map(() => ({
-        taskId: todo?.id ?? null,
-        taskTitle: todo?.title ?? '未分配',
-        category: (todo?.category ?? '其他') as Category,
-      })));
-    } else {
-      onAssignAll(assignments.map(() => ({
-        taskId: null, taskTitle: '未分配', category: '其他' as Category,
-      })));
-    }
+  const handleEnd = () => {
+    handleAssign();
     onStop();
   };
 
@@ -88,13 +70,16 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
           </div>
         )}
 
+        {/* Primary actions */}
         <div className="modal-actions">
-          <button className="modal-btn primary" onClick={handleContinue}>
-            {currentTaskName ? '继续专注' : '分配并继续'}
-          </button>
-          <button className="modal-btn secondary" onClick={handleRest}>
-            {currentTaskName ? '休息' : '分配并休息'}
-          </button>
+          <button className="modal-btn primary" onClick={handleAssign}>分配</button>
+          <button className="modal-btn primary" onClick={handleContinue}>分配并继续</button>
+        </div>
+
+        {/* Secondary actions */}
+        <div className="modal-actions modal-actions-secondary">
+          <button className="modal-btn secondary" onClick={handleEnd}>结束本次番茄</button>
+          <button className="modal-btn secondary" onClick={onResetCycle}>重置轮次</button>
         </div>
       </div>
     </div>

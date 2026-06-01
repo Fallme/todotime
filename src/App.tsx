@@ -155,6 +155,7 @@ export default function App() {
           onAssignAll={handleAssignAll}
           onStartNextGroup={timer.startNextGroup}
           onStop={timer.stop}
+          onResetCycle={timer.resetCycle}
         />
       )}
     </div>
