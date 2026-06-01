@@ -351,17 +351,28 @@ body { background: var(--bg); min-height: 100dvh; }
 .subtask-row.done .subtask-text { text-decoration: line-through; color: var(--text-muted); }
 .subtask-row.abandoned { opacity: 0.5; }
 .subtask-row.abandoned .subtask-text { text-decoration: line-through; color: var(--text-muted); }
-.subtask-abandon {
-  width: 14px; height: 14px; border: none; background: none; cursor: pointer;
-  color: var(--text-muted); font-size: 10px; padding: 0;
-  opacity: 0; transition: opacity 0.15s;
+.subtask-status {
+  width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--border);
+  background: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; font-size: 9px; font-weight: 700;
+  color: var(--text-muted); flex-shrink: 0; transition: all 0.15s;
 }
-.subtask-row:hover .subtask-abandon { opacity: 1; }
-.subtask-abandon:hover { color: #e17055; }
+.subtask-status.done { border-color: var(--green); color: var(--green); }
+.subtask-status.check:hover { border-color: var(--green); color: var(--green); }
+.subtask-status.abandon:hover { border-color: #e17055; color: #e17055; }
+.subtask-status.restore { border-color: #00b894; color: #00b894; }
 .subtask-abandoned-tag {
   font-size: 9px; color: #e17055; background: rgba(225,112,85,0.1);
   padding: 1px 5px; border-radius: 3px;
 }
+.subtask-text { font-size: 12px; color: var(--text-secondary); flex: 1; }
+.subtask-del {
+  width: 16px; height: 16px; border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-size: 14px; line-height: 1;
+  opacity: 0; transition: opacity 0.15s;
+}
+.subtask-row:hover .subtask-del { opacity: 1; }
+.subtask-del:hover { color: #e74c3c; }
 /* Single assign */
 .modal-single-assign {
   display: flex; align-items: center; gap: 10px;
@@ -375,20 +386,7 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 .modal-btn.accent { background: #6c5ce7; color: white; }
 .modal-btn.accent:hover { opacity: 0.9; }
-.subtask-check {
-  width: 16px; height: 16px; border: none; background: none; cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 0;
-}
-.subtask-circle {
-  width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--border);
-}
-.subtask-text { font-size: 12px; color: var(--text-secondary); flex: 1; }
-.subtask-del {
-  width: 16px; height: 16px; border: none; background: none; cursor: pointer;
-  color: var(--text-muted); font-size: 14px; line-height: 1;
-  opacity: 0; transition: opacity 0.15s;
-}
-.subtask-row:hover .subtask-del { opacity: 1; }
+
 .subtask-del:hover { color: #e74c3c; }
 
 /* Status tabs */

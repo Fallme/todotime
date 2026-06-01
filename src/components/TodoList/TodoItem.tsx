@@ -106,14 +106,22 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
         <div className="subtask-list-inline">
           {todo.subtasks.map(sub => (
             <div key={sub.id} className={`subtask-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
-              <button className="subtask-check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>
-                {sub.done ? <Check size={11} className="check-done" /> : <span className="subtask-circle" />}
-              </button>
-              <span className="subtask-text">{sub.title}</span>
-              {!sub.done && !sub.abandoned && (
-                <button className="subtask-abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }} title="放弃">✕</button>
+              {sub.done ? (
+                <button className="subtask-status done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }} title="取消完成">
+                  <Check size={11} />
+                </button>
+              ) : sub.abandoned ? (
+                <button className="subtask-status restore" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }} title="恢复">
+                  <RotateCcw size={10} />
+                </button>
+              ) : (
+                <>
+                  <button className="subtask-status check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }} title="完成">✓</button>
+                  <button className="subtask-status abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }} title="放弃">✕</button>
+                </>
               )}
               {sub.abandoned && <span className="subtask-abandoned-tag">放弃</span>}
+              <span className="subtask-text">{sub.title}</span>
               <button className="subtask-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
           ))}
