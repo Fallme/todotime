@@ -575,6 +575,21 @@ body { background: var(--bg); margin: 0; }
   cursor: pointer; transition: all 0.15s;
 }
 .category-chip.active { font-weight: 600; }
+.category-chip.add { border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.category-add-inline { display: inline-flex; }
+.cat-add-input {
+  width: 80px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 11px; background: var(--bg); color: var(--text);
+}
+.category-chip-wrapper { display: inline-flex; align-items: center; gap: 0; }
+.cat-del-btn {
+  width: 16px; height: 16px; border-radius: 50%; border: none; background: none;
+  color: var(--text-muted); font-size: 10px; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; margin-left: -4px;
+  opacity: 0; transition: opacity 0.15s;
+}
+.category-chip-wrapper:hover .cat-del-btn { opacity: 1; }
+.cat-del-btn:hover { color: #e74c3c; }
 .category-chip:hover { opacity: 0.8; }
 
 /* Active task badge */

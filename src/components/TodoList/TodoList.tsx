@@ -11,6 +11,7 @@ interface TodoListProps {
   todos: Todo[];
   selectedTodoId: string | null;
   todayPomodoros: number;
+  categories: Category[];
   onAdd: (title: string, priority: Priority, category: Category) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
@@ -23,6 +24,8 @@ interface TodoListProps {
   onAbandonSubtask: (todoId: string, subId: string) => void;
   onDeleteSubtask: (todoId: string, subId: string) => void;
   onChangeCategory: (todoId: string, category: Category) => void;
+  onAddCategory: (name: string) => void;
+  onDeleteCategory: (name: string) => void;
 }
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
@@ -32,7 +35,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -89,7 +92,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggl
         </div>
       )}
 
-      <AddTodo onAdd={onAdd} />
+      <AddTodo onAdd={onAdd} categories={categories} onAddCategory={onAddCategory} onDeleteCategory={onDeleteCategory} />
       <div className="todo-list-items">
         {sorted.length === 0 ? (
           <div className="todo-empty">

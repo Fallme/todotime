@@ -80,6 +80,7 @@ export interface AppSettings extends TimerSettings {
   githubRepo: string;
   countdownTitle: string;
   countdownDate: string;
+  categories: Category[];
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -93,4 +94,5 @@ export const DEFAULT_SETTINGS: AppSettings = {
   githubRepo: 'Fallme/todotime',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',
+  categories: [...CATEGORIES],
 };

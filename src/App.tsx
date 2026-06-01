@@ -1,5 +1,5 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { AppSettings, PomodoroRecord, Category, Todo } from './types';
+import { useState, useEffect } from 'react';
+import type { AppSettings, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
 import { Header } from './components/Layout/Header';
@@ -28,7 +28,6 @@ function loadSettings(): AppSettings {
 export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [tab, setTab] = useState<TabId>('timer');
-  const [todayPomodoros, setTodayPomodoros] = useState<PomodoroRecord[]>([]);
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const today = formatDate(new Date());
 
@@ -40,20 +39,19 @@ export default function App() {
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
 
-  const handlePomodoroComplete = useCallback((record: PomodoroRecord) => {
-    setTodayPomodoros(prev => { const u = [...prev, record]; syncDayData(today, u, todos); return u; });
-    if (record.taskId) todosHook.updateTodoPomodoros(record.taskId);
-    setCurrentTaskId(null);
-  }, [today, todos, todosHook, syncDayData]);
-
   const timer = useTimer();
-  useEffect(() => { timer.setOnComplete(handlePomodoroComplete); }, [timer.setOnComplete, handlePomodoroComplete]);
 
-  useStats(dayDataMap, todayPomodoros, today);
+  // Sync today's pomodoros to git
+  useEffect(() => {
+    if (timer.todayPomodoros.length > 0) {
+      syncDayData(today, timer.todayPomodoros, todos);
+    }
+  }, [timer.todayPomodoros, today, todos, syncDayData]);
+
+  useStats(dayDataMap, timer.todayPomodoros, today);
 
   const handleSaveSettings = (s: AppSettings) => setSettings(s);
 
-  // Quick start from task list: select task + start timer
   const handleQuickStart = (todo: Todo) => {
     setCurrentTaskId(todo.id);
     timer.setTaskInfo(todo.id, todo.title, todo.category);
@@ -61,13 +59,12 @@ export default function App() {
     timer.start();
   };
 
-  // Manual assign from timer (when no task pre-selected)
   const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
     timer.assignAll(results);
   };
 
   const handleExport = () => {
-    const data = { settings, todos, todayPomodoros, exportDate: new Date().toISOString() };
+    const data = { settings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `todotime-backup-${today}.json`; a.click();
@@ -82,9 +79,15 @@ export default function App() {
 
   const handleClear = () => { localStorage.clear(); window.location.reload(); };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
+  const handleCountdownUpdate = (title: string, date: string) => setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
 
-  const handleCountdownUpdate = (title: string, date: string) => {
-    setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
+  const handleAddCategory = (name: string) => {
+    if (!settings.categories.includes(name as Category)) {
+      setSettings(s => ({ ...s, categories: [...s.categories, name as Category] }));
+    }
+  };
+  const handleDeleteCategory = (name: string) => {
+    setSettings(s => ({ ...s, categories: s.categories.filter(c => c !== name) }));
   };
 
   return (
@@ -93,53 +96,34 @@ export default function App() {
       <main className="main-content">
         {tab === 'timer' && (
           <div className="timer-page">
-            <CountdownTimer
-              title={settings.countdownTitle}
-              targetDate={settings.countdownDate}
-              onUpdate={handleCountdownUpdate}
-            />
+            <CountdownTimer title={settings.countdownTitle} targetDate={settings.countdownDate} onUpdate={handleCountdownUpdate} />
             <div className="timer-section">
               <div className="cycle-indicator">
                 {Array.from({ length: 4 }, (_, i) => (
                   <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                 ))}
               </div>
-
-              <TimerRing
-                timeLeft={timer.timeLeft} totalTime={timer.totalTime}
-                mode={timer.mode} isRunning={timer.isRunning}
-                currentTaskName={currentTask?.title ?? null}
-                currentCategory={currentTask?.category ?? null}
-              />
-
-              <TimerControls
-                isRunning={timer.isRunning}
-                onStart={timer.start} onPause={timer.pause}
-                onReset={timer.reset} onSkip={timer.skip}
-              />
+              <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} />
+              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onReset={timer.reset} onSkip={timer.skip} />
             </div>
-
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
               todayPomodoros={timer.totalPomodoros}
+              categories={settings.categories}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
-              onToggle={todosHook.toggleTodo}
-              onDelete={todosHook.deleteTodo}
-              onAbandon={todosHook.abandonTodo}
-              onRestore={todosHook.restoreTodo}
-              onSelect={todosHook.selectTodo}
-              onQuickStart={handleQuickStart}
-              onAddSubtask={todosHook.addSubtask}
-              onToggleSubtask={todosHook.toggleSubtask}
-              onAbandonSubtask={todosHook.abandonSubtask}
-              onDeleteSubtask={todosHook.deleteSubtask}
+              onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
+              onAbandon={todosHook.abandonTodo} onRestore={todosHook.restoreTodo}
+              onSelect={todosHook.selectTodo} onQuickStart={handleQuickStart}
+              onAddSubtask={todosHook.addSubtask} onToggleSubtask={todosHook.toggleSubtask}
+              onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
+              onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
             />
           </div>
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={todayPomodoros} />
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} />
           </div>
         )}
         {tab === 'settings' && (
@@ -149,16 +133,12 @@ export default function App() {
       <TabNav active={tab} onChange={setTab} />
       {timer.groupPhase === 'groupDone' && timer.pendingAssignments.length > 0 && (
         <TaskAssignModal
-          assignments={timer.pendingAssignments}
-          todos={todos}
+          assignments={timer.pendingAssignments} todos={todos}
           currentTaskName={currentTask?.title ?? null}
-          onAssignAll={handleAssignAll}
-          onStartNextGroup={timer.startNextGroup}
-          onStop={timer.stop}
-          onResetCycle={timer.resetCycle}
+          onAssignAll={handleAssignAll} onStartNextGroup={timer.startNextGroup}
+          onStop={timer.stop} onResetCycle={timer.resetCycle}
         />
       )}
     </div>
   );
 }
-// redeploy
