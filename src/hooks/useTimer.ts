@@ -223,11 +223,8 @@ export function useTimer(): UseTimerReturn {
   const start = useCallback(() => { setGroupPhase('working'); setIsRunning(true); }, []);
   const pause = useCallback(() => { setIsRunning(false); clearTimer(); }, [clearTimer]);
   const reset = useCallback(() => {
-    setIsRunning(false); clearTimer();
-    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
-    setCycleCount(0); setGroupPhase('working');
-    startTimeRef.current = '';
-  }, [clearTimer]);
+    endNow();
+  }, [endNow]);
   const skip = useCallback(() => {
     if (mode === 'work') {
       clearTimer();
