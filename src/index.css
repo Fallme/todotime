@@ -273,19 +273,23 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 .todo-col { display: flex; align-items: center; }
 .todo-col-status {
-  width: 32px; min-width: 32px; height: 32px; border: none; background: none;
-  cursor: pointer; color: var(--text-muted); display: flex; align-items: center;
-  justify-content: center; padding: 0;
+  width: 32px; min-width: 32px; height: 32px; display: flex; align-items: center;
+  justify-content: center; gap: 2px;
 }
-.abandon-dot {
+.status-btn {
   width: 22px; height: 22px; border-radius: 50%; border: 1.5px solid var(--border);
-  background: none; color: var(--text-muted); font-size: 12px; font-weight: 700;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
+  background: none; cursor: pointer; display: flex; align-items: center;
+  justify-content: center; padding: 0; transition: all 0.2s; font-size: 12px; font-weight: 700;
+  color: var(--text-muted);
 }
-.abandon-dot:hover { border-color: #e17055; color: #e17055; background: rgba(225,112,85,0.08); }
-.restore-dot { color: #00b894; cursor: pointer; }
-.restore-dot:hover { opacity: 0.7; }
+.status-btn.done { border-color: var(--green); color: var(--green); background: rgba(0,184,148,0.08); }
+.status-btn.done:hover { background: rgba(0,184,148,0.15); }
+.status-btn.check { border-color: var(--border); }
+.status-btn.check:hover { border-color: var(--green); color: var(--green); background: rgba(0,184,148,0.08); }
+.status-btn.abandon { border-color: var(--border); }
+.status-btn.abandon:hover { border-color: #e17055; color: #e17055; background: rgba(225,112,85,0.08); }
+.status-btn.restore { border-color: #00b894; color: #00b894; }
+.status-btn.restore:hover { background: rgba(0,184,148,0.1); }
 .check-done { color: var(--green); }
 .todo-content {
   flex: 1; min-width: 0; gap: 6px;

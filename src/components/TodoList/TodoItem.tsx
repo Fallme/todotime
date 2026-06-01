@@ -33,18 +33,27 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
 
   return (
     <div className={`todo-item-wrapper ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
-      {/* Single main row */}
-      <div className="todo-item-main" onClick={onSelect}>
-        {/* Col 1: Status */}
-        <button className="todo-col todo-col-status" onClick={e => { e.stopPropagation(); onToggle(); }}>
-          {todo.done ? <Check size={16} className="check-done" />
-            : todo.abandoned ? <RotateCcw size={14} className="restore-dot" onClick={ev => { ev.stopPropagation(); onRestore(); }} />
-            : <button className="abandon-dot" onClick={ev => { ev.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
-          }
-        </button>
+      <div className="todo-item-main">
+        {/* Col 1: Status - NO nested buttons */}
+        <div className="todo-col todo-col-status">
+          {todo.done ? (
+            <button className="status-btn done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成">
+              <Check size={16} />
+            </button>
+          ) : todo.abandoned ? (
+            <button className="status-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复">
+              <RotateCcw size={14} />
+            </button>
+          ) : (
+            <>
+              <button className="status-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
+              <button className="status-btn check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
+            </>
+          )}
+        </div>
 
         {/* Col 2: Title + Badge */}
-        <div className="todo-col todo-content">
+        <div className="todo-col todo-content" onClick={onSelect}>
           {todo.abandoned && <span className="abandoned-label">已放弃</span>}
           <span className="todo-title">{todo.title}</span>
           <span className="category-badge" style={{ background: CATEGORY_COLORS[todo.category] }}>{todo.category}</span>
@@ -56,7 +65,7 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
           {todo.subtasks.length > 0 && <span className="sub-count">{doneCount}/{todo.subtasks.length}</span>}
         </div>
 
-        {/* Col 4: All actions in one row */}
+        {/* Col 4: Actions */}
         <div className="todo-col todo-actions">
           {isActive && <button className="todo-action-btn add-sub" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="添加子任务"><Plus size={14} /></button>}
           {isActive && <button className="todo-action-btn start" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={14} /></button>}
@@ -64,7 +73,7 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
         </div>
       </div>
 
-      {/* Inline subtask input (shows below when + is clicked) */}
+      {/* Inline subtask input */}
       {showSubInput && isActive && (
         <form className="subtask-input-inline" onSubmit={handleAddSub}>
           <input className="subtask-input" placeholder="子任务名称" value={subTitle}
