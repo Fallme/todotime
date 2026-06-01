@@ -81,6 +81,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
     return { daily, totalPomodoros, totalMinutes, totalTasks, totalTasksCompleted, categoryMinutes };
   }, [dayDataMap, todayPomodoros, period, today]);
 
+  // Aggregate stats for the period
+  const aggregates = useMemo(() => {
+    const activeDays = data.daily.filter(d => d.pomodoros > 0).length;
+    const avgDaily = data.daily.length > 0 ? (data.totalPomodoros / data.daily.length).toFixed(1) : '0';
+    const bestDay = data.daily.reduce((best, d) => d.minutes > best.minutes ? d : best, data.daily[0]);
+    const avgMinutes = data.daily.length > 0 ? Math.round(data.totalMinutes / data.daily.length) : 0;
+    const topCat = Object.entries(data.categoryMinutes).sort((a, b) => b[1] - a[1])[0];
+    return { activeDays, avgDaily, bestDay, avgMinutes, topCat };
+  }, [data]);
+
   // Selected day's category data for pie
   const selectedData = useMemo(() => {
     if (!selectedDate) return data.categoryMinutes;
@@ -179,7 +189,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
 
   return (
     <div className="stats-overview">
-      {/* Top summary */}
+      {/* Summary numbers */}
       <div className="stats-top-row">
         <div className="stats-top-item accent">
           <span className="stats-top-val">{data.totalPomodoros}</span>
@@ -199,6 +209,36 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => { setPeriod('month'); setSelectedDate(null); }}>月</button>
         </div>
       </div>
+
+      {/* Period aggregate card */}
+      {period !== 'day' && (
+        <div className="stats-aggregate-card">
+          <div className="agg-item">
+            <span className="agg-val">{aggregates.activeDays}/{data.daily.length}</span>
+            <span className="agg-label">活跃天数</span>
+          </div>
+          <div className="agg-item">
+            <span className="agg-val">🍅 {aggregates.avgDaily}/天</span>
+            <span className="agg-label">日均番茄</span>
+          </div>
+          <div className="agg-item">
+            <span className="agg-val">{aggregates.avgMinutes}m/天</span>
+            <span className="agg-label">日均时长</span>
+          </div>
+          {aggregates.topCat && (
+            <div className="agg-item">
+              <span className="agg-val" style={{ color: (CATEGORY_COLORS as Record<string, string>)[aggregates.topCat[0]] }}>{aggregates.topCat[0]}</span>
+              <span className="agg-label">最常学习</span>
+            </div>
+          )}
+          {aggregates.bestDay && aggregates.bestDay.minutes > 0 && (
+            <div className="agg-item">
+              <span className="agg-val">{aggregates.bestDay.date.slice(5)}</span>
+              <span className="agg-label">最佳日期({aggregates.bestDay.minutes}m)</span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bar chart */}
       <div className="stats-card-full">
