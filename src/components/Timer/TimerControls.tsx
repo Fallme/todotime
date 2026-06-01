@@ -1,18 +1,17 @@
-import { Play, Pause, RotateCcw, SkipForward, Square } from 'lucide-react';
+import { Play, Pause, SkipForward, RotateCcw } from 'lucide-react';
 
 interface TimerControlsProps {
   isRunning: boolean;
   onStart: () => void;
   onPause: () => void;
-  onReset: () => void;
+  onNewRound: () => void;
   onSkip: () => void;
-  onEndNow: () => void;
 }
 
-export function TimerControls({ isRunning, onStart, onPause, onReset, onSkip, onEndNow }: TimerControlsProps) {
+export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip }: TimerControlsProps) {
   return (
     <div className="timer-controls">
-      <button className="ctrl-btn secondary" onClick={onReset} title="新轮次">
+      <button className="ctrl-btn secondary" onClick={onNewRound} title="结束本轮，开始新轮次">
         <RotateCcw size={18} />
       </button>
       {isRunning ? (
@@ -28,10 +27,6 @@ export function TimerControls({ isRunning, onStart, onPause, onReset, onSkip, on
       )}
       <button className="ctrl-btn secondary" onClick={onSkip} title="跳过当前阶段">
         <SkipForward size={18} />
-      </button>
-      <button className="ctrl-btn secondary end-btn" onClick={onEndNow} title="结束并记录">
-        <Square size={14} />
-        <span>结束</span>
       </button>
     </div>
   );

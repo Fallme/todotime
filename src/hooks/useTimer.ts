@@ -183,7 +183,7 @@ export function useTimer(): UseTimerReturn {
     setCycleCount(0); startTimeRef.current = '';
   }, [clearTimer]);
 
-  // End now: record current progress and reset
+  // End current round and start new round
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -204,7 +204,7 @@ export function useTimer(): UseTimerReturn {
       playWorkComplete();
     }
 
-    // Reset everything
+    // Reset and start new round
     setIsRunning(false);
     setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
     setCycleCount(0); setGroupPhase('working');
