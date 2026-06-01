@@ -10,52 +10,47 @@ interface UseTodosReturn {
   restoreTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
   updateTodoPomodoros: (id: string) => void;
+  addSubtask: (todoId: string, title: string) => void;
+  toggleSubtask: (todoId: string, subId: string) => void;
+  deleteSubtask: (todoId: string, subId: string) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
 }
 
-export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
+export function useTodos(): UseTodosReturn {
   const [todos, setTodos] = useState<Todo[]>(() => {
-    if (initialTodos.length > 0) return initialTodos;
     try {
       const stored = localStorage.getItem('todotime_todos');
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.map((t: Record<string, unknown>) => ({
-          id: t.id,
-          title: t.title,
-          priority: t.priority || 'medium',
-          category: t.category || '其他',
-          estimatedPomodoros: t.estimatedPomodoros || 0,
-          completedPomodoros: t.completedPomodoros || 0,
-          done: t.done || false,
-          abandoned: t.abandoned || false,
-          createdAt: t.createdAt || '',
+          id: t.id as string,
+          title: t.title as string,
+          priority: (t.priority as Priority) || 'medium',
+          category: (t.category as Category) || '其他',
+          estimatedPomodoros: (t.estimatedPomodoros as number) || 0,
+          completedPomodoros: (t.completedPomodoros as number) || 0,
+          done: (t.done as boolean) || false,
+          abandoned: (t.abandoned as boolean) || false,
+          createdAt: (t.createdAt as string) || '',
+          subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
         }));
       }
       return [];
-    } catch {
-      return [];
-    }
+    } catch { return []; }
   });
 
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
 
-  useEffect(() => {
-    localStorage.setItem('todotime_todos', JSON.stringify(todos));
-  }, [todos]);
+  useEffect(() => { localStorage.setItem('todotime_todos', JSON.stringify(todos)); }, [todos]);
 
   const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
-    const newTodo: Todo = {
-      id: generateId(),
-      title, priority, category,
-      estimatedPomodoros: 0,
-      completedPomodoros: 0,
-      done: false,
-      abandoned: false,
-      createdAt: formatTime(new Date()),
-    };
-    setTodos(prev => [newTodo, ...prev]);
+    setTodos(prev => [{
+      id: generateId(), title, priority, category,
+      estimatedPomodoros: 0, completedPomodoros: 0,
+      done: false, abandoned: false, createdAt: formatTime(new Date()),
+      subtasks: [],
+    }, ...prev]);
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
@@ -79,12 +74,29 @@ export function useTodos(initialTodos: Todo[] = []): UseTodosReturn {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t));
   }, []);
 
-  const selectTodo = useCallback((id: string | null) => {
-    setSelectedTodoId(id);
+  const addSubtask = useCallback((todoId: string, title: string) => {
+    setTodos(prev => prev.map(t => t.id === todoId ? {
+      ...t, subtasks: [...t.subtasks, { id: generateId(), title, done: false }],
+    } : t));
   }, []);
+
+  const toggleSubtask = useCallback((todoId: string, subId: string) => {
+    setTodos(prev => prev.map(t => t.id === todoId ? {
+      ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s),
+    } : t));
+  }, []);
+
+  const deleteSubtask = useCallback((todoId: string, subId: string) => {
+    setTodos(prev => prev.map(t => t.id === todoId ? {
+      ...t, subtasks: t.subtasks.filter(s => s.id !== subId),
+    } : t));
+  }, []);
+
+  const selectTodo = useCallback((id: string | null) => setSelectedTodoId(id), []);
 
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, selectedTodoId, selectTodo,
+    updateTodoPomodoros, addSubtask, toggleSubtask, deleteSubtask,
+    selectedTodoId, selectTodo,
   };
 }

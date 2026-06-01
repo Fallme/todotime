@@ -127,6 +127,9 @@ export default function App() {
               onRestore={todosHook.restoreTodo}
               onSelect={todosHook.selectTodo}
               onQuickStart={handleQuickStart}
+              onAddSubtask={todosHook.addSubtask}
+              onToggleSubtask={todosHook.toggleSubtask}
+              onDeleteSubtask={todosHook.deleteSubtask}
             />
           </div>
         )}

@@ -24,6 +24,12 @@ export const CATEGORY_COLORS: Record<Category, string> = {
   '其他':  '#636e72',
 };
 
+export interface SubTask {
+  id: string;
+  title: string;
+  done: boolean;
+}
+
 export interface Todo {
   id: string;
   title: string;
@@ -34,6 +40,7 @@ export interface Todo {
   done: boolean;
   abandoned: boolean;
   createdAt: string;
+  subtasks: SubTask[];
 }
 
 export interface PomodoroRecord {

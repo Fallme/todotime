@@ -18,6 +18,9 @@ interface TodoListProps {
   onRestore: (id: string) => void;
   onSelect: (id: string | null) => void;
   onQuickStart: (todo: Todo) => void;
+  onAddSubtask: (todoId: string, title: string) => void;
+  onToggleSubtask: (todoId: string, subId: string) => void;
+  onDeleteSubtask: (todoId: string, subId: string) => void;
 }
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
@@ -27,7 +30,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onDeleteSubtask }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -100,6 +103,9 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, onAdd, onToggl
               onRestore={() => onRestore(todo.id)}
               onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
               onQuickStart={() => onQuickStart(todo)}
+              onAddSubtask={(title) => onAddSubtask(todo.id, title)}
+              onToggleSubtask={(subId) => onToggleSubtask(todo.id, subId)}
+              onDeleteSubtask={(subId) => onDeleteSubtask(todo.id, subId)}
             />
           ))
         )}
