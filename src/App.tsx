@@ -104,7 +104,7 @@ export default function App() {
                 ))}
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} />
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onReset={timer.reset} onSkip={timer.skip} />
+              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onReset={timer.reset} onSkip={timer.skip} onEndNow={timer.endNow} />
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}

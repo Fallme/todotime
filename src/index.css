@@ -295,6 +295,8 @@ body { background: var(--bg); margin: 0; }
   border: 1px solid var(--border);
 }
 .ctrl-btn.secondary:hover { background: var(--bg-hover); color: var(--text); }
+.ctrl-btn.end-btn { gap: 4px; font-size: 13px; width: auto; padding: 0 12px; }
+.ctrl-btn.end-btn:hover { color: #e17055; border-color: #e17055; }
 .ctrl-btn-group { display: flex; gap: 8px; align-items: center; }
 .ctrl-btn.task-focus {
   padding: 10px 16px;

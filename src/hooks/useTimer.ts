@@ -29,6 +29,7 @@ interface UseTimerReturn {
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   startNextGroup: () => void;
   stop: () => void;
+  endNow: () => void;
   resetCycle: () => void;
   addTestPomodoros: (records: PomodoroRecord[]) => void;
 }
@@ -182,6 +183,34 @@ export function useTimer(): UseTimerReturn {
     setCycleCount(0); startTimeRef.current = '';
   }, [clearTimer]);
 
+  // End now: record current progress and reset
+  const endNow = useCallback(() => {
+    clearTimer();
+    const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
+    const elapsed = Math.round(elapsedSeconds / 60);
+    startTimeRef.current = '';
+
+    if (mode === 'work' && elapsedSeconds >= 60) {
+      const task = currentTaskRef.current;
+      if (task) {
+        setTodayPomodoros(prev => [...prev, {
+          start: '', end: formatTime(new Date()), duration: elapsed,
+          taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
+        }]);
+      } else {
+        setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
+      }
+      setTotalPomodoros(p => p + 1);
+      playWorkComplete();
+    }
+
+    // Reset everything
+    setIsRunning(false);
+    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setCycleCount(0); setGroupPhase('working');
+    setPendingAssignments([]);
+  }, [clearTimer, mode]);
+
   const resetCycle = useCallback(() => {
     setCycleCount(0); setGroupPhase('working'); setPendingAssignments([]);
   }, []);
@@ -247,6 +276,6 @@ export function useTimer(): UseTimerReturn {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, stop, resetCycle, addTestPomodoros,
+    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros,
   };
 }
