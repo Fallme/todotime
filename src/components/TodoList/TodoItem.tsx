@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, Trash2, Play, RotateCcw, Plus, X } from 'lucide-react';
+import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo } from '../../types';
 import { CATEGORY_COLORS } from '../../types';
 
@@ -33,6 +33,7 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
 
   return (
     <div className={`todo-item-wrapper ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
+      {/* Single main row */}
       <div className="todo-item-main" onClick={onSelect}>
         {/* Col 1: Status */}
         <button className="todo-col todo-col-status" onClick={e => { e.stopPropagation(); onToggle(); }}>
@@ -55,43 +56,36 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
           {todo.subtasks.length > 0 && <span className="sub-count">{doneCount}/{todo.subtasks.length}</span>}
         </div>
 
-        {/* Col 4: Actions */}
+        {/* Col 4: All actions in one row */}
         <div className="todo-col todo-actions">
+          {isActive && <button className="todo-action-btn add-sub" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="添加子任务"><Plus size={14} /></button>}
           {isActive && <button className="todo-action-btn start" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={14} /></button>}
           <button className="todo-action-btn delete" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={14} /></button>
         </div>
       </div>
 
-      {/* Subtasks */}
-      {todo.subtasks.length > 0 && (
-        <div className="subtask-list">
-          {todo.subtasks.map(sub => (
-            <div key={sub.id} className={`subtask-item ${sub.done ? 'done' : ''}`}>
-              <button className="subtask-check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>
-                {sub.done ? <Check size={12} className="check-done" /> : <span className="subtask-circle" />}
-              </button>
-              <span className="subtask-title">{sub.title}</span>
-              <button className="subtask-delete" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}><X size={12} /></button>
-            </div>
-          ))}
-        </div>
+      {/* Inline subtask input (shows below when + is clicked) */}
+      {showSubInput && isActive && (
+        <form className="subtask-input-inline" onSubmit={handleAddSub}>
+          <input className="subtask-input" placeholder="子任务名称" value={subTitle}
+            onChange={e => setSubTitle(e.target.value)} autoFocus
+            onBlur={() => { if (!subTitle.trim()) setShowSubInput(false); }} />
+          <button className="subtask-confirm" type="submit" disabled={!subTitle.trim()}>✓</button>
+        </form>
       )}
 
-      {/* Add subtask */}
-      {isActive && (
-        <div className="subtask-add-row">
-          {showSubInput ? (
-            <form className="subtask-add-form" onSubmit={handleAddSub}>
-              <input className="subtask-add-input" placeholder="子任务名称..." value={subTitle}
-                onChange={e => setSubTitle(e.target.value)} autoFocus
-                onBlur={() => { if (!subTitle.trim()) setShowSubInput(false); }} />
-              <button className="subtask-add-confirm" type="submit" disabled={!subTitle.trim()}><Check size={14} /></button>
-            </form>
-          ) : (
-            <button className="subtask-add-btn" onClick={e => { e.stopPropagation(); setShowSubInput(true); }}>
-              <Plus size={12} /> 添加子任务
-            </button>
-          )}
+      {/* Inline subtask list */}
+      {todo.subtasks.length > 0 && (
+        <div className="subtask-list-inline">
+          {todo.subtasks.map(sub => (
+            <div key={sub.id} className={`subtask-row ${sub.done ? 'done' : ''}`}>
+              <button className="subtask-check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>
+                {sub.done ? <Check size={11} className="check-done" /> : <span className="subtask-circle" />}
+              </button>
+              <span className="subtask-text">{sub.title}</span>
+              <button className="subtask-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
+            </div>
+          ))}
         </div>
       )}
     </div>
