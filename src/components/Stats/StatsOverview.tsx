@@ -118,7 +118,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
   };
   const barOptions = {
     responsive: true, maintainAspectRatio: false,
-    onClick: (event: React.MouseEvent<HTMLCanvasElement>, elements: Array<{ index: number }>) => {
+    onClick: (event: unknown, elements: Array<{ index: number }>) => {
       if (elements.length > 0) {
         const idx = elements[0].index;
         const clickedDate = data.daily[idx]?.date;
