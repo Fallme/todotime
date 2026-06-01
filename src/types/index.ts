@@ -78,6 +78,8 @@ export interface AppSettings extends TimerSettings {
   darkMode: boolean;
   githubToken: string;
   githubRepo: string;
+  countdownTitle: string;
+  countdownDate: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -89,4 +91,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   darkMode: false,
   githubToken: '',
   githubRepo: 'Fallme/todotime',
+  countdownTitle: '2026考研',
+  countdownDate: '2026-12-27',
 };

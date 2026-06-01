@@ -3,6 +3,7 @@ import type { AppSettings, PomodoroRecord, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
 import { Header } from './components/Layout/Header';
+import { CountdownTimer } from './components/Timer/CountdownTimer';
 import { TabNav } from './components/Layout/TabNav';
 import { TimerRing } from './components/Timer/TimerRing';
 import { TimerControls } from './components/Timer/TimerControls';
@@ -13,6 +14,7 @@ import { WeeklyChart } from './components/Stats/WeeklyChart';
 import { HeatMap } from './components/Stats/HeatMap';
 import { StreakCard } from './components/Stats/StreakCard';
 import { CategoryChart } from './components/Stats/CategoryChart';
+import { DailyReport } from './components/Stats/DailyReport';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
@@ -86,12 +88,21 @@ export default function App() {
   const handleClear = () => { localStorage.clear(); window.location.reload(); };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
 
+  const handleCountdownUpdate = (title: string, date: string) => {
+    setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
+  };
+
   return (
     <div className="app">
       <Header darkMode={settings.darkMode} onToggleTheme={handleToggleTheme} syncing={syncing} syncError={syncError} />
       <main className="main-content">
         {tab === 'timer' && (
           <div className="timer-page">
+            <CountdownTimer
+              title={settings.countdownTitle}
+              targetDate={settings.countdownDate}
+              onUpdate={handleCountdownUpdate}
+            />
             <div className="timer-section">
               <div className="cycle-indicator">
                 {Array.from({ length: 4 }, (_, i) => (
@@ -136,6 +147,7 @@ export default function App() {
             <StatsPanel stats={stats} />
             <StreakCard streak={stats.streak} totalPomodoros={stats.totalPomodoros} totalFocusHours={stats.totalFocusHours} />
             <CategoryChart dayDataMap={dayDataMap} todayPomodoros={todayPomodoros} />
+            <DailyReport dayDataMap={dayDataMap} />
             <WeeklyChart data={stats.weeklyData} />
             <HeatMap data={stats.monthlyData} />
           </div>
