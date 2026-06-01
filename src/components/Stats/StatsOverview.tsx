@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useRef } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { CATEGORY_COLORS, type Category, type DayData, type PomodoroRecord } from '../../types';
@@ -41,7 +41,6 @@ function genTestData(): Map<string, DayData> {
 export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: StatsOverviewProps) {
   const [period, setPeriod] = useState<Period>('week');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-  const chartRef = useRef<HTMLCanvasElement>(null);
   const today = new Date().toISOString().slice(0, 10);
 
   const data = useMemo(() => {
@@ -207,7 +206,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, onAddTestData }: Sta
           <h4 className="chart-sub-title">{selectedDate ? `${selectedDate.slice(5)} 数据` : `${periodLabel}每日数据`}</h4>
           {selectedDate && <button className="chart-reset-btn" onClick={() => setSelectedDate(null)}>返回全部</button>}
         </div>
-        <div className="chart-wrapper-lg"><Bar ref={chartRef} data={barData} options={barOptions} /></div>
+        <div className="chart-wrapper-lg"><Bar data={barData} options={barOptions} /></div>
       </div>
 
       {/* Pie chart */}
