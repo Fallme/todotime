@@ -571,25 +571,18 @@ body { background: var(--bg); margin: 0; }
 
 /* Category picker */
 .category-picker {
-  display: flex; flex-wrap: wrap; gap: 6px;
   margin-top: 8px; padding: 8px;
   background: var(--bg); border-radius: 10px;
 }
+.category-chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.category-chip-wrapper { display: inline-flex; align-items: center; }
 .category-chip {
-  padding: 4px 10px; border-radius: 10px;
-  font-size: 12px; font-weight: 500;
-  border: 1.5px solid var(--border);
-  background: var(--bg-card); color: var(--text);
-  cursor: pointer; transition: all 0.15s;
+  padding: 4px 10px; border-radius: 8px; font-size: 12px;
+  border: 1.5px solid var(--border); background: var(--bg-card);
+  color: var(--text); cursor: pointer; transition: all 0.15s;
 }
 .category-chip.active { font-weight: 600; }
 .category-chip.add { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-.category-add-inline { display: inline-flex; }
-.cat-add-input {
-  width: 80px; padding: 3px 8px; border: 1px solid var(--border); border-radius: 6px;
-  font-size: 11px; background: var(--bg); color: var(--text);
-}
-.category-chip-wrapper { display: inline-flex; align-items: center; gap: 0; }
 .cat-del-btn {
   width: 16px; height: 16px; border-radius: 50%; border: none; background: none;
   color: var(--text-muted); font-size: 10px; cursor: pointer; display: flex;
@@ -598,7 +591,17 @@ body { background: var(--bg); margin: 0; }
 }
 .category-chip-wrapper:hover .cat-del-btn { opacity: 1; }
 .cat-del-btn:hover { color: #e74c3c; }
-.category-chip:hover { opacity: 0.8; }
+.category-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.cat-add-input {
+  flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;
+  font-size: 13px; background: var(--bg-card); color: var(--text); outline: none;
+}
+.cat-add-input:focus { border-color: var(--accent); }
+.cat-add-confirm {
+  padding: 6px 14px; border: none; border-radius: 8px;
+  background: var(--accent); color: white; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.cat-add-confirm:disabled { opacity: 0.4; }
 
 /* Active task badge */
 .active-task-badge {
