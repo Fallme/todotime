@@ -366,6 +366,7 @@ body { background: var(--bg); min-height: 100dvh; }
   padding: 1px 5px; border-radius: 3px;
 }
 .subtask-text { font-size: 12px; color: var(--text-secondary); flex: 1; }
+.subtask-pom { font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
 .subtask-del {
   width: 16px; height: 16px; border: none; background: none; cursor: pointer;
   color: var(--text-muted); font-size: 14px; line-height: 1;

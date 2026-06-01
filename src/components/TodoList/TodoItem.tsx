@@ -122,6 +122,7 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
               )}
               {sub.abandoned && <span className="subtask-abandoned-tag">放弃</span>}
               <span className="subtask-text">{sub.title}</span>
+              <span className="subtask-pom">0 🍅</span>
               <button className="subtask-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
           ))}
