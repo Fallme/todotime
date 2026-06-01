@@ -148,6 +148,11 @@ body { background: var(--bg); min-height: 100dvh; }
   font-size: 13px; color: var(--text-secondary);
   max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.timer-task-category {
+  font-size: 11px; color: white; background: var(--accent);
+  padding: 1px 8px; border-radius: 8px;
+}
+.modal-auto-label { font-size: 12px; color: var(--text-muted); }
 
 /* Timer controls */
 .timer-controls {

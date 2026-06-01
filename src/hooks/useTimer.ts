@@ -171,6 +171,16 @@ export function useTimer(): UseTimerReturn {
     setIsRunning(true); startTimeRef.current = '';
   }, []);
 
+  // Stop: assign pending, reset to idle
+  const stop = useCallback(() => {
+    setGroupPhase('working');
+    clearTimer();
+    setIsRunning(false);
+    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setCycleCount(0);
+    startTimeRef.current = '';
+  }, [clearTimer]);
+
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
@@ -195,6 +205,6 @@ export function useTimer(): UseTimerReturn {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros,
     pendingAssignments, groupPhase,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, setOnComplete,
+    assignAll, startNextGroup, stop, setOnComplete,
   };
 }

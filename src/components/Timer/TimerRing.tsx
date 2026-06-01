@@ -1,11 +1,11 @@
-import type { TimerMode } from '../../types';
+import type { TimerMode, Category } from '../../types';
 
 interface TimerRingProps {
   timeLeft: number;
   totalTime: number;
   mode: TimerMode;
-  isRunning: boolean;
   currentTaskName: string | null;
+  currentCategory: Category | null;
 }
 
 const MODE_COLORS: Record<TimerMode, string> = {
@@ -20,7 +20,7 @@ const MODE_LABELS: Record<TimerMode, string> = {
   longBreak: '长休息',
 };
 
-export function TimerRing({ timeLeft, totalTime, mode, currentTaskName }: TimerRingProps) {
+export function TimerRing({ timeLeft, totalTime, mode, currentTaskName, currentCategory }: TimerRingProps) {
   const R = 130, STROKE = 8, NR = R - STROKE / 2;
   const CIRC = NR * 2 * Math.PI;
   const progress = totalTime > 0 ? Math.max(0, Math.min(1, timeLeft / totalTime)) : 0;
@@ -41,6 +41,7 @@ export function TimerRing({ timeLeft, totalTime, mode, currentTaskName }: TimerR
       <div className="timer-ring-text">
         <div className="timer-time">{mm}:{ss}</div>
         {currentTaskName && <div className="timer-task-name">{currentTaskName}</div>}
+        {currentCategory && <div className="timer-task-category">{currentCategory}</div>}
         <div className="timer-mode-label" style={{ color }}>{MODE_LABELS[mode]}</div>
       </div>
     </div>

@@ -101,8 +101,9 @@ export default function App() {
 
               <TimerRing
                 timeLeft={timer.timeLeft} totalTime={timer.totalTime}
-                mode={timer.mode} isRunning={timer.isRunning}
+                mode={timer.mode}
                 currentTaskName={currentTask?.title ?? null}
+                currentCategory={currentTask?.category ?? null}
               />
 
               <TimerControls
@@ -151,6 +152,7 @@ export default function App() {
           currentTaskName={currentTask?.title ?? null}
           onAssignAll={handleAssignAll}
           onStartNextGroup={timer.startNextGroup}
+          onStop={timer.stop}
         />
       )}
     </div>
