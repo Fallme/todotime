@@ -12,6 +12,7 @@ interface UseTodosReturn {
   updateTodoPomodoros: (id: string) => void;
   addSubtask: (todoId: string, title: string) => void;
   toggleSubtask: (todoId: string, subId: string) => void;
+  abandonSubtask: (todoId: string, subId: string) => void;
   deleteSubtask: (todoId: string, subId: string) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
@@ -76,13 +77,19 @@ export function useTodos(): UseTodosReturn {
 
   const addSubtask = useCallback((todoId: string, title: string) => {
     setTodos(prev => prev.map(t => t.id === todoId ? {
-      ...t, subtasks: [...t.subtasks, { id: generateId(), title, done: false }],
+      ...t, subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false }],
     } : t));
   }, []);
 
   const toggleSubtask = useCallback((todoId: string, subId: string) => {
     setTodos(prev => prev.map(t => t.id === todoId ? {
       ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s),
+    } : t));
+  }, []);
+
+  const abandonSubtask = useCallback((todoId: string, subId: string) => {
+    setTodos(prev => prev.map(t => t.id === todoId ? {
+      ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, abandoned: true } : s),
     } : t));
   }, []);
 
@@ -96,7 +103,7 @@ export function useTodos(): UseTodosReturn {
 
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, addSubtask, toggleSubtask, deleteSubtask,
+    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask,
     selectedTodoId, selectTodo,
   };
 }

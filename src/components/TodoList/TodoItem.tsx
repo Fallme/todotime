@@ -14,10 +14,11 @@ interface TodoItemProps {
   onQuickStart: () => void;
   onAddSubtask: (title: string) => void;
   onToggleSubtask: (subId: string) => void;
+  onAbandonSubtask: (subId: string) => void;
   onDeleteSubtask: (subId: string) => void;
 }
 
-export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onAddSubtask, onToggleSubtask, onDeleteSubtask }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask }: TodoItemProps) {
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const isActive = !todo.done && !todo.abandoned;
@@ -87,11 +88,15 @@ export function TodoItem({ todo, isSelected, onToggle, onDelete, onSelect, onAba
       {todo.subtasks.length > 0 && (
         <div className="subtask-list-inline">
           {todo.subtasks.map(sub => (
-            <div key={sub.id} className={`subtask-row ${sub.done ? 'done' : ''}`}>
+            <div key={sub.id} className={`subtask-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
               <button className="subtask-check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>
                 {sub.done ? <Check size={11} className="check-done" /> : <span className="subtask-circle" />}
               </button>
               <span className="subtask-text">{sub.title}</span>
+              {!sub.done && !sub.abandoned && (
+                <button className="subtask-abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }} title="放弃">✕</button>
+              )}
+              {sub.abandoned && <span className="subtask-abandoned-tag">放弃</span>}
               <button className="subtask-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
           ))}

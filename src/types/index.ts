@@ -28,6 +28,7 @@ export interface SubTask {
   id: string;
   title: string;
   done: boolean;
+  abandoned: boolean;
 }
 
 export interface Todo {

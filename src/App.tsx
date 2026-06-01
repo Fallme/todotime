@@ -124,6 +124,7 @@ export default function App() {
               onQuickStart={handleQuickStart}
               onAddSubtask={todosHook.addSubtask}
               onToggleSubtask={todosHook.toggleSubtask}
+              onAbandonSubtask={todosHook.abandonSubtask}
               onDeleteSubtask={todosHook.deleteSubtask}
             />
           </div>
@@ -142,8 +143,13 @@ export default function App() {
         )}
       </main>
       <TabNav active={tab} onChange={setTab} />
-      {timer.pendingAssignments.length > 0 && (
-        <TaskAssignModal assignments={timer.pendingAssignments} todos={todos} onAssignAll={handleAssignAll} />
+      {timer.groupPhase === 'groupDone' && timer.pendingAssignments.length > 0 && (
+        <TaskAssignModal
+          assignments={timer.pendingAssignments}
+          todos={todos}
+          onAssignAll={handleAssignAll}
+          onStartNextGroup={timer.startNextGroup}
+        />
       )}
     </div>
   );

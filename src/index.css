@@ -349,6 +349,21 @@ body { background: var(--bg); min-height: 100dvh; }
 }
 .subtask-row.done { opacity: 0.5; }
 .subtask-row.done .subtask-text { text-decoration: line-through; color: var(--text-muted); }
+.subtask-row.abandoned { opacity: 0.5; }
+.subtask-row.abandoned .subtask-text { text-decoration: line-through; color: var(--text-muted); }
+.subtask-abandon {
+  width: 14px; height: 14px; border: none; background: none; cursor: pointer;
+  color: var(--text-muted); font-size: 10px; padding: 0;
+  opacity: 0; transition: opacity 0.15s;
+}
+.subtask-row:hover .subtask-abandon { opacity: 1; }
+.subtask-abandon:hover { color: #e17055; }
+.subtask-abandoned-tag {
+  font-size: 9px; color: #e17055; background: rgba(225,112,85,0.1);
+  padding: 1px 5px; border-radius: 3px;
+}
+.modal-btn.accent { background: #6c5ce7; color: white; }
+.modal-btn.accent:hover { opacity: 0.9; }
 .subtask-check {
   width: 16px; height: 16px; border: none; background: none; cursor: pointer;
   display: flex; align-items: center; justify-content: center; padding: 0;
