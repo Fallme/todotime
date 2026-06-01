@@ -27,6 +27,7 @@ interface UseTimerReturn {
   setTaskInfo: (id: string | null, title: string, category: Category) => void;
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   startNextGroup: () => void;
+  stop: () => void;
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 

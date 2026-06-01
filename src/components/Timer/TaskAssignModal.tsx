@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import type { Todo, Category } from '../../types';
-import { CATEGORY_COLORS } from '../../types';
 import type { PendingAssignment } from '../../hooks/useTimer';
 
 interface TaskAssignModalProps {
