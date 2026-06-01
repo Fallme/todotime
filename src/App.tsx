@@ -147,6 +147,7 @@ export default function App() {
         <TaskAssignModal
           assignments={timer.pendingAssignments}
           todos={todos}
+          currentTaskName={currentTask?.title ?? null}
           onAssignAll={handleAssignAll}
           onStartNextGroup={timer.startNextGroup}
         />
