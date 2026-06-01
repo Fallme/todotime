@@ -45,7 +45,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
     const todo = selectedTodoId ? activeTodos.find(t => t.id === selectedTodoId) : null;
     const result = {
       taskId: todo?.id ?? null,
-      taskTitle: todo?.title ?? '未分类专注',
+      taskTitle: todo?.title ?? '未分配',
       category: (todo?.category ?? '其他') as Category,
     };
     onAssignAll(assignments.map(() => result));
@@ -74,7 +74,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
         <div className="modal-actions">
           <button className="modal-btn primary" onClick={handleConfirm}>分配</button>
           <button className="modal-btn secondary" onClick={() => {
-            onAssignAll(assignments.map(() => ({ taskId: null, taskTitle: '未分类专注', category: '其他' as Category })));
+            onAssignAll(assignments.map(() => ({ taskId: null, taskTitle: '未分配', category: '其他' as Category })));
           }}>跳过分配</button>
         </div>
         <div className="modal-actions" style={{ marginTop: '8px' }}>

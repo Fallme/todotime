@@ -158,7 +158,7 @@ export function useTimer(): UseTimerReturn {
       const a = results[i] || results[results.length - 1];
       onCompleteRef.current?.({
         start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-        taskId: a.taskId, taskTitle: a.taskTitle || '未分类专注', category: a.category, completed: true,
+        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他', completed: true,
       });
     });
     setPendingAssignments([]);
