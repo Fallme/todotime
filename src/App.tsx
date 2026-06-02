@@ -78,17 +78,14 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- Sync pomodoro data: on every new pomodoro with duration >= 5 min ---
+  // --- Sync pomodoro data: on every new pomodoro ---
   useEffect(() => {
     if (timer.todayPomodoros.length > 0) {
-      const last = timer.todayPomodoros[timer.todayPomodoros.length - 1];
-      if (last.duration >= 5) {
-        syncDayData(today, timer.todayPomodoros);
-      }
+      syncDayData(today, timer.todayPomodoros);
     }
   }, [timer.todayPomodoros, today, syncDayData]);
 
-  // --- Sync config: when settings or todos change (debounced, after initial load) ---
+  // --- Sync config: when settings or todos change (after initial load) ---
   useEffect(() => {
     if (!configLoadedRef.current) return;
     syncConfig(settings, todos);

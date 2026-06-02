@@ -10,7 +10,7 @@ interface UseGithubSyncReturn {
   syncError: string | null;
   /** Sync pomodoro data for a specific day to git */
   syncDayData: (date: string, pomodoros: PomodoroRecord[]) => void;
-  /** Sync config (settings + todos) to git, debounced */
+  /** Sync config (settings + todos) to git immediately */
   syncConfig: (settings: AppSettings, todos: Todo[]) => void;
   /** Load everything from git: config + 31 days of data */
   loadAll: () => Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }>;
@@ -21,7 +21,6 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
-  const configTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastConfigHashRef = useRef('');
 
   // --- Load all data from git on app open ---
@@ -107,7 +106,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
     });
   }, [token, repo]);
 
-  // --- Sync config (settings + todos), debounced 2s ---
+  // --- Sync config (settings + todos) immediately on change ---
   const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
     if (!token || !repo) return;
 
@@ -132,21 +131,18 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
     if (hash === lastConfigHashRef.current) return; // skip duplicate
     lastConfigHashRef.current = hash;
 
-    // Debounce
-    if (configTimerRef.current) clearTimeout(configTimerRef.current);
-    configTimerRef.current = setTimeout(() => {
-      queueRef.current = queueRef.current.then(async () => {
-        setSyncing(true);
-        setSyncError(null);
-        try {
-          await saveConfig(repo, token, configPayload);
-        } catch (e) {
-          setSyncError((e as Error).message);
-        } finally {
-          setSyncing(false);
-        }
-      });
-    }, 2000);
+    // Queue the commit immediately
+    queueRef.current = queueRef.current.then(async () => {
+      setSyncing(true);
+      setSyncError(null);
+      try {
+        await saveConfig(repo, token, configPayload);
+      } catch (e) {
+        setSyncError((e as Error).message);
+      } finally {
+        setSyncing(false);
+      }
+    });
   }, [token, repo]);
 
   return { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll };
