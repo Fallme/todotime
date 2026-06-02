@@ -1,13 +1,36 @@
 {
   "name": "todotime",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
+  "description": "番茄钟 TodoTime - 番茄工作法计时器与任务管理工具",
+  "author": "Fallme",
   "type": "module",
+  "main": "electron.js",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "electron:dev": "npm run build && electron .",
+    "electron:build": "npm run build && electron-builder --win --portable"
+  },
+  "build": {
+    "appId": "com.todotime.app",
+    "productName": "TodoTime 番茄钟",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron.js"
+    ],
+    "win": {
+      "target": "portable",
+      "icon": null
+    },
+    "portable": {
+      "artifactName": "TodoTime-${version}-Portable.exe"
+    }
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.3.0",
@@ -24,6 +47,8 @@
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "electron": "^42.3.1",
+    "electron-builder": "^26.8.1",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",

@@ -43,7 +43,7 @@ export default function App() {
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
 
-  const timer = useTimer(settings.longBreakInterval);
+  const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled);
 
   // Wire up onComplete callback to update task's completedPomodoros
   useEffect(() => {
@@ -108,9 +108,6 @@ export default function App() {
   const handleDeleteCategory = (name: string) => {
     setSettings(s => ({ ...s, categories: s.categories.filter(c => c.name !== name) }));
   };
-  const handleChangeCategoryColor = (name: string, color: string) => {
-    setSettings(s => ({ ...s, categories: s.categories.map(c => c.name === name ? { ...c, color } : c) }));
-  };
   const handleRenameCategory = (oldName: string, newName: string, newColor: string) => {
     if (oldName !== newName && settings.categories.some(c => c.name === newName)) return;
     setSettings(s => ({
@@ -150,7 +147,6 @@ export default function App() {
               onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
-              onChangeCategoryColor={handleChangeCategoryColor}
               onRenameCategory={handleRenameCategory}
             />
           </div>

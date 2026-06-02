@@ -42,7 +42,7 @@ export function getDataPath(date: string): string {
 
 export function getWeekDay(date: string): string {
   const days = ['日', '一', '二', '三', '四', '五', '六'];
-  return days[new Date(date).getDay()];
+  return days[new Date(date + 'T12:00:00').getDay()];
 }
 
 export function getWeekDayShort(date: string): string {

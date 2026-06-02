@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { Plus } from 'lucide-react';
 import type { Priority, Category, CategoryItem } from '../../types';
 
@@ -7,7 +7,6 @@ interface AddTodoProps {
   categories: CategoryItem[];
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
-  onChangeCategoryColor: (name: string, color: string) => void;
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
 }
 
@@ -31,6 +30,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const [showCatAdd, setShowCatAdd] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState(getRandomHSL());
+  const randomPreviewRef = useRef(getRandomHSL());
 
   const currentCat = categories.find(c => c.name === category);
 
@@ -105,8 +105,8 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                     style={{ background: c }} onClick={() => setEditColor(c)} />
                 ))}
                 <button type="button" className="cat-color-swatch random"
-                  style={{ background: getRandomHSL() }}
-                  onClick={() => setEditColor(getRandomHSL())}>?</button>
+                  style={{ background: randomPreviewRef.current }}
+                  onClick={() => { const c = getRandomHSL(); randomPreviewRef.current = c; setEditColor(c); }}>?</button>
               </div>
               <div className="cat-edit-actions">
                 <button type="button" className="cat-edit-save" onClick={saveEdit} disabled={!editName.trim()}>保存</button>

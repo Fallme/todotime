@@ -210,10 +210,6 @@ body { background: var(--bg); margin: 0; }
 .chart-wrapper-lg { height: 180px; }
 .chart-wrapper-pie { width: 140px; height: 140px; flex-shrink: 0; }
 .pie-layout { display: flex; align-items: center; gap: 16px; justify-content: center; }
-.pie-legend { display: flex; flex-direction: column; gap: 6px; }
-.pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
-.pie-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
-.pie-legend-val { margin-left: auto; color: var(--text-muted); font-weight: 500; }
 .chart-empty { text-align: center; padding: 40px 0; color: var(--text-muted); font-size: 13px; }
 .pie-legend { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
 .pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-secondary); }
@@ -434,7 +430,7 @@ body { background: var(--bg); margin: 0; }
 .todo-card {
   background: var(--bg-card); border-radius: 10px;
   transition: opacity 0.3s, background 0.2s;
-  border: 1px solid transparent; overflow: visible;
+  border: 1px solid transparent; overflow: hidden;
 }
 .todo-card:hover { border-color: var(--border); }
 .todo-card.selected { background: rgba(255,107,107,0.06); border-color: rgba(255,107,107,0.25); }
@@ -475,7 +471,6 @@ body { background: var(--bg); margin: 0; }
 
 .todo-card-body {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
-  position: relative;
 }
 .todo-card-title {
   font-size: 13px; font-weight: 500; white-space: nowrap; overflow: hidden;
@@ -601,7 +596,6 @@ body { background: var(--bg); margin: 0; }
 /* Category picker popup */
 .cat-picker-popup {
   display: flex; flex-wrap: wrap; gap: 4px;
-  position: absolute; top: 100%; left: 0; z-index: 20;
   background: var(--bg-card); border: 1px solid var(--border);
   border-radius: 8px; padding: 6px; box-shadow: var(--shadow-lg);
   min-width: 200px;

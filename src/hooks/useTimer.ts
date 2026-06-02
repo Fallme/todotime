@@ -36,7 +36,7 @@ interface UseTimerReturn {
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
-export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
+export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes: number; longBreakMinutes: number; longBreakInterval: number }, soundEnabled: boolean = true): UseTimerReturn {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalTime, setTotalTimeState] = useState(25 * 60);
@@ -59,7 +59,11 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   const groupPhaseRef = useRef(groupPhase); groupPhaseRef.current = groupPhase;
   const pendingAssignRef = useRef(pendingAssignments); pendingAssignRef.current = pendingAssignments;
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
-  const cycleIntervalRef = useRef(longBreakInterval); cycleIntervalRef.current = longBreakInterval;
+  const workMinutesRef = useRef(timerSettings.workMinutes); workMinutesRef.current = timerSettings.workMinutes;
+  const shortBreakMinutesRef = useRef(timerSettings.shortBreakMinutes); shortBreakMinutesRef.current = timerSettings.shortBreakMinutes;
+  const longBreakMinutesRef = useRef(timerSettings.longBreakMinutes); longBreakMinutesRef.current = timerSettings.longBreakMinutes;
+  const cycleIntervalRef = useRef(timerSettings.longBreakInterval); cycleIntervalRef.current = timerSettings.longBreakInterval;
+  const soundEnabledRef = useRef(soundEnabled); soundEnabledRef.current = soundEnabled;
   const isLongBreakRef = useRef(false);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
@@ -104,9 +108,9 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   // Start break then auto-continue
   const startBreak = useCallback((isLong: boolean) => {
     if (isLong) {
-      setMode('longBreak'); setTimeLeft(15 * 60); setTotalTimeState(15 * 60);
+      setMode('longBreak'); setTimeLeft(longBreakMinutesRef.current * 60); setTotalTimeState(longBreakMinutesRef.current * 60);
     } else {
-      setMode('shortBreak'); setTimeLeft(5 * 60); setTotalTimeState(5 * 60);
+      setMode('shortBreak'); setTimeLeft(shortBreakMinutesRef.current * 60); setTotalTimeState(shortBreakMinutesRef.current * 60);
     }
     setIsRunning(true);
   }, []);
@@ -118,14 +122,14 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearTimer();
-          playBreakComplete();
+          if (soundEnabledRef.current) playBreakComplete();
           setIsRunning(false);
           // Only settle after long break (4 pomodoros complete)
           if (isLongBreakRef.current) {
             settlePending(currentTaskRef.current);
             isLongBreakRef.current = false;
           }
-          setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+          setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
           return 0;
         }
@@ -145,11 +149,11 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
     startTimeRef.current = '';
 
     if (!force && elapsedSeconds < 60) {
-      setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       return;
     }
 
-    playWorkComplete();
+    if (soundEnabledRef.current) playWorkComplete();
     setTotalPomodoros(p => p + 1);
     const nextDot = cycleCountRef.current + 1;
     setCycleCount(nextDot);
@@ -204,7 +208,7 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   // Start next group
   const startNextGroup = useCallback(() => {
     setGroupPhase('working');
-    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     setIsRunning(true); startTimeRef.current = '';
   }, []);
 
@@ -212,7 +216,7 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   const stop = useCallback(() => {
     setGroupPhase('working');
     clearTimer(); setIsRunning(false);
-    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     setCycleCount(0); startTimeRef.current = '';
     isLongBreakRef.current = false;
     setPendingAssignments([]);
@@ -226,20 +230,22 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Record current work if any time elapsed
-    if (mode === 'work' && elapsedSeconds > 0) {
-      setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
-      playWorkComplete();
-    }
+    // Build full pending list locally (old + current work session) to avoid stale ref
+    const oldPending = pendingAssignRef.current;
+    const currentWork = (modeRef.current === 'work' && elapsedSeconds > 0)
+      ? [{ start: startTime, duration: Math.max(1, elapsed) }]
+      : [];
+    const allPending = [...oldPending, ...currentWork];
+
+    if (currentWork.length > 0 && soundEnabledRef.current) playWorkComplete();
 
     setIsRunning(false);
 
     // Settle if at least 1 pomodoro exists
-    const pending = [...pendingAssignRef.current];
-    if (pending.length > 0) {
+    if (allPending.length > 0) {
       const task = currentTaskRef.current;
       if (task) {
-        pending.forEach(pa => {
+        allPending.forEach(pa => {
           recordPomodoro({
             start: pa.start, end: formatTime(new Date()), duration: pa.duration,
             taskId: task.id, taskTitle: task.title, category: task.category,
@@ -247,18 +253,19 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
           });
         });
         setPendingAssignments([]);
-        showToast(`🍅 已结算 ${pending.length} 个番茄 → 「${task.title}」`);
+        showToast(`🍅 已结算 ${allPending.length} 个番茄 → 「${task.title}」`);
       } else {
+        setPendingAssignments(allPending);
         setGroupPhase('settle');
       }
     }
 
     // Reset
-    setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+    setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     setCycleCount(0);
     isLongBreakRef.current = false;
-    if (pending.length === 0) setGroupPhase('working');
-  }, [clearTimer, mode, recordPomodoro, showToast]);
+    if (allPending.length === 0) setGroupPhase('working');
+  }, [clearTimer, recordPomodoro, showToast]);
 
   const resetCycle = useCallback(() => {
     setCycleCount(0); setGroupPhase('working'); setPendingAssignments([]);
@@ -273,7 +280,7 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
-    playStart();
+    if (soundEnabledRef.current) playStart();
   }, []);
 
   const pause = useCallback(() => { setIsRunning(false); clearTimer(); }, [clearTimer]);
@@ -281,17 +288,17 @@ export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
 
   // Skip: same as completeOne for work, or skip break
   const skip = useCallback(() => {
-    if (mode === 'work') { completeOne(true); }
+    if (modeRef.current === 'work') { completeOne(true); }
     else {
       clearTimer(); setIsRunning(false);
       if (isLongBreakRef.current) {
         settlePending(currentTaskRef.current);
         isLongBreakRef.current = false;
       }
-      setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
+      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
     }
-  }, [mode, clearTimer, completeOne, settlePending]);
+  }, [clearTimer, completeOne, settlePending]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
@@ -24,15 +24,29 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
+  const [popupPos, setPopupPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
+  const catTagRef = useRef<HTMLSpanElement>(null);
   const catPickerRef = useRef<HTMLDivElement>(null);
   const isActive = !todo.done && !todo.abandoned;
   const catColor = getCategoryColor(categories, todo.category);
+
+  const toggleCatPicker = useCallback(() => {
+    if (!isActive) return;
+    if (showCatPicker) {
+      setShowCatPicker(false);
+    } else if (catTagRef.current) {
+      const rect = catTagRef.current.getBoundingClientRect();
+      setPopupPos({ top: rect.bottom + 4, left: rect.left });
+      setShowCatPicker(true);
+    }
+  }, [isActive, showCatPicker]);
 
   // Click outside to close category picker
   useEffect(() => {
     if (!showCatPicker) return;
     const handleClick = (e: MouseEvent) => {
-      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)) {
+      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)
+        && catTagRef.current && !catTagRef.current.contains(e.target as Node)) {
         setShowCatPicker(false);
       }
     };
@@ -65,23 +79,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           )}
         </div>
 
-        <div className="todo-card-body" ref={catPickerRef}>
+        <div className="todo-card-body">
           {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
           <span className="todo-card-title">{todo.title}</span>
-          <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
-            onClick={e => { e.stopPropagation(); if (isActive) setShowCatPicker(!showCatPicker); }}>
+          <span className="todo-card-cat" ref={catTagRef} style={{ color: catColor, borderColor: catColor }}
+            onClick={e => { e.stopPropagation(); toggleCatPicker(); }}>
             {todo.category}
           </span>
-          {showCatPicker && isActive && (
-            <div className="cat-picker-popup">
-              {categories.map(c => (
-                <button key={c.name} className="cat-pick-btn" style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
-                  onClick={e => { e.stopPropagation(); onChangeCategory(c.name); setShowCatPicker(false); }}>
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
         </div>
 
         <div className="todo-card-meta">
@@ -101,6 +105,18 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={13} /></button>
         </div>
       </div>
+
+      {/* Category picker - rendered as fixed portal to prevent layout jitter */}
+      {showCatPicker && isActive && (
+        <div className="cat-picker-popup" ref={catPickerRef} style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999 }}>
+          {categories.map(c => (
+            <button key={c.name} className="cat-pick-btn" style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
+              onClick={e => { e.stopPropagation(); onChangeCategory(c.name); setShowCatPicker(false); }}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Subtasks inline */}
       {todo.subtasks.length > 0 && (
