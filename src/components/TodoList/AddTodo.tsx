@@ -79,7 +79,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
     <form className="add-todo" onSubmit={handleAddTask}>
       <div className="add-todo-row">
         <button type="button" className="category-badge-add"
-          style={{ color: currentCat?.color || '#636e72', borderColor: currentCat?.color || '#636e72' }}
+          style={{ color: 'var(--text)', borderColor: currentCat?.color || '#636e72', background: currentCat ? currentCat.color + '18' : 'transparent' }}
           onClick={() => { setShowCatPicker(!showCatPicker); setEditingCat(null); setShowCatAdd(false); }}>
           {category}
         </button>
@@ -119,7 +119,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                 {categories.map(cat => (
                   <button key={cat.name} type="button"
                     className={`category-chip ${cat.name === category ? 'active' : ''}`}
-                    style={{ color: cat.color, borderColor: cat.color }}
+                    style={{ color: 'var(--text)', borderColor: cat.color }}
                     onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}
                     onDoubleClick={(e) => { e.stopPropagation(); startEdit(cat); }}>
                     {cat.name}
