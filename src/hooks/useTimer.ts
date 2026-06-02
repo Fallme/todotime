@@ -131,14 +131,15 @@ export function useTimer(): UseTimerReturn {
   }, [isRunning, mode, clearTimer, settlePending]);
 
   // Complete one work pomodoro
-  const completeOne = useCallback(() => {
+  const completeOne = useCallback((force = false) => {
     clearTimer();
     setIsRunning(false);
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = Math.round(elapsedSeconds / 60);
+    const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    if (elapsedSeconds < 60) {
+    if (!force && elapsedSeconds < 60) {
       setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
       return;
     }
@@ -148,15 +149,12 @@ export function useTimer(): UseTimerReturn {
     const nextDot = cycleCountRef.current + 1;
     setCycleCount(nextDot);
 
-    // Add to pending (will be settled after break or on endNow)
-    setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
+    setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
 
     if (nextDot >= 4) {
       setCycleCount(0);
-      // 4 pomodoros done → long break, then settle
       startBreak(true);
     } else {
-      // Short break, then continue
       startBreak(false);
     }
   }, [clearTimer, startBreak]);
@@ -217,11 +215,12 @@ export function useTimer(): UseTimerReturn {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = Math.round(elapsedSeconds / 60);
+    const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Record current work if ≥60s
-    if (mode === 'work' && elapsedSeconds >= 60) {
-      setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
+    // Record current work if any time elapsed
+    if (mode === 'work' && elapsedSeconds > 0) {
+      setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
       playWorkComplete();
     }
 
@@ -272,7 +271,7 @@ export function useTimer(): UseTimerReturn {
 
   // Skip: same as completeOne for work, or skip break
   const skip = useCallback(() => {
-    if (mode === 'work') { completeOne(); }
+    if (mode === 'work') { completeOne(true); }
     else {
       clearTimer(); setIsRunning(false);
       settlePending(currentTaskRef.current);
