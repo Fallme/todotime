@@ -15,12 +15,11 @@ interface StatsOverviewProps {
 }
 
 function genTestData(): Map<string, DayData> {
-  const cats: Category[] = ['数学', '英语', '专业课', '政治', '运动', '绘画', '开发'];
+  const cats: Category[] = ['数学', '英语', '专业课', '政治', '运动'];
   const tasks: Record<string, string[]> = {
     '数学': ['刷高数真题', '线性代数'], '英语': ['背单词', '阅读理解'],
     '专业课': ['数据结构', '操作系统'], '政治': ['马原复习', '肖四'],
-    '运动': ['跑步', '健身'], '绘画': ['素描练习', '色彩'],
-    '开发': ['React项目', '算法题'],
+    '运动': ['跑步', '健身'],
   };
   const map = new Map<string, DayData>();
   const now = new Date();
