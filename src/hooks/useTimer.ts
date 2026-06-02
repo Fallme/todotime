@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatTime } from '../utils/dateUtils';
-import { playWorkComplete, playBreakComplete } from '../utils/sound';
+import { playWorkComplete, playBreakComplete, playStart } from '../utils/sound';
 
 export interface PendingAssignment {
   start: string;
@@ -58,6 +58,8 @@ export function useTimer(): UseTimerReturn {
   cycleCountRef.current = cycleCount;
   const groupPhaseRef = useRef(groupPhase);
   groupPhaseRef.current = groupPhase;
+  const pendingAssignRef = useRef(pendingAssignments);
+  pendingAssignRef.current = pendingAssignments;
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
@@ -98,7 +100,8 @@ export function useTimer(): UseTimerReturn {
     if (task) {
       recordPomodoro({
         start: '', end: formatTime(new Date()), duration: elapsed,
-        taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
+        taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
       });
     } else {
       setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
@@ -164,7 +167,8 @@ export function useTimer(): UseTimerReturn {
       const a = results[i] || results[results.length - 1];
       recordPomodoro({
         start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他', completed: true,
+        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他',
+        completed: true, createdAt: formatTime(new Date()),
       });
     });
     setPendingAssignments([]);
@@ -183,32 +187,44 @@ export function useTimer(): UseTimerReturn {
     setCycleCount(0); startTimeRef.current = '';
   }, [clearTimer]);
 
-  // End current round and start new round
+  // End current round: settle all pomodoros to task or show assignment modal
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = Math.round(elapsedSeconds / 60);
     startTimeRef.current = '';
 
+    const task = currentTaskRef.current;
+    const allPending = [...pendingAssignRef.current];
+
+    // Add current work pomodoro if >= 60s
     if (mode === 'work' && elapsedSeconds >= 60) {
-      const task = currentTaskRef.current;
-      if (task) {
-        setTodayPomodoros(prev => [...prev, {
-          start: '', end: formatTime(new Date()), duration: elapsed,
-          taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
-        }]);
-      } else {
-        setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
-      }
-      setTotalPomodoros(p => p + 1);
+      allPending.push({ start: '', duration: elapsed });
       playWorkComplete();
     }
 
-    // Reset and start new round
+    if (task && allPending.length > 0) {
+      // Auto-assign all to current task
+      allPending.forEach(pa => {
+        setTodayPomodoros(prev => [...prev, {
+          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+          taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
+        }]);
+      });
+      setTotalPomodoros(p => p + allPending.length);
+      setPendingAssignments([]);
+    } else if (allPending.length > 0) {
+      // No task → set as pending for assignment modal
+      setPendingAssignments(allPending);
+      setGroupPhase('groupDone');
+    }
+
+    // Reset round
     setIsRunning(false);
     setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
-    setCycleCount(0); setGroupPhase('working');
-    setPendingAssignments([]);
+    setCycleCount(0);
+    if (allPending.length === 0 || task) setGroupPhase('working');
   }, [clearTimer, mode]);
 
   const resetCycle = useCallback(() => {
@@ -220,7 +236,11 @@ export function useTimer(): UseTimerReturn {
     setTotalPomodoros(p => p + records.length);
   }, []);
 
-  const start = useCallback(() => { setGroupPhase('working'); setIsRunning(true); }, []);
+  const start = useCallback(() => {
+    setGroupPhase('working');
+    setIsRunning(true);
+    playStart();
+  }, []);
   const pause = useCallback(() => { setIsRunning(false); clearTimer(); }, [clearTimer]);
   const reset = useCallback(() => {
     endNow();
@@ -237,7 +257,8 @@ export function useTimer(): UseTimerReturn {
         if (task) {
           setTodayPomodoros(prev => [...prev, {
             start: '', end: formatTime(new Date()), duration: elapsed,
-            taskId: task.id, taskTitle: task.title, category: task.category, completed: true,
+            taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
           }]);
         } else {
           setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);

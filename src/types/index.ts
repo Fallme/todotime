@@ -61,6 +61,7 @@ export interface PomodoroRecord {
   taskTitle: string;
   category: Category;
   completed: boolean;
+  createdAt: string;
 }
 
 export interface DayData {
