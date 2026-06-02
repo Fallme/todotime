@@ -27,6 +27,7 @@ interface TodoListProps {
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
   onChangeCategoryColor: (name: string, color: string) => void;
+  onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
 }
 
 const STATUS_TABS: { id: StatusTab; label: string }[] = [
@@ -34,7 +35,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'done', label: '已完成' }, { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onChangeCategoryColor }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onChangeCategoryColor, onRenameCategory }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -79,7 +80,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
         </div>
       )}
 
-      <AddTodo onAdd={onAdd} categories={categories} onAddCategory={onAddCategory} onDeleteCategory={onDeleteCategory} onChangeCategoryColor={onChangeCategoryColor} />
+      <AddTodo onAdd={onAdd} categories={categories} onAddCategory={onAddCategory} onDeleteCategory={onDeleteCategory} onChangeCategoryColor={onChangeCategoryColor} onRenameCategory={onRenameCategory} />
 
       <div className="todo-list-items">
         {sorted.length === 0 ? (

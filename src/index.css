@@ -588,7 +588,6 @@ body { background: var(--bg); margin: 0; }
   background: var(--bg); border-radius: 10px;
 }
 .category-chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
-.category-chip-wrapper { display: inline-flex; align-items: center; }
 .category-chip {
   padding: 2px 10px; border-radius: 4px; font-size: 12px;
   border-width: 1px; border-style: solid; border-color: var(--border);
@@ -597,21 +596,37 @@ body { background: var(--bg); margin: 0; }
 }
 .category-chip.active { font-weight: 600; opacity: 0.7; }
 .category-chip.add { border-color: var(--accent); color: var(--accent); font-weight: 700; }
-.cat-del-btn {
-  width: 16px; height: 16px; border-radius: 50%; border: none; background: none;
-  color: var(--text-muted); font-size: 10px; cursor: pointer; display: flex;
-  align-items: center; justify-content: center; margin-left: -4px;
-  opacity: 0; transition: opacity 0.15s;
+.cat-edit-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; }
+
+/* Category edit panel */
+.cat-edit-panel { display: flex; flex-direction: column; gap: 8px; }
+.cat-edit-input {
+  padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px;
+  font-size: 13px; background: var(--bg-card); color: var(--text); outline: none;
 }
-.category-chip-wrapper:hover .cat-del-btn { opacity: 1; }
-.cat-del-btn:hover { color: #e74c3c; }
-.cat-color-btn {
-  width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--border);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  padding: 0; margin-left: -2px; background: none; transition: transform 0.15s;
+.cat-edit-input:focus { border-color: var(--accent); }
+.cat-color-palette { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat-color-swatch {
+  width: 24px; height: 24px; border-radius: 50%; border: 2px solid transparent;
+  cursor: pointer; padding: 0; transition: transform 0.15s, border-color 0.15s;
 }
-.cat-color-btn:hover { transform: scale(1.2); }
-.cat-color-dot { width: 10px; height: 10px; border-radius: 50%; }
+.cat-color-swatch:hover { transform: scale(1.15); }
+.cat-color-swatch.active { border-color: var(--text); }
+.cat-color-swatch.random { font-size: 12px; font-weight: 700; color: white; line-height: 20px; }
+.cat-edit-actions { display: flex; gap: 6px; }
+.cat-edit-save {
+  padding: 4px 14px; border: none; border-radius: 6px;
+  background: var(--accent); color: white; font-size: 12px; font-weight: 600; cursor: pointer;
+}
+.cat-edit-save:disabled { opacity: 0.4; }
+.cat-edit-del {
+  padding: 4px 10px; border: 1px solid #e74c3c; border-radius: 6px;
+  background: transparent; color: #e74c3c; font-size: 12px; cursor: pointer;
+}
+.cat-edit-cancel {
+  padding: 4px 10px; border: 1px solid var(--border); border-radius: 6px;
+  background: transparent; color: var(--text-secondary); font-size: 12px; cursor: pointer;
+}
 .category-add-row { display: flex; gap: 6px; margin-top: 8px; }
 .cat-add-input {
   flex: 1; padding: 6px 10px; border: 1px solid var(--border); border-radius: 8px;

@@ -107,6 +107,16 @@ export default function App() {
   const handleChangeCategoryColor = (name: string, color: string) => {
     setSettings(s => ({ ...s, categories: s.categories.map(c => c.name === name ? { ...c, color } : c) }));
   };
+  const handleRenameCategory = (oldName: string, newName: string, newColor: string) => {
+    if (oldName !== newName && settings.categories.some(c => c.name === newName)) return;
+    setSettings(s => ({
+      ...s,
+      categories: s.categories.map(c => c.name === oldName ? { name: newName, color: newColor } : c),
+    }));
+    if (oldName !== newName) {
+      todosHook.renameTodosCategory(oldName, newName);
+    }
+  };
 
   return (
     <div className="app">
@@ -137,6 +147,7 @@ export default function App() {
               onChangeCategory={todosHook.changeCategory}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onChangeCategoryColor={handleChangeCategoryColor}
+              onRenameCategory={handleRenameCategory}
             />
           </div>
         )}

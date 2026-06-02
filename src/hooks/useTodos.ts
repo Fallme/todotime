@@ -15,6 +15,7 @@ interface UseTodosReturn {
   abandonSubtask: (todoId: string, subId: string) => void;
   deleteSubtask: (todoId: string, subId: string) => void;
   changeCategory: (id: string, category: Category) => void;
+  renameTodosCategory: (oldName: string, newName: string) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
 }
@@ -111,9 +112,13 @@ export function useTodos(): UseTodosReturn {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, category } : t));
   }, []);
 
+  const renameTodosCategory = useCallback((oldName: string, newName: string) => {
+    setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName as Category } : t));
+  }, []);
+
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory,
+    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory,
     selectedTodoId, selectTodo,
   };
 }
