@@ -6,9 +6,11 @@ export function formatDate(date: Date): string {
 }
 
 export function formatTime(date: Date): string {
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
   const h = String(date.getHours()).padStart(2, '0');
-  const m = String(date.getMinutes()).padStart(2, '0');
-  return `${h}:${m}`;
+  const min = String(date.getMinutes()).padStart(2, '0');
+  return `${m}-${d} ${h}:${min}`;
 }
 
 export function getWeekDates(anchor: Date = new Date()): string[] {

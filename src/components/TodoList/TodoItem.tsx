@@ -25,7 +25,6 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const isActive = !todo.done && !todo.abandoned;
-  const doneCount = todo.subtasks.filter(s => s.done).length;
   const catColor = getCategoryColor(categories, todo.category);
 
   const handleAddSub = (e: React.FormEvent) => {
@@ -37,27 +36,26 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   };
 
   return (
-    <div className={`todo-item-wrapper ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
-      <div className="todo-item-main">
-        <div className="todo-col todo-col-status">
+    <div className={`todo-card ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
+      {/* Main row */}
+      <div className="todo-card-row" onClick={onSelect}>
+        <div className="todo-card-status">
           {todo.done ? (
-            <button className="status-btn done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={16} /></button>
+            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={14} /></button>
           ) : todo.abandoned ? (
-            <button className="status-btn restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={14} /></button>
+            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={12} /></button>
           ) : (
             <>
-              <button className="status-btn check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
-              <button className="status-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
+              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
+              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
             </>
           )}
         </div>
 
-        <div className="todo-col todo-content" onClick={onSelect}>
-          {todo.abandoned && <span className="abandoned-label">已放弃</span>}
-          <span className="todo-title">{todo.title}</span>
-          {todo.createdAt && <span className="todo-time">{todo.createdAt}</span>}
-          {todo.done && todo.completedAt && <span className="todo-time completed">完成于 {todo.completedAt}</span>}
-          <span className="category-badge clickable" style={{ color: catColor, borderColor: catColor }}
+        <div className="todo-card-body">
+          {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
+          <span className="todo-card-title">{todo.title}</span>
+          <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
             onClick={e => { e.stopPropagation(); if (isActive) setShowCatPicker(!showCatPicker); }}>
             {todo.category}
           </span>
@@ -73,48 +71,49 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           )}
         </div>
 
-        <div className="todo-col todo-count">
-          {todo.completedPomodoros} 🍅
-          {todo.subtasks.length > 0 && <span className="sub-count">{doneCount}/{todo.subtasks.length}</span>}
+        <div className="todo-card-meta">
+          {todo.createdAt && <span className="todo-card-time">{todo.createdAt}</span>}
+          {todo.done && todo.completedAt && <span className="todo-card-time done-time">{todo.completedAt}</span>}
+          <span className="todo-card-pom">{todo.completedPomodoros}🍅</span>
         </div>
 
-        <div className="todo-col todo-actions">
-          {isActive && <button className="todo-action-btn add-sub" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="添加子任务"><Plus size={14} /></button>}
-          {isActive && <button className="todo-action-btn start" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={14} /></button>}
-          <button className="todo-action-btn delete" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={14} /></button>
+        <div className="todo-card-actions">
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={13} /></button>}
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="子任务"><Plus size={13} /></button>}
+          <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={13} /></button>
         </div>
       </div>
 
-      {showSubInput && isActive && (
-        <form className="subtask-input-inline" onSubmit={handleAddSub}>
-          <input className="subtask-input" placeholder="子任务名称" value={subTitle}
-            onChange={e => setSubTitle(e.target.value)} autoFocus
-            onBlur={() => { if (!subTitle.trim()) setShowSubInput(false); }} />
-          <button className="subtask-confirm" type="submit" disabled={!subTitle.trim()}>✓</button>
-        </form>
-      )}
-
+      {/* Subtasks inline */}
       {todo.subtasks.length > 0 && (
-        <div className="subtask-list-inline">
+        <div className="todo-card-subs">
           {todo.subtasks.map(sub => (
-            <div key={sub.id} className={`subtask-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
+            <div key={sub.id} className={`sub-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
               {sub.done ? (
-                <button className="subtask-status done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><Check size={11} /></button>
+                <button className="sub-dot done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><Check size={10} /></button>
               ) : sub.abandoned ? (
-                <button className="subtask-status restore" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><RotateCcw size={10} /></button>
+                <button className="sub-dot restore" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><RotateCcw size={9} /></button>
               ) : (
                 <>
-                  <button className="subtask-status check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>✓</button>
-                  <button className="subtask-status abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }}>✕</button>
+                  <button className="sub-dot check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>✓</button>
+                  <button className="sub-dot abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }}>✕</button>
                 </>
               )}
-              {sub.abandoned && <span className="subtask-abandoned-tag">放弃</span>}
-              <span className="subtask-text">{sub.title}</span>
-              <span className="subtask-pom">0 🍅</span>
-              <button className="subtask-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
+              <span className="sub-text">{sub.title}</span>
+              <button className="sub-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Subtask input */}
+      {showSubInput && isActive && (
+        <form className="todo-card-sub-input" onSubmit={handleAddSub}>
+          <input className="sub-input" placeholder="子任务名称" value={subTitle}
+            onChange={e => setSubTitle(e.target.value)} autoFocus
+            onBlur={() => { if (!subTitle.trim()) setShowSubInput(false); }} />
+          <button className="sub-confirm" type="submit" disabled={!subTitle.trim()}>✓</button>
+        </form>
       )}
     </div>
   );

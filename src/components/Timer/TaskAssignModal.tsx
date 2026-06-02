@@ -12,38 +12,40 @@ interface TaskAssignModalProps {
   onResetCycle: () => void;
 }
 
-export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop, onResetCycle }: TaskAssignModalProps) {
+export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.done && !t.abandoned);
   const [selectedTodoId, setSelectedTodoId] = useState('');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
-  const doAssign = (todoId: string | null) => {
+  const getResult = (todoId: string | null) => {
     const todo = todoId ? activeTodos.find(t => t.id === todoId) : null;
-    const result = {
+    return {
       taskId: todo?.id ?? null,
       taskTitle: todo?.title ?? '未分配',
       category: (todo?.category ?? '数学') as Category,
     };
-    onAssignAll(assignments.map(() => result));
   };
 
-  const handleAssign = () => {
+  const getSelectedTodoId = () => {
     if (currentTaskName) {
       const todo = activeTodos.find(t => t.title === currentTaskName);
-      doAssign(todo?.id ?? null);
-    } else {
-      doAssign(selectedTodoId || null);
+      return todo?.id ?? null;
     }
+    return selectedTodoId || null;
   };
 
-  const handleContinue = () => {
-    handleAssign();
-    onStartNextGroup();
-  };
-
-  const handleEnd = () => {
-    handleAssign();
+  // 分配：分配并关闭，番茄恢复初始
+  const handleAssign = () => {
+    const result = getResult(getSelectedTodoId());
+    onAssignAll(assignments.map(() => result));
     onStop();
+  };
+
+  // 分配并继续：分配后以当前任务继续下一轮
+  const handleAssignAndContinue = () => {
+    const result = getResult(getSelectedTodoId());
+    onAssignAll(assignments.map(() => result));
+    onStartNextGroup();
   };
 
   return (
@@ -55,8 +57,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
         {currentTaskName ? (
           <div className="modal-single-assign">
             <span className="modal-assign-label">任务：</span>
-            <span className="todo-title">{currentTaskName}</span>
-            <span className="modal-auto-label">已自动记录</span>
+            <span className="modal-auto-label">{currentTaskName}</span>
           </div>
         ) : (
           <div className="modal-single-assign">
@@ -70,16 +71,9 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
           </div>
         )}
 
-        {/* Primary actions */}
         <div className="modal-actions">
-          <button className="modal-btn primary" onClick={handleAssign}>分配</button>
-          <button className="modal-btn primary" onClick={handleContinue}>分配并继续</button>
-        </div>
-
-        {/* Secondary actions */}
-        <div className="modal-actions modal-actions-secondary">
-          <button className="modal-btn secondary" onClick={handleEnd}>结束本次番茄</button>
-          <button className="modal-btn secondary" onClick={onResetCycle}>重置轮次</button>
+          <button className="modal-btn secondary" onClick={handleAssign}>分配</button>
+          <button className="modal-btn primary" onClick={handleAssignAndContinue}>分配并继续</button>
         </div>
       </div>
     </div>
