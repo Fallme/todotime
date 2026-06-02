@@ -148,7 +148,6 @@ export function useTimer(): UseTimerReturn {
     const nextDot = cycleCountRef.current + 1;
     setCycleCount(nextDot);
 
-    const task = currentTaskRef.current;
     // Add to pending (will be settled after break or on endNow)
     setPendingAssignments(prev => [...prev, { start: '', duration: elapsed }]);
 
@@ -275,10 +274,8 @@ export function useTimer(): UseTimerReturn {
   const skip = useCallback(() => {
     if (mode === 'work') { completeOne(); }
     else {
-      // Skip break → settle + back to work
       clearTimer(); setIsRunning(false);
-      const task = currentTaskRef.current;
-      settlePending(task);
+      settlePending(currentTaskRef.current);
       setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
       startTimeRef.current = '';
     }
