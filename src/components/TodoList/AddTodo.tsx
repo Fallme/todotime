@@ -37,7 +37,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onAdd(title.trim(), 'medium', category as Category);
+    onAdd(title.trim(), 'medium', category);
     setTitle('');
   };
 

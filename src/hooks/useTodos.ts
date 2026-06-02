@@ -114,7 +114,7 @@ export function useTodos(): UseTodosReturn {
   }, []);
 
   const renameTodosCategory = useCallback((oldName: string, newName: string) => {
-    setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName as Category } : t));
+    setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName } : t));
   }, []);
 
   return {

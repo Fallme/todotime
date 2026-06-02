@@ -1,7 +1,6 @@
 export type Priority = 'high' | 'medium' | 'low';
 
-export type Category =
-  | '数学' | '英语' | '专业课' | '政治' | '运动';
+export type Category = string;
 
 export interface CategoryItem {
   name: string;

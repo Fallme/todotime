@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
@@ -24,8 +24,21 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
+  const catPickerRef = useRef<HTMLDivElement>(null);
   const isActive = !todo.done && !todo.abandoned;
   const catColor = getCategoryColor(categories, todo.category);
+
+  // Click outside to close category picker
+  useEffect(() => {
+    if (!showCatPicker) return;
+    const handleClick = (e: MouseEvent) => {
+      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)) {
+        setShowCatPicker(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClick, true);
+    return () => document.removeEventListener('mousedown', handleClick, true);
+  }, [showCatPicker]);
 
   const handleAddSub = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +65,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           )}
         </div>
 
-        <div className="todo-card-body">
+        <div className="todo-card-body" ref={catPickerRef}>
           {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
           <span className="todo-card-title">{todo.title}</span>
           <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
@@ -63,7 +76,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             <div className="cat-picker-popup">
               {categories.map(c => (
                 <button key={c.name} className="cat-pick-btn" style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
-                  onClick={e => { e.stopPropagation(); onChangeCategory(c.name as Category); setShowCatPicker(false); }}>
+                  onClick={e => { e.stopPropagation(); onChangeCategory(c.name); setShowCatPicker(false); }}>
                   {c.name}
                 </button>
               ))}
