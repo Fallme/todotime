@@ -30,6 +30,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const [editColor, setEditColor] = useState('');
   const [showCatAdd, setShowCatAdd] = useState(false);
   const [newCatName, setNewCatName] = useState('');
+  const [newCatColor, setNewCatColor] = useState(getRandomHSL());
 
   const currentCat = categories.find(c => c.name === category);
 
@@ -63,10 +64,10 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
 
   const handleAddCat = () => {
     if (!newCatName.trim()) return;
-    const color = getRandomHSL();
-    onAddCategory(newCatName.trim(), color);
+    onAddCategory(newCatName.trim(), newCatColor);
     setCategory(newCatName.trim());
     setNewCatName('');
+    setNewCatColor(getRandomHSL());
     setShowCatAdd(false);
   };
 
@@ -133,6 +134,14 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                     value={newCatName} onChange={e => setNewCatName(e.target.value)}
                     onKeyDown={handleCatKeyDown} autoFocus />
                   <button type="button" className="cat-add-confirm" onClick={handleAddCat} disabled={!newCatName.trim()}>添加</button>
+                </div>
+              )}
+              {showCatAdd && (
+                <div className="cat-color-palette" style={{ marginTop: 6 }}>
+                  {PRESET_COLORS.map(c => (
+                    <button key={c} type="button" className={`cat-color-swatch ${newCatColor === c ? 'active' : ''}`}
+                      style={{ background: c }} onClick={() => setNewCatColor(c)} />
+                  ))}
                 </div>
               )}
               <div className="cat-edit-hint">双击标签可编辑名称和颜色</div>
