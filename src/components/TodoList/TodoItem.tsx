@@ -57,7 +57,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           <span className="todo-title">{todo.title}</span>
           {todo.createdAt && <span className="todo-time">{todo.createdAt}</span>}
           {todo.done && todo.completedAt && <span className="todo-time completed">完成于 {todo.completedAt}</span>}
-          <span className="category-badge clickable" style={{ background: catColor }}
+          <span className="category-badge clickable" style={{ color: catColor, borderColor: catColor }}
             onClick={e => { e.stopPropagation(); if (isActive) setShowCatPicker(!showCatPicker); }}>
             {todo.category}
           </span>
