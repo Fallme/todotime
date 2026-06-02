@@ -43,7 +43,7 @@ export default function App() {
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
 
-  const timer = useTimer();
+  const timer = useTimer(settings.longBreakInterval);
 
   // Wire up onComplete callback to update task's completedPomodoros
   useEffect(() => {

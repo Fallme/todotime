@@ -36,7 +36,7 @@ interface UseTimerReturn {
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
-export function useTimer(): UseTimerReturn {
+export function useTimer(longBreakInterval: number = 4): UseTimerReturn {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalTime, setTotalTimeState] = useState(25 * 60);
@@ -59,6 +59,7 @@ export function useTimer(): UseTimerReturn {
   const groupPhaseRef = useRef(groupPhase); groupPhaseRef.current = groupPhase;
   const pendingAssignRef = useRef(pendingAssignments); pendingAssignRef.current = pendingAssignments;
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
+  const cycleIntervalRef = useRef(longBreakInterval); cycleIntervalRef.current = longBreakInterval;
   const isLongBreakRef = useRef(false);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
@@ -155,7 +156,7 @@ export function useTimer(): UseTimerReturn {
 
     setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
 
-    if (nextDot >= 4) {
+    if (nextDot >= cycleIntervalRef.current) {
       setCycleCount(0);
       isLongBreakRef.current = true;
       startBreak(true);
