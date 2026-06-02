@@ -37,6 +37,7 @@ export function useTodos(): UseTodosReturn {
           abandoned: (t.abandoned as boolean) || false,
           createdAt: (t.createdAt as string) || '',
           completedAt: (t.completedAt as string) || '',
+          abandonedAt: (t.abandonedAt as string) || '',
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
         }));
       }
@@ -52,7 +53,7 @@ export function useTodos(): UseTodosReturn {
     setTodos(prev => [{
       id: generateId(), title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
-      done: false, abandoned: false, createdAt: formatTime(new Date()), completedAt: '',
+      done: false, abandoned: false, createdAt: formatTime(new Date()), completedAt: '', abandonedAt: '',
       subtasks: [],
     }, ...prev]);
   }, []);
@@ -66,11 +67,11 @@ export function useTodos(): UseTodosReturn {
   }, []);
 
   const abandonTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true } : t));
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true, abandonedAt: formatTime(new Date()) } : t));
   }, []);
 
   const restoreTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: false } : t));
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: false, abandonedAt: '' } : t));
   }, []);
 
   const deleteTodo = useCallback((id: string) => {

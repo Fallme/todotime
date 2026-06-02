@@ -72,8 +72,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-meta">
-          {todo.createdAt && <span className="todo-card-time">{todo.createdAt}</span>}
-          {todo.done && todo.completedAt && <span className="todo-card-time done-time">{todo.completedAt}</span>}
+          {todo.done && todo.completedAt ? (
+            <span className="todo-card-time done-time">{todo.completedAt}</span>
+          ) : todo.abandoned && todo.abandonedAt ? (
+            <span className="todo-card-time abandoned-time">{todo.abandonedAt}</span>
+          ) : todo.createdAt ? (
+            <span className="todo-card-time">{todo.createdAt}</span>
+          ) : null}
           <span className="todo-card-pom">{todo.completedPomodoros}🍅</span>
         </div>
 

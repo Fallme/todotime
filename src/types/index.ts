@@ -43,6 +43,7 @@ export interface Todo {
   abandoned: boolean;
   createdAt: string;
   completedAt: string;
+  abandonedAt: string;
   subtasks: SubTask[];
 }
 
