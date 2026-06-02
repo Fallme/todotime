@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { AppSettings, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -38,10 +38,11 @@ export default function App() {
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
   useEffect(() => { localStorage.setItem('todotime_settings', JSON.stringify(settings)); }, [settings]);
 
-  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData } = useGithubSync(settings.githubRepo, settings.githubToken);
+  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll } = useGithubSync(settings.githubRepo, settings.githubToken);
   const todosHook = useTodos();
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
+  const configLoadedRef = useRef(false);
 
   const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled);
 
@@ -54,12 +55,44 @@ export default function App() {
     });
   }, [timer.setOnComplete, todosHook]);
 
-  // Sync today's pomodoros to git
+  // --- App open: load all data from git and merge ---
+  useEffect(() => {
+    let cancelled = false;
+    loadAll().then(({ settings: gitSettings, todos: gitTodos }) => {
+      if (cancelled) return;
+      // Merge settings: local githubToken preserved, rest from git
+      if (gitSettings) {
+        setSettings(prev => ({
+          ...gitSettings,
+          githubToken: prev.githubToken,
+          categories: gitSettings.categories.length > 0 ? gitSettings.categories : prev.categories,
+        }));
+      }
+      // Merge todos: add any git-only todos to local
+      if (gitTodos && gitTodos.length > 0) {
+        todosHook.mergeTodos(gitTodos);
+      }
+      configLoadedRef.current = true;
+    });
+    return () => { cancelled = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // --- Sync pomodoro data: on every new pomodoro with duration >= 5 min ---
   useEffect(() => {
     if (timer.todayPomodoros.length > 0) {
-      syncDayData(today, timer.todayPomodoros, todos);
+      const last = timer.todayPomodoros[timer.todayPomodoros.length - 1];
+      if (last.duration >= 5) {
+        syncDayData(today, timer.todayPomodoros);
+      }
     }
-  }, [timer.todayPomodoros, today, todos, syncDayData]);
+  }, [timer.todayPomodoros, today, syncDayData]);
+
+  // --- Sync config: when settings or todos change (debounced, after initial load) ---
+  useEffect(() => {
+    if (!configLoadedRef.current) return;
+    syncConfig(settings, todos);
+  }, [settings, todos, syncConfig]);
 
   useStats(dayDataMap, timer.todayPomodoros, today);
 

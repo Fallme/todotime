@@ -16,6 +16,7 @@ interface UseTodosReturn {
   deleteSubtask: (todoId: string, subId: string) => void;
   changeCategory: (id: string, category: Category) => void;
   renameTodosCategory: (oldName: string, newName: string) => void;
+  mergeTodos: (gitTodos: Todo[]) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
 }
@@ -117,9 +118,19 @@ export function useTodos(): UseTodosReturn {
     setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName } : t));
   }, []);
 
+  const mergeTodos = useCallback((gitTodos: Todo[]) => {
+    setTodos(prev => {
+      const localIds = new Set(prev.map(t => t.id));
+      // Add git-only todos (not in local)
+      const gitOnly = gitTodos.filter(t => !localIds.has(t.id));
+      if (gitOnly.length === 0) return prev;
+      return [...prev, ...gitOnly];
+    });
+  }, []);
+
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory,
+    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo,
   };
 }

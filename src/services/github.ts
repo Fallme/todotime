@@ -1,4 +1,4 @@
-import type { DayData } from '../types';
+import type { DayData, ConfigData } from '../types';
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -79,4 +79,18 @@ export async function loadMultipleDays(repo: string, token: string, dates: strin
     }),
   );
   return map;
+}
+
+const CONFIG_PATH = 'config.json';
+
+export async function saveConfig(repo: string, token: string, data: ConfigData): Promise<void> {
+  const content = JSON.stringify(data, null, 2);
+  const existing = await getFile(repo, token, CONFIG_PATH);
+  await putFile(repo, token, CONFIG_PATH, content, existing?.sha, 'Update config');
+}
+
+export async function loadConfig(repo: string, token: string): Promise<ConfigData | null> {
+  const file = await getFile(repo, token, CONFIG_PATH);
+  if (!file) return null;
+  return JSON.parse(file.content) as ConfigData;
 }

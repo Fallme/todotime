@@ -99,3 +99,9 @@ export const DEFAULT_SETTINGS: AppSettings = {
   countdownDate: '2026-12-27',
   categories: [...DEFAULT_CATEGORIES],
 };
+
+export interface ConfigData {
+  settings: Omit<AppSettings, 'githubToken'>;
+  todos: Todo[];
+  updatedAt: string;
+}

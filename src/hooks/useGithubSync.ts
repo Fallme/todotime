@@ -1,6 +1,6 @@
-import { useState, useCallback, useEffect, useRef } from 'react';
-import type { DayData, PomodoroRecord, Todo } from '../types';
-import { saveDayData, loadMultipleDays } from '../services/github';
+import { useState, useCallback, useRef } from 'react';
+import type { DayData, PomodoroRecord, AppSettings, Todo, ConfigData } from '../types';
+import { saveDayData, loadMultipleDays, saveConfig, loadConfig as fetchConfig } from '../services/github';
 import { formatDate } from '../utils/dateUtils';
 
 interface UseGithubSyncReturn {
@@ -8,8 +8,12 @@ interface UseGithubSyncReturn {
   setDayDataMap: React.Dispatch<React.SetStateAction<Map<string, DayData>>>;
   syncing: boolean;
   syncError: string | null;
-  syncDayData: (date: string, pomodoros: PomodoroRecord[], tasks: Todo[]) => Promise<void>;
-  loadWeekData: () => Promise<void>;
+  /** Sync pomodoro data for a specific day to git */
+  syncDayData: (date: string, pomodoros: PomodoroRecord[]) => void;
+  /** Sync config (settings + todos) to git, debounced */
+  syncConfig: (settings: AppSettings, todos: Todo[]) => void;
+  /** Load everything from git: config + 31 days of data */
+  loadAll: () => Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }>;
 }
 
 export function useGithubSync(repo: string, token: string): UseGithubSyncReturn {
@@ -17,12 +21,17 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const configTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastConfigHashRef = useRef('');
 
-  const loadWeekData = useCallback(async () => {
-    if (!token || !repo) return;
+  // --- Load all data from git on app open ---
+  const loadAll = useCallback(async (): Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }> => {
+    if (!token || !repo) return { settings: null, todos: null };
     setSyncing(true);
     setSyncError(null);
+
     try {
+      // Parallel: config + 31 days of pomodoro data
       const dates: string[] = [];
       const now = new Date();
       for (let i = 30; i >= 0; i--) {
@@ -30,64 +39,115 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
         d.setDate(d.getDate() - i);
         dates.push(formatDate(d));
       }
-      const data = await loadMultipleDays(repo, token, dates);
+
+      const [configData, dayData] = await Promise.all([
+        fetchConfig(repo, token).catch(() => null),
+        loadMultipleDays(repo, token, dates).catch(() => new Map<string, DayData>()),
+      ]);
+
+      // Merge day data
       setDayDataMap(prev => {
         const merged = new Map(prev);
-        data.forEach((v, k) => merged.set(k, v));
+        dayData.forEach((v, k) => merged.set(k, v));
         return merged;
       });
+
+      return {
+        settings: configData?.settings ?? null,
+        todos: configData?.todos ?? null,
+      };
     } catch (e) {
       setSyncError((e as Error).message);
+      return { settings: null, todos: null };
     } finally {
       setSyncing(false);
     }
   }, [repo, token]);
 
-  const syncDayData = useCallback(async (
-    date: string,
-    pomodoros: PomodoroRecord[],
-    tasks: Todo[],
-  ) => {
+  // --- Sync pomodoro data for a day (only pomodoro-related) ---
+  const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
     if (!token || !repo) return;
 
-    const existing = dayDataMap.get(date);
-    const allPomodoros = existing
-      ? [...existing.pomodoros, ...pomodoros.slice(existing.pomodoros.length)]
-      : pomodoros;
-    const totalFocusMinutes = allPomodoros.reduce((s, p) => s + p.duration, 0);
-    const completedTasks = tasks.filter(t => t.done).length;
+    // Use functional state update to avoid stale closure
+    setDayDataMap(prev => {
+      const existing = prev.get(date);
+      // Deduplicate: keep existing pomodoros, append only new ones
+      const allPomodoros = existing
+        ? [...existing.pomodoros, ...pomodoros.slice(existing.pomodoros.length)]
+        : pomodoros;
+      const totalFocusMinutes = allPomodoros.reduce((s, p) => s + p.duration, 0);
 
-    const dayData: DayData = {
-      date,
-      pomodoros: allPomodoros,
-      tasks,
-      totalFocusMinutes,
-      totalPomodoros: allPomodoros.length,
-      totalTasksCompleted: completedTasks,
-      streak: existing?.streak || 0,
-    };
+      const dayData: DayData = {
+        date,
+        pomodoros: allPomodoros,
+        tasks: existing?.tasks ?? [],
+        totalFocusMinutes,
+        totalPomodoros: allPomodoros.length,
+        totalTasksCompleted: existing?.totalTasksCompleted ?? 0,
+        streak: existing?.streak ?? 0,
+      };
 
-    setDayDataMap(prev => new Map(prev).set(date, dayData));
+      const next = new Map(prev);
+      next.set(date, dayData);
 
-    // queue the GitHub commit
-    queueRef.current = queueRef.current.then(async () => {
-      setSyncing(true);
-      setSyncError(null);
-      try {
-        await saveDayData(repo, token, dayData);
-      } catch (e) {
-        setSyncError((e as Error).message);
-      } finally {
-        setSyncing(false);
-      }
+      // Queue the GitHub commit
+      queueRef.current = queueRef.current.then(async () => {
+        setSyncing(true);
+        setSyncError(null);
+        try {
+          await saveDayData(repo, token, dayData);
+        } catch (e) {
+          setSyncError((e as Error).message);
+        } finally {
+          setSyncing(false);
+        }
+      });
+
+      return next;
     });
-  }, [token, repo, dayDataMap]);
+  }, [token, repo]);
 
-  useEffect(() => {
-    if (token && repo) {
-      loadWeekData();
-    }
-  }, [token, repo, loadWeekData]);
+  // --- Sync config (settings + todos), debounced 2s ---
+  const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
+    if (!token || !repo) return;
 
-  return { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, loadWeekData };
+    // Hash to skip if nothing changed
+    const configPayload: ConfigData = {
+      settings: {
+        workMinutes: settings.workMinutes,
+        shortBreakMinutes: settings.shortBreakMinutes,
+        longBreakMinutes: settings.longBreakMinutes,
+        longBreakInterval: settings.longBreakInterval,
+        soundEnabled: settings.soundEnabled,
+        darkMode: settings.darkMode,
+        githubRepo: settings.githubRepo,
+        countdownTitle: settings.countdownTitle,
+        countdownDate: settings.countdownDate,
+        categories: settings.categories,
+      },
+      todos,
+      updatedAt: new Date().toISOString(),
+    };
+    const hash = JSON.stringify(configPayload);
+    if (hash === lastConfigHashRef.current) return; // skip duplicate
+    lastConfigHashRef.current = hash;
+
+    // Debounce
+    if (configTimerRef.current) clearTimeout(configTimerRef.current);
+    configTimerRef.current = setTimeout(() => {
+      queueRef.current = queueRef.current.then(async () => {
+        setSyncing(true);
+        setSyncError(null);
+        try {
+          await saveConfig(repo, token, configPayload);
+        } catch (e) {
+          setSyncError((e as Error).message);
+        } finally {
+          setSyncing(false);
+        }
+      });
+    }, 2000);
+  }, [token, repo]);
+
+  return { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll };
 }

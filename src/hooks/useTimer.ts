@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
-import { formatTime } from '../utils/dateUtils';
+import { formatTime, formatDate } from '../utils/dateUtils';
 import { playWorkComplete, playBreakComplete, playStart } from '../utils/sound';
 
 export interface PendingAssignment {
@@ -43,7 +43,17 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const [isRunning, setIsRunning] = useState(false);
   const [cycleCount, setCycleCount] = useState(0);
   const [totalPomodoros, setTotalPomodoros] = useState(0);
-  const [todayPomodoros, setTodayPomodoros] = useState<PomodoroRecord[]>([]);
+  const [todayPomodoros, setTodayPomodoros] = useState<PomodoroRecord[]>(() => {
+    try {
+      const storedDate = localStorage.getItem('todotime_today_date');
+      const today = formatDate(new Date());
+      if (storedDate === today) {
+        const stored = localStorage.getItem('todotime_today_pomodoros');
+        if (stored) return JSON.parse(stored) as PomodoroRecord[];
+      }
+    } catch { /* ignore */ }
+    return [];
+  });
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
   const [groupPhase, setGroupPhase] = useState<GroupPhase>('working');
   const [toast, setToast] = useState<string | null>(null);
@@ -82,6 +92,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setTodayPomodoros(prev => [...prev, record]);
     onCompleteRef.current?.(record);
   }, []);
+
+  // Persist todayPomodoros to localStorage
+  useEffect(() => {
+    const today = formatDate(new Date());
+    localStorage.setItem('todotime_today_date', today);
+    localStorage.setItem('todotime_today_pomodoros', JSON.stringify(todayPomodoros));
+  }, [todayPomodoros]);
 
   // Settle: assign pending pomodoros to task or show modal
   const settlePending = useCallback((taskInfo: { id: string | null; title: string; category: Category } | null) => {
