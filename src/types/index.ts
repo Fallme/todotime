@@ -1,9 +1,8 @@
 export type Priority = 'high' | 'medium' | 'low';
 
 export type Category =
-  | '嵌入式' | 'AI' | '游戏' | '数学' | '物理'
-  | '英语' | '政治' | '音乐' | '画画' | '运动'
-  | '其他';
+  | '数学' | '英语' | '专业课' | '政治' | '运动'
+  | '绘画' | '开发';
 
 export interface CategoryItem {
   name: string;
@@ -11,17 +10,13 @@ export interface CategoryItem {
 }
 
 export const DEFAULT_CATEGORIES: CategoryItem[] = [
-  { name: '嵌入式', color: '#e17055' },
-  { name: 'AI', color: '#6c5ce7' },
-  { name: '游戏', color: '#00b894' },
   { name: '数学', color: '#0984e3' },
-  { name: '物理', color: '#fdcb6e' },
   { name: '英语', color: '#e84393' },
+  { name: '专业课', color: '#6c5ce7' },
   { name: '政治', color: '#d63031' },
-  { name: '音乐', color: '#a29bfe' },
-  { name: '画画', color: '#fd79a8' },
   { name: '运动', color: '#00cec9' },
-  { name: '其他', color: '#636e72' },
+  { name: '绘画', color: '#fd79a8' },
+  { name: '开发', color: '#00b894' },
 ];
 
 export function getCategoryColor(categories: CategoryItem[], name: string): string {
@@ -50,6 +45,7 @@ export interface Todo {
   done: boolean;
   abandoned: boolean;
   createdAt: string;
+  completedAt: string;
   subtasks: SubTask[];
 }
 

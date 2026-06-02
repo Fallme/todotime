@@ -17,7 +17,7 @@ function getRandomHSL(): string {
 
 export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, onChangeCategoryColor }: AddTodoProps) {
   const [title, setTitle] = useState('');
-  const [category, setCategory] = useState<string>('其他');
+  const [category, setCategory] = useState<string>('数学');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const [showCatAdd, setShowCatAdd] = useState(false);
   const [newCatName, setNewCatName] = useState('');

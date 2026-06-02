@@ -22,7 +22,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
     const result = {
       taskId: todo?.id ?? null,
       taskTitle: todo?.title ?? '未分配',
-      category: (todo?.category ?? '其他') as Category,
+      category: (todo?.category ?? '数学') as Category,
     };
     onAssignAll(assignments.map(() => result));
   };

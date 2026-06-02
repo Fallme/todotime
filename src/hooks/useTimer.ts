@@ -59,6 +59,7 @@ export function useTimer(): UseTimerReturn {
   const groupPhaseRef = useRef(groupPhase); groupPhaseRef.current = groupPhase;
   const pendingAssignRef = useRef(pendingAssignments); pendingAssignRef.current = pendingAssignments;
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
+  const isLongBreakRef = useRef(false);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
   const setTotalTime = useCallback((s: number) => { setTotalTimeState(s); setTimeLeft(s); }, []);
@@ -118,8 +119,11 @@ export function useTimer(): UseTimerReturn {
           clearTimer();
           playBreakComplete();
           setIsRunning(false);
-          // After break: settle pending
-          settlePending(currentTaskRef.current);
+          // Only settle after long break (4 pomodoros complete)
+          if (isLongBreakRef.current) {
+            settlePending(currentTaskRef.current);
+            isLongBreakRef.current = false;
+          }
           setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
           startTimeRef.current = '';
           return 0;
@@ -153,8 +157,10 @@ export function useTimer(): UseTimerReturn {
 
     if (nextDot >= 4) {
       setCycleCount(0);
+      isLongBreakRef.current = true;
       startBreak(true);
     } else {
+      isLongBreakRef.current = false;
       startBreak(false);
     }
   }, [clearTimer, startBreak]);
@@ -185,7 +191,7 @@ export function useTimer(): UseTimerReturn {
       const a = results[i] || results[results.length - 1];
       recordPomodoro({
         start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他',
+        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '数学',
         completed: true, createdAt: formatTime(new Date()),
       });
     });
@@ -207,6 +213,7 @@ export function useTimer(): UseTimerReturn {
     clearTimer(); setIsRunning(false);
     setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
     setCycleCount(0); startTimeRef.current = '';
+    isLongBreakRef.current = false;
     setPendingAssignments([]);
   }, [clearTimer]);
 
@@ -248,11 +255,13 @@ export function useTimer(): UseTimerReturn {
     // Reset
     setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
     setCycleCount(0);
+    isLongBreakRef.current = false;
     if (pending.length === 0) setGroupPhase('working');
   }, [clearTimer, mode, recordPomodoro, showToast]);
 
   const resetCycle = useCallback(() => {
     setCycleCount(0); setGroupPhase('working'); setPendingAssignments([]);
+    isLongBreakRef.current = false;
   }, []);
 
   const addTestPomodoros = useCallback((records: PomodoroRecord[]) => {
@@ -274,7 +283,10 @@ export function useTimer(): UseTimerReturn {
     if (mode === 'work') { completeOne(true); }
     else {
       clearTimer(); setIsRunning(false);
-      settlePending(currentTaskRef.current);
+      if (isLongBreakRef.current) {
+        settlePending(currentTaskRef.current);
+        isLongBreakRef.current = false;
+      }
       setMode('work'); setTimeLeft(25 * 60); setTotalTimeState(25 * 60);
       startTimeRef.current = '';
     }

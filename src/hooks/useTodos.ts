@@ -29,12 +29,13 @@ export function useTodos(): UseTodosReturn {
           id: t.id as string,
           title: t.title as string,
           priority: (t.priority as Priority) || 'medium',
-          category: (t.category as Category) || '其他',
+          category: (t.category as Category) || '数学',
           estimatedPomodoros: (t.estimatedPomodoros as number) || 0,
           completedPomodoros: (t.completedPomodoros as number) || 0,
           done: (t.done as boolean) || false,
           abandoned: (t.abandoned as boolean) || false,
           createdAt: (t.createdAt as string) || '',
+          completedAt: (t.completedAt as string) || '',
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
         }));
       }
@@ -50,13 +51,17 @@ export function useTodos(): UseTodosReturn {
     setTodos(prev => [{
       id: generateId(), title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
-      done: false, abandoned: false, createdAt: formatTime(new Date()),
+      done: false, abandoned: false, createdAt: formatTime(new Date()), completedAt: '',
       subtasks: [],
     }, ...prev]);
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+    setTodos(prev => prev.map(t => t.id === id ? {
+      ...t,
+      done: !t.done,
+      completedAt: !t.done ? formatTime(new Date()) : '',
+    } : t));
   }, []);
 
   const abandonTodo = useCallback((id: string) => {
