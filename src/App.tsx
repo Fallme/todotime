@@ -74,10 +74,16 @@ export default function App() {
 
   const handleExport = () => {
     const data = { settings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = `todotime-backup-${today}.json`; a.click();
-    URL.revokeObjectURL(url);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `todotime-backup-${today}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const handleImport = (file: File) => {
@@ -156,7 +162,7 @@ export default function App() {
       {timer.toast && <div className="toast-notification">{timer.toast}</div>}
 
       {/* Assignment modal */}
-      {timer.groupPhase === 'groupDone' && timer.pendingAssignments.length > 0 && (
+      {timer.groupPhase === 'settle' && timer.pendingAssignments.length > 0 && (
         <TaskAssignModal
           assignments={timer.pendingAssignments} todos={todos}
           currentTaskName={currentTask?.title ?? null}
