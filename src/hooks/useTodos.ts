@@ -76,8 +76,8 @@ export function useTodos(): UseTodosReturn {
 
   const deleteTodo = useCallback((id: string) => {
     setTodos(prev => prev.filter(t => t.id !== id));
-    if (selectedTodoId === id) setSelectedTodoId(null);
-  }, [selectedTodoId]);
+    setSelectedTodoId(prev => prev === id ? null : prev);
+  }, []);
 
   const updateTodoPomodoros = useCallback((id: string) => {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t));

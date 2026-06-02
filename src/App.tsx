@@ -131,7 +131,7 @@ export default function App() {
             <CountdownTimer title={settings.countdownTitle} targetDate={settings.countdownDate} onUpdate={handleCountdownUpdate} />
             <div className="timer-section">
               <div className="cycle-indicator">
-                {Array.from({ length: 4 }, (_, i) => (
+                {Array.from({ length: settings.longBreakInterval }, (_, i) => (
                   <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                 ))}
               </div>

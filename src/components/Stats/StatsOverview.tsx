@@ -338,7 +338,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTes
                   <span className={`compare-diff ${diffText(reportData.rd.totalPomodoros, reportData.pd.totalPomodoros).cls}`}>
                     {diffText(reportData.rd.totalPomodoros, reportData.pd.totalPomodoros).text}
                   </span>
-                  <span className="compare-prev">(上周{reportData.pd.totalPomodoros}个)</span>
+                  <span className="compare-prev">(上{showReport === 'week' ? '周' : '月'}{reportData.pd.totalPomodoros}个)</span>
                 </div>
                 <div className="report-compare-row">
                   <span className="compare-label">⏱ 时长</span>
@@ -346,7 +346,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTes
                   <span className={`compare-diff ${diffText(reportData.rd.totalMinutes, reportData.pd.totalMinutes).cls}`}>
                     {diffText(reportData.rd.totalMinutes, reportData.pd.totalMinutes).text}
                   </span>
-                  <span className="compare-prev">(上周{reportData.pd.totalMinutes}分钟)</span>
+                  <span className="compare-prev">(上{showReport === 'week' ? '周' : '月'}{reportData.pd.totalMinutes}分钟)</span>
                 </div>
                 <div className="report-compare-row">
                   <span className="compare-label">✅ 完成任务</span>
@@ -354,7 +354,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTes
                   <span className={`compare-diff ${diffText(reportData.rd.totalTasksCompleted, reportData.pd.totalTasksCompleted).cls}`}>
                     {diffText(reportData.rd.totalTasksCompleted, reportData.pd.totalTasksCompleted).text}
                   </span>
-                  <span className="compare-prev">(上周{reportData.pd.totalTasksCompleted}个)</span>
+                  <span className="compare-prev">(上{showReport === 'week' ? '周' : '月'}{reportData.pd.totalTasksCompleted}个)</span>
                 </div>
                 <div className="report-compare-row">
                   <span className="compare-label">📅 活跃天</span>
@@ -362,7 +362,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTes
                   <span className={`compare-diff ${diffText(reportData.rd.daily.filter(d => d.pomodoros > 0).length, reportData.pd.daily.filter(d => d.pomodoros > 0).length).cls}`}>
                     {diffText(reportData.rd.daily.filter(d => d.pomodoros > 0).length, reportData.pd.daily.filter(d => d.pomodoros > 0).length).text}
                   </span>
-                  <span className="compare-prev">(上周{reportData.pd.daily.filter(d => d.pomodoros > 0).length}天)</span>
+                  <span className="compare-prev">(上{showReport === 'week' ? '周' : '月'}{reportData.pd.daily.filter(d => d.pomodoros > 0).length}天)</span>
                 </div>
               </div>
 
