@@ -125,12 +125,6 @@ function getCategoryData(data: PeriodResult, metric: ChartMetric, categories: Ca
     .sort((a, b) => b.value - a.value);
 }
 
-function getMetricTotal(data: PeriodResult, metric: ChartMetric): number {
-  if (metric === 'minutes') return data.totalMinutes;
-  if (metric === 'pomodoros') return data.totalPomodoros;
-  return data.totalTasksCompleted;
-}
-
 function diffText(current: number, previous: number): { text: string; cls: string } {
   if (previous === 0 && current === 0) return { text: '—', cls: '' };
   if (previous === 0) return { text: `↑ 新增`, cls: 'up' };
@@ -176,7 +170,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, onAddTes
   const prevMonthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 30), [dayDataMap, todayPomodoros, today]);
 
   const activeData = period === 'week' ? weekData : monthData;
-  const prevData = period === 'week' ? prevWeekData : prevMonthData;
   const isCompact = period === 'month';
 
   const handleTest = useCallback(() => { onAddTestData?.(genTestData()); }, [onAddTestData]);
