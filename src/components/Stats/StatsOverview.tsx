@@ -33,7 +33,7 @@ function genTestData(): Map<string, DayData> {
     for (let j = 0; j < count; j++) {
       const cat = cats[Math.floor(Math.random() * cats.length)];
       const task = tasks[cat][Math.floor(Math.random() * tasks[cat].length)];
-      pomodoros.push({ start: '', end: '', duration: 25, taskId: null, taskTitle: task, category: cat, completed: true });
+      pomodoros.push({ start: '', end: '', duration: 25, taskId: null, taskTitle: task, category: cat, completed: true, createdAt: '' });
     }
     map.set(date, { date, pomodoros, tasks: [], totalFocusMinutes: pomodoros.length * 25, totalPomodoros: pomodoros.length, totalTasksCompleted: 0, streak: 0 });
   }
