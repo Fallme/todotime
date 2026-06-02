@@ -41,6 +41,15 @@ export default function App() {
 
   const timer = useTimer();
 
+  // Wire up onComplete callback to update task's completedPomodoros
+  useEffect(() => {
+    timer.setOnComplete((record) => {
+      if (record.taskId) {
+        todosHook.updateTodoPomodoros(record.taskId);
+      }
+    });
+  }, [timer.setOnComplete, todosHook]);
+
   // Sync today's pomodoros to git
   useEffect(() => {
     if (timer.todayPomodoros.length > 0) {

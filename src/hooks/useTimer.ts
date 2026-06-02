@@ -33,6 +33,7 @@ interface UseTimerReturn {
   endNow: () => void;
   resetCycle: () => void;
   addTestPomodoros: (records: PomodoroRecord[]) => void;
+  setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
 export function useTimer(): UseTimerReturn {
@@ -64,6 +65,10 @@ export function useTimer(): UseTimerReturn {
   const pendingAssignRef = useRef(pendingAssignments);
   pendingAssignRef.current = pendingAssignments;
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
+
+  const setOnComplete = useCallback((cb: (r: PomodoroRecord) => void) => {
+    onCompleteRef.current = cb;
+  }, []);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
   const setTotalTime = useCallback((s: number) => { setTotalTimeState(s); setTimeLeft(s); }, []);
@@ -320,6 +325,6 @@ export function useTimer(): UseTimerReturn {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros,
+    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, setOnComplete,
   };
 }
