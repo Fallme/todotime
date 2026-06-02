@@ -21,7 +21,11 @@ type TabId = 'timer' | 'stats' | 'settings';
 function loadSettings(): AppSettings {
   try {
     const stored = localStorage.getItem('todotime_settings');
-    return stored ? { ...DEFAULT_SETTINGS, ...JSON.parse(stored) } : DEFAULT_SETTINGS;
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return { ...DEFAULT_SETTINGS, ...parsed, categories: [...DEFAULT_SETTINGS.categories] };
+    }
+    return DEFAULT_SETTINGS;
   } catch { return DEFAULT_SETTINGS; }
 }
 
