@@ -73,7 +73,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
           <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>全部</button>
           {usedCategories.map(cat => (
             <button key={cat} className={`category-filter-chip ${filterCategory === cat ? 'active' : ''}`}
-              style={filterCategory === cat ? { background: getCategoryColor(categories, cat), color: 'white', borderColor: getCategoryColor(categories, cat) } : { borderColor: getCategoryColor(categories, cat) }}
+              style={{ color: getCategoryColor(categories, cat), borderColor: getCategoryColor(categories, cat) }}
               onClick={() => setFilterCategory(filterCategory === cat ? 'all' : cat)}>{cat}</button>
           ))}
         </div>
