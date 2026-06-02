@@ -142,7 +142,11 @@ export default function App() {
         )}
       </main>
       <TabNav active={tab} onChange={setTab} />
-      {timer.groupPhase === 'groupDone' && timer.pendingAssignments.length > 0 && (
+
+      {/* Toast notification */}
+      {timer.toast && <div className="toast-notification">{timer.toast}</div>}
+
+      {/* Assignment modal */}
         <TaskAssignModal
           assignments={timer.pendingAssignments} todos={todos}
           currentTaskName={currentTask?.title ?? null}

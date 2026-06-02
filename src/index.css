@@ -236,6 +236,17 @@ body { background: var(--bg); margin: 0; }
 }
 .cd-btn.cancel { background: var(--bg); color: var(--text-secondary); border: 1px solid var(--border); }
 
+/* Toast notification */
+.toast-notification {
+  position: fixed; bottom: 90px; left: 50%; transform: translateX(-50%);
+  background: var(--bg-card); color: var(--text); border: 1px solid var(--border);
+  padding: 10px 20px; border-radius: 12px; box-shadow: var(--shadow-lg);
+  font-size: 14px; font-weight: 500; z-index: 100;
+  animation: toastIn 0.3s ease;
+  max-width: 340px; text-align: center;
+}
+@keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+
 /* Cycle dots */
 .cycle-indicator { display: flex; gap: 6px; align-items: center; }
 .cycle-dot {

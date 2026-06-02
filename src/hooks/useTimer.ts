@@ -20,6 +20,7 @@ interface UseTimerReturn {
   todayPomodoros: PomodoroRecord[];
   pendingAssignments: PendingAssignment[];
   groupPhase: GroupPhase;
+  toast: string | null;
   start: () => void;
   pause: () => void;
   reset: () => void;
@@ -44,6 +45,8 @@ export function useTimer(): UseTimerReturn {
   const [todayPomodoros, setTodayPomodoros] = useState<PomodoroRecord[]>([]);
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
   const [groupPhase, setGroupPhase] = useState<GroupPhase>('working');
+  const [toast, setToast] = useState<string | null>(null);
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string>('');
@@ -110,10 +113,33 @@ export function useTimer(): UseTimerReturn {
     setTotalPomodoros(p => p + 1);
     setCycleCount(nextDot);
 
+    // Group complete (4 dots)
     if (nextDot >= 4) {
       setCycleCount(0);
-      setGroupPhase('groupDone');
-      setIsRunning(false);
+      // Auto-assign if task selected, otherwise show modal
+      if (task) {
+        // Assign all pending to task
+        const allPending = [...pendingAssignRef.current];
+        allPending.forEach(pa => {
+          setTodayPomodoros(prev => [...prev, {
+            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+            taskId: task.id, taskTitle: task.title, category: task.category,
+            completed: true, createdAt: formatTime(new Date()),
+          }]);
+        });
+        if (allPending.length > 0) setTotalPomodoros(p => p + allPending.length);
+        setPendingAssignments([]);
+        // Toast notification
+        setToast(`🍅 本轮${allPending.length + 1}个番茄已记录给「${task.title}」`);
+        if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = setTimeout(() => setToast(null), 3000);
+        // Start long break
+        startBreakAndContinue(4);
+      } else {
+        // No task → show assignment modal
+        setGroupPhase('groupDone');
+        setIsRunning(false);
+      }
     } else {
       startBreakAndContinue(nextDot);
     }
@@ -292,7 +318,7 @@ export function useTimer(): UseTimerReturn {
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
-    pendingAssignments, groupPhase,
+    pendingAssignments, groupPhase, toast,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
     assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros,
   };
