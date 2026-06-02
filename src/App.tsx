@@ -147,6 +147,7 @@ export default function App() {
       {timer.toast && <div className="toast-notification">{timer.toast}</div>}
 
       {/* Assignment modal */}
+      {timer.groupPhase === 'groupDone' && timer.pendingAssignments.length > 0 && (
         <TaskAssignModal
           assignments={timer.pendingAssignments} todos={todos}
           currentTaskName={currentTask?.title ?? null}
