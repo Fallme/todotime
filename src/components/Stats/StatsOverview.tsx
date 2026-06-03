@@ -319,23 +319,21 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> 今日完成</span></div>
       </div>
 
-      {/* Toolbar: period toggle + report buttons */}
+      {/* Toolbar: all controls in one row */}
       <div className="stats-toolbar">
         <div className="stats-period-toggle">
           <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>近七天</button>
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>近一个月</button>
         </div>
+        <div className="stats-metric-toggle">
+          <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
+          <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
+          <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
+        </div>
         <div className="stats-report-btns">
           <button className="btn secondary small" onClick={() => setShowReport('week')}><BarChart3 size={13} /> 周报</button>
           <button className="btn secondary small" onClick={() => setShowReport('month')}><BarChart3 size={13} /> 月报</button>
         </div>
-      </div>
-
-      {/* Metric toggle */}
-      <div className="stats-metric-toggle" style={{ marginBottom: 12 }}>
-        <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
-        <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
-        <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
       </div>
 
       {/* Aggregate summary */}
