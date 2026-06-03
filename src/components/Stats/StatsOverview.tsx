@@ -133,10 +133,11 @@ function getCategoryData(data: PeriodResult, metric: ChartMetric, categories: Ca
 
 function diffText(current: number, previous: number): { text: string; cls: string; icon: React.ReactNode } {
   if (previous === 0 && current === 0) return { text: '—', cls: '', icon: <Minus size={12} /> };
-  if (previous === 0) return { text: '新增', cls: 'up', icon: <TrendingUp size={12} /> };
+  if (previous === 0) return { text: `新增${current}`, cls: 'up', icon: <TrendingUp size={12} /> };
   const pct = Math.round((current - previous) / previous * 100);
-  if (pct > 0) return { text: `+${pct}%`, cls: 'up', icon: <TrendingUp size={12} /> };
-  if (pct < 0) return { text: `${pct}%`, cls: 'down', icon: <TrendingDown size={12} /> };
+  const diff = current - previous;
+  if (pct > 0) return { text: `+${pct}% (+${diff})`, cls: 'up', icon: <TrendingUp size={12} /> };
+  if (pct < 0) return { text: `${pct}% (${diff})`, cls: 'down', icon: <TrendingDown size={12} /> };
   return { text: '持平', cls: 'same', icon: <Minus size={12} /> };
 }
 
@@ -318,21 +319,23 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> 今日完成</span></div>
       </div>
 
-      {/* Toolbar: period toggle + metric toggle + report buttons */}
+      {/* Toolbar: period toggle + report buttons */}
       <div className="stats-toolbar">
         <div className="stats-period-toggle">
           <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>近七天</button>
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>近一个月</button>
         </div>
-        <div className="stats-metric-toggle">
-          <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
-          <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
-          <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
-        </div>
         <div className="stats-report-btns">
           <button className="btn secondary small" onClick={() => setShowReport('week')}><BarChart3 size={13} /> 周报</button>
           <button className="btn secondary small" onClick={() => setShowReport('month')}><BarChart3 size={13} /> 月报</button>
         </div>
+      </div>
+
+      {/* Metric toggle */}
+      <div className="stats-metric-toggle" style={{ marginBottom: 12 }}>
+        <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
+        <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
+        <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
       </div>
 
       {/* Aggregate summary */}
