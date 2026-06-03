@@ -2,7 +2,8 @@ import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
-import { X, Clock, Flame, CheckCircle2, Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, Minus, Timer, Target, Award, Sparkles, RefreshCw, Download } from 'lucide-react';
+import { X, Clock, Flame, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
+import { formatDuration } from '../../utils/dateUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
@@ -137,17 +138,6 @@ function diffText(current: number, previous: number): { text: string; cls: strin
   if (pct > 0) return { text: `+${pct}%`, cls: 'up', icon: <TrendingUp size={12} /> };
   if (pct < 0) return { text: `${pct}%`, cls: 'down', icon: <TrendingDown size={12} /> };
   return { text: '持平', cls: 'same', icon: <Minus size={12} /> };
-}
-
-function evalInfo(current: number, previous: number, label: string): { text: string; cls: string; icon: React.ReactNode } {
-  if (previous === 0 && current === 0) return { text: `${label}无数据`, cls: 'neutral', icon: <Minus size={18} /> };
-  if (previous === 0) return { text: `${label}首次记录，加油!`, cls: 'good', icon: <Sparkles size={18} /> };
-  const pct = Math.round((current - previous) / previous * 100);
-  if (pct > 20) return { text: `${label}大幅进步 (+${pct}%)，继续保持!`, cls: 'good', icon: <Award size={18} /> };
-  if (pct > 0) return { text: `${label}小幅提升 (+${pct}%)`, cls: 'good', icon: <TrendingUp size={18} /> };
-  if (pct === 0) return { text: `${label}与上期持平`, cls: 'neutral', icon: <Target size={18} /> };
-  if (pct > -20) return { text: `${label}略有下降 (${pct}%)，调整一下`, cls: 'warn', icon: <TrendingDown size={18} /> };
-  return { text: `${label}明显下滑 (${pct}%)，需要关注`, cls: 'bad', icon: <TrendingDown size={18} /> };
 }
 
 export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, onAddTestData, onRefresh }: StatsOverviewProps) {
@@ -417,144 +407,86 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         const reportType = showReport === 'week' ? '周报' : '月报';
         const prevLabel = showReport === 'week' ? '上周' : '上月';
         const activeDays = rd.daily.filter(d => d.pomodoros > 0).length;
-        const prevActiveDays = pd.daily.filter(d => d.pomodoros > 0).length;
         const reportCats = Object.entries(rd.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-        const reportPieCats = reportCats.map(([k, v]) => ({ label: k, value: v, color: getCategoryColor(categories, k) }));
-        const reportPieTotal = reportPieCats.reduce((s, c) => s + c.value, 0);
-        const rPieData = reportPieCats.length > 0 ? {
-          labels: reportPieCats.map(c => c.label),
-          datasets: [{ data: reportPieCats.map(c => c.value), backgroundColor: reportPieCats.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg-card)' }],
-        } : null;
-        const rPieOpts = {
-          responsive: true, maintainAspectRatio: false, cutout: '62%', animation: { duration: 0 },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${reportPieTotal > 0 ? Math.round(v / reportPieTotal * 100) : 0}%)`; } } } },
-        };
-        const sumCards = [
-          { icon: <Flame size={16} />, bg: '#FF6B6B', val: rd.totalPomodoros, label: '番茄', diff: diffText(rd.totalPomodoros, pd.totalPomodoros), prev: pd.totalPomodoros, unit: '个' },
-          { icon: <Clock size={16} />, bg: '#6c5ce7', val: rd.totalMinutes, label: '专注时长', diff: diffText(rd.totalMinutes, pd.totalMinutes), prev: pd.totalMinutes, unit: '分钟' },
-          { icon: <CheckCircle2 size={16} />, bg: '#00b894', val: rd.totalTasksCompleted, label: '完成任务', diff: diffText(rd.totalTasksCompleted, pd.totalTasksCompleted), prev: pd.totalTasksCompleted, unit: '个' },
-          { icon: <Calendar size={16} />, bg: '#0984e3', val: activeDays, label: '活跃天数', diff: diffText(activeDays, prevActiveDays), prev: prevActiveDays, unit: '天' },
-        ];
-        const evals = [
-          evalInfo(rd.totalPomodoros, pd.totalPomodoros, '番茄数'),
-          evalInfo(rd.totalMinutes, pd.totalMinutes, '专注时长'),
-          evalInfo(rd.totalTasksCompleted, pd.totalTasksCompleted, '完成任务'),
-        ];
 
         return (
           <div className="modal-overlay" onClick={() => setShowReport(null)}>
-            <div className="report-modal" onClick={e => e.stopPropagation()}>
-              {/* Banner */}
-              <div className="report-banner">
-                <div className="report-banner-head">
-                  <div className="report-banner-title">
-                    <BarChart3 size={22} strokeWidth={2.5} />
-                    <h3>{reportType}</h3>
-                  </div>
-                  <button className="report-banner-close" onClick={() => setShowReport(null)}><X size={16} /></button>
+            <div className="report-modal apple-style" onClick={e => e.stopPropagation()}>
+              {/* Header */}
+              <div className="report-header-apple">
+                <button className="report-close-btn" onClick={() => setShowReport(null)}><X size={18} /></button>
+                <h3>{reportType}</h3>
+                <span className="report-date-range">{rd.daily[0]?.date.slice(5)} ~ {rd.daily[rd.daily.length - 1]?.date.slice(5)}</span>
+              </div>
+
+              {/* Big summary number */}
+              <div className="report-big-summary">
+                <div className="report-big-val">{formatDuration(rd.totalMinutes)}</div>
+                <div className="report-big-label">总专注时长</div>
+                <div className={`report-big-diff ${diffText(rd.totalMinutes, pd.totalMinutes).cls}`}>
+                  {diffText(rd.totalMinutes, pd.totalMinutes).icon} 与{prevLabel}比{diffText(rd.totalMinutes, pd.totalMinutes).text}
                 </div>
-                <div className="report-banner-date">
-                  {rd.daily[0]?.date.slice(5)} ~ {rd.daily[rd.daily.length - 1]?.date.slice(5)}
-                </div>
               </div>
 
-              {/* Summary cards */}
-              <div className="report-summary">
-                {sumCards.map((c) => (
-                  <div key={c.label} className="report-sum-card">
-                    <div className="report-sum-icon" style={{ background: c.bg }}>{c.icon}</div>
-                    <div className="report-sum-val">{c.val}<span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-muted)', marginLeft: 3 }}>{c.unit}</span></div>
-                    <div className="report-sum-label">{c.label}</div>
-                    <div className={`report-sum-diff ${c.diff.cls}`}>
-                      {c.diff.icon} {c.diff.text}
-                      <span style={{ fontWeight: 400, opacity: 0.7, marginLeft: 3 }}>/ {prevLabel}{c.prev}{c.unit}</span>
-                    </div>
-                  </div>
-                ))}
+              {/* Stacked bar chart */}
+              <div className="report-apple-chart">
+                <div className="report-bar-wrap"><Bar data={reportBarData} options={reportBarOptions} /></div>
               </div>
 
-              {/* Evaluation */}
-              <div className="report-section-title">评价</div>
-              <div className="report-eval">
-                {evals.map((e, i) => (
-                  <div key={i} className="report-eval-item">
-                    <div className={`report-eval-icon ${e.cls}`}>{e.icon}</div>
-                    <div className="report-eval-text">{e.text}</div>
-                  </div>
-                ))}
-              </div>
-
-              {/* Category distribution */}
-              <div className="report-section-title">板块分布</div>
-              {reportCats.length > 0 ? (
-                <div className="report-cat-bars">
-                  {reportCats.map(([cat, mins]) => {
-                    const poms = rd.categoryPomodoros[cat] || 0;
-                    const tasks = rd.categoryTasks[cat] || 0;
-                    const pct = rd.totalMinutes > 0 ? Math.round(mins / rd.totalMinutes * 100) : 0;
-                    const color = getCategoryColor(categories, cat);
-                    return (
-                      <div key={cat} className="report-cat-bar-item">
-                        <div className="report-cat-bar-head">
-                          <span className="report-cat-bar-dot" style={{ background: color }} />
-                          <span className="report-cat-bar-name">{cat}</span>
-                          <span className="report-cat-bar-pct">{pct}%</span>
-                        </div>
-                        <div className="report-cat-bar-track">
-                          <div className="report-cat-bar-fill" style={{ width: `${pct}%`, background: color }} />
-                        </div>
-                        <div className="report-cat-bar-stats">
-                          <span className="report-cat-bar-stat"><Timer size={11} /> {mins}分钟</span>
-                          <span className="report-cat-bar-stat"><Flame size={11} /> {poms}个番茄</span>
-                          <span className="report-cat-bar-stat"><CheckCircle2 size={11} /> {tasks}个任务</span>
-                        </div>
+              {/* Category breakdown - Apple style */}
+              <div className="report-apple-cats">
+                {reportCats.map(([cat, mins]) => {
+                  const poms = rd.categoryPomodoros[cat] || 0;
+                  const tasks = rd.categoryTasks[cat] || 0;
+                  const pct = rd.totalMinutes > 0 ? Math.round(mins / rd.totalMinutes * 100) : 0;
+                  const color = getCategoryColor(categories, cat);
+                  return (
+                    <div key={cat} className="report-apple-cat-row">
+                      <div className="report-apple-cat-head">
+                        <span className="report-apple-cat-dot" style={{ background: color }} />
+                        <span className="report-apple-cat-name">{cat}</span>
+                        <span className="report-apple-cat-val">{formatDuration(mins)}</span>
                       </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="chart-empty">暂无数据</div>
-              )}
-
-              {/* Category pie + bar charts */}
-              <div className="report-section-title">图表分析</div>
-              <div className="report-chart-section">
-                {rPieData && (
-                  <div style={{ marginBottom: 16 }}>
-                    <h4><PieChart size={14} /> 板块占比</h4>
-                    <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-                      <div style={{ width: 110, height: 110, flexShrink: 0 }}><Doughnut data={rPieData} options={rPieOpts} /></div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        {reportPieCats.map(c => (
-                          <div key={c.label} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 0', fontSize: 12 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
-                            <span style={{ color: 'var(--text-secondary)' }}>{c.label}</span>
-                            <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontWeight: 600 }}>
-                              {reportPieTotal > 0 ? Math.round(c.value / reportPieTotal * 100) : 0}%
-                            </span>
-                          </div>
-                        ))}
+                      <div className="report-apple-cat-bar">
+                        <div className="report-apple-cat-fill" style={{ width: `${pct}%`, background: color }} />
+                      </div>
+                      <div className="report-apple-cat-stats">
+                        🍅 {poms}个番茄 · ✓ {tasks}个任务
                       </div>
                     </div>
-                  </div>
-                )}
-                <div>
-                  <h4><BarChart3 size={14} /> 每日趋势</h4>
-                  <div className="report-bar-wrap"><Bar data={reportBarData} options={reportBarOptions} /></div>
+                  );
+                })}
+              </div>
+
+              {/* Summary stats */}
+              <div className="report-apple-stats">
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">🍅 {rd.totalPomodoros}</span>
+                  <span className="report-apple-stat-label">番茄</span>
                 </div>
-                <div style={{ marginTop: 16 }}>
-                  <h4><TrendingUp size={14} /> 综合趋势</h4>
-                  <div className="report-bar-wrap"><Line data={trendData} options={trendOptions} /></div>
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">✓ {rd.totalTasksCompleted}</span>
+                  <span className="report-apple-stat-label">任务</span>
                 </div>
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">{activeDays}天</span>
+                  <span className="report-apple-stat-label">活跃</span>
+                </div>
+              </div>
+
+              {/* Combined trend */}
+              <div className="report-apple-trend">
+                <h4>综合趋势</h4>
+                <div className="report-bar-wrap"><Line data={trendData} options={trendOptions} /></div>
               </div>
 
               {/* Footer */}
-              <div className="report-footer">
+              <div className="report-footer-apple">
                 <button className="report-share-btn" onClick={handleRefresh} disabled={refreshing}>
-                  <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> {refreshing ? '同步中...' : '刷新数据'}
+                  <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> {refreshing ? '同步中...' : '刷新'}
                 </button>
                 <button className="report-share-btn primary" onClick={() => handleDownload(rd, reportType)}>
-                  <Download size={14} /> 下载报告
+                  <Download size={14} /> 下载
                 </button>
               </div>
             </div>

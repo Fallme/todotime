@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Check, Trash2, Play, RotateCcw, Plus, Flame } from 'lucide-react';
+import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
 
@@ -109,7 +109,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           ) : todo.createdAt ? (
             <span className="todo-card-time">{formatIsoTime(todo.createdAt)}</span>
           ) : null}
-          <span className="todo-card-pom"><Flame size={11} /> {todo.completedPomodoros}</span>
+          <span className="todo-card-pom">🍅 {todo.completedPomodoros}</span>
         </div>
 
         <div className="todo-card-actions">
@@ -148,7 +148,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
               )}
               <span className="sub-text">{sub.title}</span>
               {sub.createdAt && <span className="sub-time">{formatIsoTime(sub.createdAt)}</span>}
-              <span className="sub-pom"><Flame size={10} /> {sub.completedPomodoros}</span>
+              <span className="sub-pom">🍅 {sub.completedPomodoros}</span>
               {!sub.done && !sub.abandoned && (
                 <button className="sub-play" onClick={e => { e.stopPropagation(); onQuickStartSubtask({ id: sub.id, title: sub.title, category: todo.category }); }} title="开始番茄"><Play size={11} /></button>
               )}

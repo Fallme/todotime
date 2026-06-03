@@ -3,7 +3,7 @@ import type { Todo, Priority, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
 import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
-import { ListTodo, Flame } from 'lucide-react';
+import { ListTodo } from 'lucide-react';
 
 type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
 
@@ -58,7 +58,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
         <ListTodo size={20} /><span>任务清单</span>
         <div className="todo-header-stats">
           <span className="todo-stat-done">{todos.filter(t => t.done).length}/{todos.filter(t => !t.abandoned).length}</span>
-          <span className="todo-stat-pom"><Flame size={13} /> {todayPomodoros}</span>
+          <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
         </div>
       </div>
 
