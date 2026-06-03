@@ -104,25 +104,27 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
   // Settle: assign pending pomodoros to task or show modal for assignment
   const settlePending = useCallback((taskInfo: { id: string | null; title: string; category: Category } | null) => {
-    const pending = pendingAssignRef.current;
-    if (pending.length === 0) return;
+    setPendingAssignments(prev => {
+      if (prev.length === 0) return prev;
 
-    if (taskInfo) {
-      // Auto-assign all to task
-      pending.forEach(pa => {
-        recordPomodoro({
-          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-          taskId: taskInfo.id, taskTitle: taskInfo.title, category: taskInfo.category,
-          completed: true, createdAt: formatTime(new Date()),
+      if (taskInfo) {
+        // Auto-assign all to task
+        prev.forEach(pa => {
+          recordPomodoro({
+            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+            taskId: taskInfo.id, taskTitle: taskInfo.title, category: taskInfo.category,
+            completed: true, createdAt: formatTime(new Date()),
+          });
         });
-      });
-      setPendingAssignments([]);
-      showToast(`已结算 ${pending.length} 个番茄 →「${taskInfo.title}」`);
-    } else {
-      // No task → show assignment modal (default: 其他)
-      setPendingAssignments(pending);
-      setGroupPhase('settle');
-    }
+        // Use setTimeout to show toast after state update
+        setTimeout(() => showToast(`已结算 ${prev.length} 个番茄 →「${taskInfo.title}」`), 0);
+        return [];
+      } else {
+        // No task → show assignment modal (default: 其他)
+        setGroupPhase('settle');
+        return prev;
+      }
+    });
   }, [recordPomodoro, showToast]);
 
   // Start break then auto-continue

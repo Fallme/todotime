@@ -32,6 +32,7 @@ export default function App() {
   const [settings, setSettings] = useState<AppSettings>(loadSettings);
   const [tab, setTab] = useState<TabId>('timer');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
   const today = formatDate(new Date());
 
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
@@ -245,7 +246,7 @@ export default function App() {
                   <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                 ))}
               </div>
-              <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} />
+              <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
               <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />
             </div>
             <TodoList
@@ -304,6 +305,27 @@ export default function App() {
           onAssignAll={handleAssignAll} onStartNextGroup={timer.startNextGroup}
           onStop={timer.stop} onResetCycle={timer.resetCycle}
         />
+      )}
+
+      {/* Task picker modal (click timer ring) */}
+      {showTaskPicker && (
+        <div className="modal-overlay" onClick={() => setShowTaskPicker(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 320 }}>
+            <h3 className="modal-title">切换任务</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12, maxHeight: 300, overflowY: 'auto' }}>
+              <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: '#636e72', background: !currentTaskId ? '#636e72' : undefined, color: !currentTaskId ? 'white' : undefined }}
+                onClick={() => { setCurrentTaskId(null); timer.setTaskInfo(null, '', '其他'); setShowTaskPicker(false); }}>
+                无任务（其他）
+              </button>
+              {todos.filter(t => !t.done && !t.abandoned).map(t => (
+                <button key={t.id} className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
+                  onClick={() => { setCurrentTaskId(t.id); timer.setTaskInfo(t.id, t.title, t.category); setShowTaskPicker(false); }}>
+                  {t.title}（{t.category}）
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
