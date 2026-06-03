@@ -298,8 +298,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setCycleCount(0);
     isLongBreakRef.current = false;
 
-    // Settle if at least 1 pomodoro exists
     if (allPending.length > 0) {
+      // Has pending pomodoros → settle them
       if (soundEnabledRef.current) playWorkComplete();
       const task = currentTaskRef.current;
       if (task) {
@@ -319,7 +319,15 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         setGroupPhase('settle');
       }
     } else {
-      setGroupPhase('working');
+      // No pending but still show settlement popup for current task
+      const task = currentTaskRef.current;
+      if (task) {
+        showToast(`已重置轮次，当前任务：「${task.title}」`);
+      } else {
+        // No task → show assignment modal with empty list (user can add task)
+        setPendingAssignments([{ start: formatTime(new Date()), duration: 0 }]);
+        setGroupPhase('settle');
+      }
     }
   }, [clearTimer, recordPomodoro, showToast]);
 
