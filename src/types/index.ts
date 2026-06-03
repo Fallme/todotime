@@ -30,6 +30,8 @@ export interface SubTask {
   title: string;
   done: boolean;
   abandoned: boolean;
+  completedPomodoros: number;
+  createdAt: string;
   updatedAt: string;
 }
 

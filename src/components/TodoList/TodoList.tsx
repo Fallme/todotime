@@ -19,6 +19,7 @@ interface TodoListProps {
   onRestore: (id: string) => void;
   onSelect: (id: string | null) => void;
   onQuickStart: (todo: Todo) => void;
+  onQuickStartSubtask: (subtask: { id: string; title: string; category: Category }) => void;
   onAddSubtask: (todoId: string, title: string) => void;
   onToggleSubtask: (todoId: string, subId: string) => void;
   onAbandonSubtask: (todoId: string, subId: string) => void;
@@ -34,7 +35,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'done', label: '已完成' }, { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
 
@@ -88,7 +89,8 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
           <TodoItem key={todo.id} todo={todo} isSelected={todo.id === selectedTodoId} categories={categories}
             onToggle={() => onToggle(todo.id)} onDelete={() => onDelete(todo.id)} onAbandon={() => onAbandon(todo.id)}
             onRestore={() => onRestore(todo.id)} onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
-            onQuickStart={() => onQuickStart(todo)} onAddSubtask={(t) => onAddSubtask(todo.id, t)}
+            onQuickStart={() => onQuickStart(todo)} onQuickStartSubtask={onQuickStartSubtask}
+            onAddSubtask={(t) => onAddSubtask(todo.id, t)}
             onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)}
             onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
           />

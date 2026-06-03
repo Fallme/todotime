@@ -13,6 +13,7 @@ interface TodoItemProps {
   onAbandon: () => void;
   onRestore: () => void;
   onQuickStart: () => void;
+  onQuickStartSubtask: (subtask: { id: string; title: string; category: Category }) => void;
   onAddSubtask: (title: string) => void;
   onToggleSubtask: (subId: string) => void;
   onAbandonSubtask: (subId: string) => void;
@@ -20,7 +21,7 @@ interface TodoItemProps {
   onChangeCategory: (category: Category) => void;
 }
 
-export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -134,6 +135,11 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
                 </>
               )}
               <span className="sub-text">{sub.title}</span>
+              {sub.createdAt && <span className="sub-time">{sub.createdAt}</span>}
+              <span className="sub-pom">{sub.completedPomodoros}个</span>
+              {!sub.done && !sub.abandoned && (
+                <button className="sub-play" onClick={e => { e.stopPropagation(); onQuickStartSubtask({ id: sub.id, title: sub.title, category: todo.category }); }} title="开始番茄"><Play size={11} /></button>
+              )}
               <button className="sub-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
           ))}

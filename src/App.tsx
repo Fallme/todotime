@@ -49,10 +49,16 @@ export default function App() {
   useEffect(() => {
     timer.setOnComplete((record) => {
       if (record.taskId) {
-        todosHook.updateTodoPomodoros(record.taskId);
+        // Check if it's a subtask (not a main todo)
+        const isSubtask = todos.some(t => t.subtasks.some(s => s.id === record.taskId));
+        if (isSubtask) {
+          todosHook.updateSubtaskPomodoros(record.taskId);
+        } else {
+          todosHook.updateTodoPomodoros(record.taskId);
+        }
       }
     });
-  }, [timer.setOnComplete, todosHook]);
+  }, [timer.setOnComplete, todosHook, todos]);
 
   // --- Merge git data into local state ---
   const mergeGitData = useCallback(({ settings: gitSettings, todos: gitTodos }: { settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }) => {
@@ -133,6 +139,15 @@ export default function App() {
     }
   };
 
+  const handleQuickStartSubtask = (subtask: { id: string; title: string; category: Category }) => {
+    setCurrentTaskId(null);
+    timer.setTaskInfo(subtask.id, subtask.title, subtask.category);
+    if (!timer.isRunning) {
+      timer.setTotalTime(settings.workMinutes * 60);
+      timer.start();
+    }
+  };
+
   const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
     timer.assignAll(results);
   };
@@ -204,6 +219,7 @@ export default function App() {
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
               onAbandon={todosHook.abandonTodo} onRestore={todosHook.restoreTodo}
               onSelect={todosHook.selectTodo} onQuickStart={handleQuickStart}
+              onQuickStartSubtask={handleQuickStartSubtask}
               onAddSubtask={todosHook.addSubtask} onToggleSubtask={todosHook.toggleSubtask}
               onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}

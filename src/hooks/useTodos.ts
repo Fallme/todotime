@@ -10,6 +10,7 @@ interface UseTodosReturn {
   restoreTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
   updateTodoPomodoros: (id: string) => void;
+  updateSubtaskPomodoros: (subId: string) => void;
   addSubtask: (todoId: string, title: string) => void;
   toggleSubtask: (todoId: string, subId: string) => void;
   abandonSubtask: (todoId: string, subId: string) => void;
@@ -93,11 +94,19 @@ export function useTodos(): UseTodosReturn {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1, updatedAt: ts } : t));
   }, []);
 
+  const updateSubtaskPomodoros = useCallback((subId: string) => {
+    const ts = now();
+    setTodos(prev => prev.map(t => ({
+      ...t, updatedAt: ts,
+      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, completedPomodoros: s.completedPomodoros + 1, updatedAt: ts } : s),
+    })));
+  }, []);
+
   const addSubtask = useCallback((todoId: string, title: string) => {
     const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
       ...t, updatedAt: ts,
-      subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false, updatedAt: ts }],
+      subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false, completedPomodoros: 0, createdAt: ts, updatedAt: ts }],
     } : t));
   }, []);
 
@@ -183,7 +192,7 @@ export function useTodos(): UseTodosReturn {
 
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
+    updateTodoPomodoros, updateSubtaskPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo,
   };
 }
