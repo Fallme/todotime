@@ -102,31 +102,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     localStorage.setItem('todotime_today_pomodoros', JSON.stringify(todayPomodoros));
   }, [todayPomodoros]);
 
-  // Settle: assign pending pomodoros to task or show modal for assignment
-  const settlePending = useCallback((taskInfo: { id: string | null; title: string; category: Category } | null) => {
-    setPendingAssignments(prev => {
-      if (prev.length === 0) return prev;
-
-      if (taskInfo) {
-        // Auto-assign all to task
-        prev.forEach(pa => {
-          recordPomodoro({
-            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-            taskId: taskInfo.id, taskTitle: taskInfo.title, category: taskInfo.category,
-            completed: true, createdAt: formatTime(new Date()),
-          });
-        });
-        // Use setTimeout to show toast after state update
-        setTimeout(() => showToast(`已结算 ${prev.length} 个番茄 →「${taskInfo.title}」`), 0);
-        return [];
-      } else {
-        // No task → show assignment modal (default: 其他)
-        setGroupPhase('settle');
-        return prev;
-      }
-    });
-  }, [recordPomodoro, showToast]);
-
   // Start break then auto-continue
   const startBreak = useCallback((isLong: boolean) => {
     if (isLong) {
@@ -147,14 +122,41 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           if (soundEnabledRef.current) playBreakComplete();
           // Long break completed → settle and reset cycle
           if (isLongBreakRef.current) {
-            settlePending(currentTaskRef.current);
             isLongBreakRef.current = false;
             setCycleCount(0);
-            setPendingAssignments([]);
             setIsRunning(false);
             setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
             startTimeRef.current = '';
-            showToast('一轮完成！已重置轮次');
+
+            // Settle pending pomodoros
+            const pending = pendingAssignRef.current;
+            const task = currentTaskRef.current;
+            if (pending.length > 0) {
+              if (task) {
+                // Has task → auto-assign
+                pending.forEach(pa => {
+                  recordPomodoro({
+                    start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+                    taskId: task.id, taskTitle: task.title, category: task.category,
+                    completed: true, createdAt: formatTime(new Date()),
+                  });
+                });
+                setPendingAssignments([]);
+                showToast(`一轮完成！已结算 ${pending.length} 个番茄 →「${task.title}」`);
+              } else {
+                // No task → show assignment modal
+                setPendingAssignments(pending);
+                setGroupPhase('settle');
+              }
+            } else {
+              // No pending but show assignment modal for current task
+              if (task) {
+                showToast(`一轮完成！已重置轮次，当前任务：「${task.title}」`);
+              } else {
+                setPendingAssignments([{ start: formatTime(new Date()), duration: 0 }]);
+                setGroupPhase('settle');
+              }
+            }
             return 0;
           }
           // Short break completed → auto-start next work
@@ -167,7 +169,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       });
     }, 1000);
     return clearTimer;
-  }, [isRunning, mode, clearTimer, settlePending, showToast]);
+  }, [isRunning, mode, clearTimer, recordPomodoro, showToast]);
 
   // Complete one work pomodoro
   const completeOne = useCallback((force = false) => {
