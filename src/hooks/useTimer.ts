@@ -120,20 +120,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         if (prev <= 1) {
           clearTimer();
           if (soundEnabledRef.current) playBreakComplete();
-          // Long break completed → settle and reset cycle
+          // Long break completed → settle and reset
           if (isLongBreakRef.current) {
             isLongBreakRef.current = false;
-            setCycleCount(0);
-            setIsRunning(false);
-            setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-            startTimeRef.current = '';
-
-            // Settle pending pomodoros
-            const pending = pendingAssignRef.current;
-            const task = currentTaskRef.current;
-            if (pending.length > 0) {
-              if (task) {
-                // Has task → auto-assign
+            // Call endNow to settle
+            setTimeout(() => {
+              const pending = pendingAssignRef.current;
+              const task = currentTaskRef.current;
+              if (pending.length > 0 && task) {
                 pending.forEach(pa => {
                   recordPomodoro({
                     start: pa.start, end: formatTime(new Date()), duration: pa.duration,
@@ -142,24 +136,26 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
                   });
                 });
                 setPendingAssignments([]);
+                setCycleCount(0);
+                setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+                setIsRunning(false);
                 showToast(`一轮完成！已结算 ${pending.length} 个番茄 →「${task.title}」`);
-              } else {
-                // No task → show assignment modal
+              } else if (pending.length > 0) {
                 setPendingAssignments(pending);
                 setGroupPhase('settle');
-              }
-            } else {
-              // No pending but show assignment modal for current task
-              if (task) {
-                showToast(`一轮完成！已重置轮次，当前任务：「${task.title}」`);
+                setCycleCount(0);
+                setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+                setIsRunning(false);
               } else {
-                setPendingAssignments([{ start: formatTime(new Date()), duration: 0 }]);
-                setGroupPhase('settle');
+                setCycleCount(0);
+                setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+                setIsRunning(false);
+                showToast('一轮完成！');
               }
-            }
+            }, 0);
             return 0;
           }
-          // Short break completed → auto-start next work
+          // Short break → auto-start next work
           setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
           setIsRunning(true);
@@ -276,20 +272,17 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: directly settle to current task, or show popup if no task
+  // End now: settle all time to current task
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = Math.round(elapsedSeconds / 60);
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
-    const wasWorkMode = modeRef.current === 'work'; // Check BEFORE resetting mode
 
-    // Build full pending list (old pending + current work if > 1 minute)
+    // Collect ALL pending + current work time
     const oldPending = pendingAssignRef.current;
-    const currentWork = (wasWorkMode && elapsedSeconds >= 60)
-      ? [{ start: startTime, duration: elapsed }]
-      : [];
+    const currentWork = elapsedSeconds >= 60 ? [{ start: startTime, duration: elapsed }] : [];
     const allPending = [...oldPending, ...currentWork];
 
     setIsRunning(false);
@@ -299,36 +292,26 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     isLongBreakRef.current = false;
 
     const task = currentTaskRef.current;
-    if (allPending.length > 0 && task) {
-      // Has pending + task → directly settle all
+    if (allPending.length > 0) {
       if (soundEnabledRef.current) playWorkComplete();
-      allPending.forEach(pa => {
-        recordPomodoro({
-          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-          taskId: task.id, taskTitle: task.title, category: task.category,
-          completed: true, createdAt: formatTime(new Date()),
+      if (task) {
+        // Has task → settle all to task
+        allPending.forEach(pa => {
+          recordPomodoro({
+            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+            taskId: task.id, taskTitle: task.title, category: task.category,
+            completed: true, createdAt: formatTime(new Date()),
+          });
         });
-      });
-      setPendingAssignments([]);
-      showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
-    } else if (allPending.length > 0 && !task) {
-      // Has pending but no task → show assignment modal
-      setPendingAssignments(allPending);
-      setGroupPhase('settle');
-    } else if (task) {
-      // No pending but has task → still record if was work mode > 1 min
-      if (wasWorkMode && elapsedSeconds >= 60) {
-        if (soundEnabledRef.current) playWorkComplete();
-        recordPomodoro({
-          start: startTime, end: formatTime(new Date()), duration: elapsed,
-          taskId: task.id, taskTitle: task.title, category: task.category,
-          completed: true, createdAt: formatTime(new Date()),
-        });
-        showToast(`已结算 ${elapsed} 分钟 →「${task.title}」`);
+        setPendingAssignments([]);
+        showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
       } else {
-        showToast(`已重置轮次`);
+        // No task → show assignment modal
+        setPendingAssignments(allPending);
+        setGroupPhase('settle');
       }
     } else {
+      // No time to record
       setGroupPhase('working');
     }
   }, [clearTimer, recordPomodoro, showToast]);
