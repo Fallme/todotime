@@ -585,7 +585,7 @@ body { background: var(--bg); margin: 0; }
 .todo-card {
   background: var(--bg-card); border-radius: 10px;
   transition: opacity 0.3s, background 0.2s, transform 0.2s, box-shadow 0.2s;
-  border: 1px solid transparent; overflow: hidden;
+  border: 1px solid transparent; overflow: visible;
 }
 .todo-card:hover { border-color: var(--border); transform: translateY(-1px); box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
 .todo-card.selected { background: rgba(255,107,107,0.06); border-color: rgba(255,107,107,0.25); }
