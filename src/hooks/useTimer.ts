@@ -187,30 +187,27 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
     if (soundEnabledRef.current) playWorkComplete();
 
+    // Always add to pending assignments (even if < 20 min)
+    setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
+
     // Only count as pomodoro if >= 20 minutes
     const isFullPomodoro = elapsed >= 20;
     if (isFullPomodoro) {
       setTotalPomodoros(p => p + 1);
-      const nextDot = cycleCountRef.current + 1;
-      setCycleCount(nextDot);
-
-      setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
-
-      if (nextDot >= cycleIntervalRef.current) {
-        setCycleCount(0);
-        isLongBreakRef.current = true;
-        startBreak(true);
-      } else {
-        isLongBreakRef.current = false;
-        startBreak(false);
-      }
-    } else {
-      // Short session: record time only, no pomodoro, no break
-      setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
-      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-      showToast(`已记录 ${elapsed} 分钟（不满20分钟不计入番茄）`);
     }
-  }, [clearTimer, startBreak, showToast]);
+
+    const nextDot = cycleCountRef.current + 1;
+    setCycleCount(nextDot);
+
+    if (nextDot >= cycleIntervalRef.current) {
+      setCycleCount(0);
+      isLongBreakRef.current = true;
+      startBreak(true);
+    } else {
+      isLongBreakRef.current = false;
+      startBreak(false);
+    }
+  }, [clearTimer, startBreak]);
 
   // Work countdown — tracks running minutes for real-time stats
   const workSecondsRef = useRef(0);
