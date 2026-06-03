@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import { Bar, Doughnut, Chart } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
@@ -289,38 +289,24 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     return { rd, pd, count };
   }, [showReport, weekData, monthData, prevWeekData, prevMonthData]);
 
-  // Report bar chart (daily trend)
-  const reportBarData = {
-    labels: reportData.rd.daily.map(d => d.date.slice(5)),
-    datasets: [
-      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Bcc', borderRadius: 4, maxBarThickness: 20 },
-      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60cc', borderRadius: 4, maxBarThickness: 20 },
-    ],
-  };
-  const reportBarOptions = {
-    responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
-    plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
-    scales: {
-      x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999' } },
-    },
-  };
-
-  // Combined trend chart: duration + pomodoros + tasks as grouped bars
+  // Combined trend: bar for duration, lines for pomodoros/tasks
   const trendData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
       {
-        label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes),
-        backgroundColor: '#6c5ce7aa', borderRadius: 4, maxBarThickness: 16,
+        type: 'bar' as const, label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes),
+        backgroundColor: '#6c5ce755', borderColor: '#6c5ce7', borderWidth: 1, borderRadius: 4,
+        yAxisID: 'y', order: 2,
       },
       {
-        label: '番茄数', data: reportData.rd.daily.map(d => d.pomodoros),
-        backgroundColor: '#FF6B6Baa', borderRadius: 4, maxBarThickness: 16,
+        type: 'line' as const, label: '番茄数', data: reportData.rd.daily.map(d => d.pomodoros),
+        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#FF6B6B',
+        yAxisID: 'y1', order: 1,
       },
       {
-        label: '任务数', data: reportData.rd.daily.map(d => d.tasksDone),
-        backgroundColor: '#27ae60aa', borderRadius: 4, maxBarThickness: 16,
+        type: 'line' as const, label: '任务数', data: reportData.rd.daily.map(d => d.tasksDone),
+        borderColor: '#27ae60', backgroundColor: '#27ae6033', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#27ae60',
+        yAxisID: 'y1', order: 0,
       },
     ],
   };
@@ -329,7 +315,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999' } },
+      y: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#6c5ce7' }, title: { display: true, text: '分钟', color: '#6c5ce7', font: { size: 10 } } },
+      y1: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B' }, title: { display: true, text: '个数', color: '#FF6B6B', font: { size: 10 } } },
     },
   };
 
@@ -445,10 +432,32 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
                 </div>
               </div>
 
-              {/* Duration bar chart */}
+              {/* Summary stats with comparison */}
+              <div className="report-apple-stats">
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">🍅 {rd.totalPomodoros}</span>
+                  <span className="report-apple-stat-label">番茄</span>
+                  <span className={`report-apple-stat-diff ${diffText(rd.totalPomodoros, pd.totalPomodoros).cls}`}>
+                    {diffText(rd.totalPomodoros, pd.totalPomodoros).text}
+                  </span>
+                </div>
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">✓ {rd.totalTasksCompleted}</span>
+                  <span className="report-apple-stat-label">任务</span>
+                  <span className={`report-apple-stat-diff ${diffText(rd.totalTasksCompleted, pd.totalTasksCompleted).cls}`}>
+                    {diffText(rd.totalTasksCompleted, pd.totalTasksCompleted).text}
+                  </span>
+                </div>
+                <div className="report-apple-stat">
+                  <span className="report-apple-stat-val">{activeDays}天</span>
+                  <span className="report-apple-stat-label">活跃</span>
+                </div>
+              </div>
+
+              {/* Combined trend chart */}
               <div className="report-section-apple">
-                <h4>每日专注时长</h4>
-                <div className="report-bar-wrap"><Bar data={reportBarData} options={reportBarOptions} /></div>
+                <h4>综合趋势</h4>
+                <div className="report-bar-wrap"><Chart type="bar" data={trendData} options={trendOptions} /></div>
               </div>
 
               {/* Pie chart - category distribution */}
@@ -487,28 +496,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
                   </div>
                 </div>
               )}
-
-              {/* Summary stats */}
-              <div className="report-apple-stats">
-                <div className="report-apple-stat">
-                  <span className="report-apple-stat-val">🍅 {rd.totalPomodoros}</span>
-                  <span className="report-apple-stat-label">番茄</span>
-                </div>
-                <div className="report-apple-stat">
-                  <span className="report-apple-stat-val">✓ {rd.totalTasksCompleted}</span>
-                  <span className="report-apple-stat-label">任务</span>
-                </div>
-                <div className="report-apple-stat">
-                  <span className="report-apple-stat-val">{activeDays}天</span>
-                  <span className="report-apple-stat-label">活跃</span>
-                </div>
-              </div>
-
-              {/* Combined trend */}
-              <div className="report-section-apple">
-                <h4>综合趋势</h4>
-                <div className="report-bar-wrap"><Line data={trendData} options={trendOptions} /></div>
-              </div>
 
               {/* Footer */}
               <div className="report-footer-apple">
