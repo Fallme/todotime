@@ -22,9 +22,11 @@ const QUOTES = [
 interface HeaderProps {
   darkMode: boolean;
   onToggleTheme: () => void;
+  syncing: boolean;
+  syncError: string | null;
 }
 
-export function Header({ darkMode, onToggleTheme }: HeaderProps) {
+export function Header({ darkMode, onToggleTheme, syncing, syncError }: HeaderProps) {
   const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
 
   return (
@@ -35,6 +37,8 @@ export function Header({ darkMode, onToggleTheme }: HeaderProps) {
           <h1 className="header-title">番茄钟</h1>
         </div>
         <div className="header-right">
+          {syncing && <span className="sync-badge syncing">同步中...</span>}
+          {syncError && <span className="sync-badge error" title={syncError}>同步失败</span>}
           <button className="icon-btn" onClick={onToggleTheme} title="切换主题">
             {darkMode ? <Sun size={20} /> : <Moon size={20} />}
           </button>
