@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Doughnut, Chart } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
@@ -289,34 +289,43 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     return { rd, pd, count };
   }, [showReport, weekData, monthData, prevWeekData, prevMonthData]);
 
-  // Combined trend: bar for duration, lines for pomodoros/tasks
-  const trendData = {
+  // Duration bar chart
+  const durationBarData = {
+    labels: reportData.rd.daily.map(d => d.date.slice(5)),
+    datasets: [{
+      label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes),
+      backgroundColor: '#6c5ce7aa', borderRadius: 4, maxBarThickness: 20,
+    }],
+  };
+  const durationBarOpts = {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
+      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#6c5ce7' } },
+    },
+  };
+
+  // Pomodoros + tasks line chart
+  const trendLineData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
       {
-        type: 'bar' as const, label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes),
-        backgroundColor: '#6c5ce755', borderColor: '#6c5ce7', borderWidth: 1, borderRadius: 4,
-        yAxisID: 'y', order: 2,
+        label: '番茄数', data: reportData.rd.daily.map(d => d.pomodoros),
+        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#FF6B6B', fill: true,
       },
       {
-        type: 'line' as const, label: '番茄数', data: reportData.rd.daily.map(d => d.pomodoros),
-        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#FF6B6B',
-        yAxisID: 'y1', order: 1,
-      },
-      {
-        type: 'line' as const, label: '任务数', data: reportData.rd.daily.map(d => d.tasksDone),
-        borderColor: '#27ae60', backgroundColor: '#27ae6033', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#27ae60',
-        yAxisID: 'y1', order: 0,
+        label: '任务数', data: reportData.rd.daily.map(d => d.tasksDone),
+        borderColor: '#27ae60', backgroundColor: '#27ae6033', tension: 0.3, pointRadius: 3, pointBackgroundColor: '#27ae60', fill: true,
       },
     ],
   };
-  const trendOptions = {
+  const trendLineOpts = {
     responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      y: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#6c5ce7' }, title: { display: true, text: '分钟', color: '#6c5ce7', font: { size: 10 } } },
-      y1: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B' }, title: { display: true, text: '个数', color: '#FF6B6B', font: { size: 10 } } },
+      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999' } },
     },
   };
 
@@ -454,10 +463,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
                 </div>
               </div>
 
-              {/* Combined trend chart */}
+              {/* Duration bar chart */}
               <div className="report-section-apple">
-                <h4>综合趋势</h4>
-                <div className="report-bar-wrap"><Chart type="bar" data={trendData} options={trendOptions} /></div>
+                <h4>每日专注时长</h4>
+                <div className="report-bar-wrap"><Bar data={durationBarData} options={durationBarOpts} /></div>
+              </div>
+
+              {/* Pomodoros + tasks line chart */}
+              <div className="report-section-apple">
+                <h4>番茄与任务趋势</h4>
+                <div className="report-bar-wrap"><Line data={trendLineData} options={trendLineOpts} /></div>
               </div>
 
               {/* Pie chart - category distribution */}
