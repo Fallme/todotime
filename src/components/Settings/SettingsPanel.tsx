@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { AppSettings } from '../../types';
-import { Download, Upload, Trash2, Save } from 'lucide-react';
+import { Download, Upload, Trash2 } from 'lucide-react';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -14,9 +14,15 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
   const [form, setForm] = useState(settings);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  const handleSave = () => {
+  // Auto-save: when form changes, immediately save
+  useEffect(() => {
     onSave(form);
-  };
+  }, [form, onSave]);
+
+  // Sync form when settings change externally (e.g. git sync)
+  useEffect(() => {
+    setForm(settings);
+  }, [settings]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -119,9 +125,6 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
       </section>
 
       <div className="settings-actions">
-        <button className="btn primary" onClick={handleSave}>
-          <Save size={16} /> 保存设置
-        </button>
         <button className="btn secondary" onClick={onExport}>
           <Download size={16} /> 导出数据
         </button>
