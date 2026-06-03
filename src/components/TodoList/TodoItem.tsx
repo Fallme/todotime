@@ -44,7 +44,6 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const catColor = getCategoryColor(categories, todo.category);
 
   const toggleCatPicker = useCallback(() => {
-    if (!isActive) return;
     if (showCatPicker) {
       setShowCatPicker(false);
     } else if (catTagRef.current) {
@@ -52,7 +51,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       setPopupPos({ top: rect.bottom + 4, left: rect.left });
       setShowCatPicker(true);
     }
-  }, [isActive, showCatPicker]);
+  }, [showCatPicker]);
 
   // Click outside to close category picker
   useEffect(() => {
@@ -119,8 +118,8 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
       </div>
 
-      {/* Category picker - rendered as fixed portal to prevent layout jitter */}
-      {showCatPicker && isActive && (
+      {/* Category picker - works for all tasks */}
+      {showCatPicker && (
         <div className="cat-picker-popup" ref={catPickerRef} style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999 }}>
           {categories.map(c => (
             <button key={c.name} className="cat-pick-btn" style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
