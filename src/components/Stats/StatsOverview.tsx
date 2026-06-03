@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
-import { X, Clock, Flame, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
+import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDuration } from '../../utils/dateUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
@@ -339,7 +339,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     <div className="stats-overview">
       {/* Today summary */}
       <div className="stats-top-row">
-        <div className="stats-top-item accent"><span className="stats-top-val">{todayData.pomodoros}</span><span className="stats-top-label"><Flame size={12} /> 今日番茄</span></div>
+        <div className="stats-top-item accent"><span className="stats-top-val">{todayData.pomodoros}</span><span className="stats-top-label">🍅 今日番茄</span></div>
         <div className="stats-top-item"><span className="stats-top-val">{todayData.minutes}m</span><span className="stats-top-label"><Clock size={12} /> 今日时长</span></div>
         <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> 今日完成</span></div>
       </div>
@@ -352,7 +352,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         </div>
         <div className="stats-metric-toggle">
           <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
-          <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}><Flame size={12} /> 番茄</button>
+          <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
           <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
         </div>
         <div className="stats-report-btns">
@@ -363,7 +363,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
 
       {/* Aggregate summary */}
       <div className="stats-aggregate-card">
-        <div className="agg-item"><span className="agg-val">{activeData.totalPomodoros}</span><span className="agg-label"><Flame size={11} /> 番茄</span></div>
+        <div className="agg-item"><span className="agg-val">{activeData.totalPomodoros}</span><span className="agg-label">🍅 番茄</span></div>
         <div className="agg-item"><span className="agg-val">{activeData.totalMinutes}m</span><span className="agg-label"><Clock size={11} /> 时长</span></div>
         <div className="agg-item"><span className="agg-val">{activeData.totalTasksCompleted}</span><span className="agg-label"><CheckCircle2 size={11} /> 完成任务</span></div>
         <div className="agg-item"><span className="agg-val">{activeDays}/{activeData.daily.length}</span><span className="agg-label"><Calendar size={11} /> 活跃天</span></div>
