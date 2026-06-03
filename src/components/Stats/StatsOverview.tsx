@@ -409,6 +409,23 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         const activeDays = rd.daily.filter(d => d.pomodoros > 0).length;
         const reportCats = Object.entries(rd.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
 
+        // Pie chart data for categories
+        const pieCategories = reportCats.map(([k, v]) => ({ label: k, value: v, color: getCategoryColor(categories, k) }));
+        const pieTotal = pieCategories.reduce((s, c) => s + c.value, 0);
+        const pieData = pieCategories.length > 0 ? {
+          labels: pieCategories.map(c => c.label),
+          datasets: [{ data: pieCategories.map(c => c.value), backgroundColor: pieCategories.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg)' }],
+        } : null;
+        const pieOpts = {
+          responsive: true, maintainAspectRatio: false, cutout: '60%', animation: { duration: 0 },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${pieTotal > 0 ? Math.round(v / pieTotal * 100) : 0}%)`; } } } },
+        };
+
+        // Completed tasks in period
+        const periodStart = rd.daily[0]?.date ?? '';
+        const periodEnd = rd.daily[rd.daily.length - 1]?.date ?? '';
+        const periodTasks = todos.filter(t => t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
+
         return (
           <div className="modal-overlay" onClick={() => setShowReport(null)}>
             <div className="report-modal apple-style" onClick={e => e.stopPropagation()}>
@@ -428,35 +445,48 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
                 </div>
               </div>
 
-              {/* Stacked bar chart */}
-              <div className="report-apple-chart">
+              {/* Duration bar chart */}
+              <div className="report-section-apple">
+                <h4>每日专注时长</h4>
                 <div className="report-bar-wrap"><Bar data={reportBarData} options={reportBarOptions} /></div>
               </div>
 
-              {/* Category breakdown - Apple style */}
-              <div className="report-apple-cats">
-                {reportCats.map(([cat, mins]) => {
-                  const poms = rd.categoryPomodoros[cat] || 0;
-                  const tasks = rd.categoryTasks[cat] || 0;
-                  const pct = rd.totalMinutes > 0 ? Math.round(mins / rd.totalMinutes * 100) : 0;
-                  const color = getCategoryColor(categories, cat);
-                  return (
-                    <div key={cat} className="report-apple-cat-row">
-                      <div className="report-apple-cat-head">
-                        <span className="report-apple-cat-dot" style={{ background: color }} />
-                        <span className="report-apple-cat-name">{cat}</span>
-                        <span className="report-apple-cat-val">{formatDuration(mins)}</span>
-                      </div>
-                      <div className="report-apple-cat-bar">
-                        <div className="report-apple-cat-fill" style={{ width: `${pct}%`, background: color }} />
-                      </div>
-                      <div className="report-apple-cat-stats">
-                        🍅 {poms}个番茄 · ✓ {tasks}个任务
-                      </div>
+              {/* Pie chart - category distribution */}
+              {pieData && (
+                <div className="report-section-apple">
+                  <h4>板块分布</h4>
+                  <div className="report-pie-layout">
+                    <div className="report-pie-chart"><Doughnut data={pieData} options={pieOpts} /></div>
+                    <div className="report-pie-legend">
+                      {pieCategories.map(c => (
+                        <div key={c.label} className="report-pie-item">
+                          <span className="report-pie-dot" style={{ background: c.color }} />
+                          <span className="report-pie-name">{c.label}</span>
+                          <span className="report-pie-val">{formatDuration(c.value)} ({pieTotal > 0 ? Math.round(c.value / pieTotal * 100) : 0}%)</span>
+                        </div>
+                      ))}
                     </div>
-                  );
-                })}
-              </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Completed tasks */}
+              {periodTasks.length > 0 && (
+                <div className="report-section-apple">
+                  <h4>完成的任务 ({periodTasks.length}个)</h4>
+                  <div className="report-task-list">
+                    {periodTasks.slice(0, 8).map(t => (
+                      <div key={t.id} className="report-task-row">
+                        <span className="report-task-dot" style={{ background: getCategoryColor(categories, t.category) }} />
+                        <span className="report-task-name">{t.title}</span>
+                        <span className="report-task-cat">{t.category}</span>
+                        <span className="report-task-pom">🍅 {t.completedPomodoros}</span>
+                      </div>
+                    ))}
+                    {periodTasks.length > 8 && <div className="report-task-more">还有 {periodTasks.length - 8} 个任务...</div>}
+                  </div>
+                </div>
+              )}
 
               {/* Summary stats */}
               <div className="report-apple-stats">
@@ -475,7 +505,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
               </div>
 
               {/* Combined trend */}
-              <div className="report-apple-trend">
+              <div className="report-section-apple">
                 <h4>综合趋势</h4>
                 <div className="report-bar-wrap"><Line data={trendData} options={trendOptions} /></div>
               </div>
