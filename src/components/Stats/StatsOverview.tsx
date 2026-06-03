@@ -92,7 +92,7 @@ function computePeriodData(
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     // Count completed tasks from local todos by completedAt date (ISO format: 2026-06-03T...)
     const doneToday = todos.filter(t => t.done && t.completedAt.startsWith(date));
-    let tasksDone = doneToday.length;
+    const tasksDone = doneToday.length;
     const totalTasksDay = todos.filter(t => t.createdAt.startsWith(date)).length || tasksDone;
     if (date === today) {
       const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
