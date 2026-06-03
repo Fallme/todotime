@@ -283,10 +283,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const elapsed = Math.round(elapsedSeconds / 60);
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
+    const wasWorkMode = modeRef.current === 'work'; // Check BEFORE resetting mode
 
     // Build full pending list (old pending + current work if > 1 minute)
     const oldPending = pendingAssignRef.current;
-    const currentWork = (modeRef.current === 'work' && elapsedSeconds >= 60)
+    const currentWork = (wasWorkMode && elapsedSeconds >= 60)
       ? [{ start: startTime, duration: elapsed }]
       : [];
     const allPending = [...oldPending, ...currentWork];
@@ -315,8 +316,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setPendingAssignments(allPending);
       setGroupPhase('settle');
     } else if (task) {
-      // No pending but has task → still record if current work > 1 min
-      if (modeRef.current === 'work' && elapsedSeconds >= 60) {
+      // No pending but has task → still record if was work mode > 1 min
+      if (wasWorkMode && elapsedSeconds >= 60) {
         if (soundEnabledRef.current) playWorkComplete();
         recordPomodoro({
           start: startTime, end: formatTime(new Date()), duration: elapsed,
