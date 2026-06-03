@@ -120,16 +120,17 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         if (prev <= 1) {
           clearTimer();
           if (soundEnabledRef.current) playBreakComplete();
-          // Long break completed → always show assignment modal
+          // Long break completed → merge all into one pomodoro and show modal
           if (isLongBreakRef.current) {
             isLongBreakRef.current = false;
             setTimeout(() => {
               const pending = pendingAssignRef.current;
+              const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
               setCycleCount(0);
               setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
               setIsRunning(false);
-              if (pending.length > 0) {
-                setPendingAssignments(pending);
+              if (totalMinutes > 0) {
+                setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
                 setGroupPhase('settle');
               } else {
                 showToast('一轮完成！');
@@ -187,37 +188,21 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, startBreak]);
 
-  // Work countdown — records time every minute
+  // Work countdown — tracks running minutes
   const workSecondsRef = useRef(0);
-  const lastMinuteRef = useRef(0);
   useEffect(() => {
     if (!isRunning || mode !== 'work') {
       if (mode !== 'work') setRunningMinutes(0);
       workSecondsRef.current = 0;
-      lastMinuteRef.current = 0;
       return;
     }
     if (!startTimeRef.current) startTimeRef.current = formatTime(new Date());
     workSecondsRef.current = totalTimeRef.current - timeLeftRef.current;
-    lastMinuteRef.current = Math.floor(workSecondsRef.current / 60);
-    setRunningMinutes(lastMinuteRef.current);
+    setRunningMinutes(Math.floor(workSecondsRef.current / 60));
     intervalRef.current = window.setInterval(() => {
       workSecondsRef.current++;
-      const currentMinute = Math.floor(workSecondsRef.current / 60);
-      // Record time every minute
-      if (currentMinute > lastMinuteRef.current && currentMinute > 0) {
-        lastMinuteRef.current = currentMinute;
-        setRunningMinutes(currentMinute);
-        // Add 1 minute to pending assignments
-        setPendingAssignments(prev => {
-          const last = prev[prev.length - 1];
-          const startTime = startTimeRef.current || formatTime(new Date());
-          // If last entry is from same start time, increment duration
-          if (last && last.start === startTime) {
-            return [...prev.slice(0, -1), { start: last.start, duration: last.duration + 1 }];
-          }
-          return [...prev, { start: startTime, duration: 1 }];
-        });
+      if (workSecondsRef.current % 60 === 0) {
+        setRunningMinutes(Math.floor(workSecondsRef.current / 60));
       }
       setTimeLeft(prev => { if (prev <= 1) { completeOne(); return 0; } return prev - 1; });
     }, 1000);
@@ -267,7 +252,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: always show assignment modal
+  // End now: settle all pending time as ONE pomodoro
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -275,10 +260,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Collect all pending + current minute
+    // Calculate total pending minutes
     const oldPending = pendingAssignRef.current;
-    const currentMinute = elapsedSeconds >= 60 ? [{ start: startTime, duration: elapsed }] : [];
-    const allPending = [...oldPending, ...currentMinute];
+    const oldMinutes = oldPending.reduce((sum, p) => sum + p.duration, 0);
+    const currentMinute = elapsedSeconds >= 60 ? elapsed : 0;
+    const totalMinutes = oldMinutes + currentMinute;
 
     setIsRunning(false);
     setRunningMinutes(0);
@@ -286,9 +272,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setCycleCount(0);
     isLongBreakRef.current = false;
 
-    if (allPending.length > 0) {
-      // Always show assignment modal
-      setPendingAssignments(allPending);
+    if (totalMinutes > 0) {
+      // Show assignment modal with merged time
+      setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
       setGroupPhase('settle');
     } else {
       setGroupPhase('working');
