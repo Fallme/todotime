@@ -221,14 +221,16 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
           } else if (!local && git) {
             mergedTodos.push(git);
           } else if (local && git) {
-            // Both exist: merge, keeping newer version per-todo
             const lt = local.updatedAt || local.createdAt || '';
             const gt = git.updatedAt || git.createdAt || '';
             mergedTodos.push(gt > lt ? git : local);
           }
         }
 
-        setSyncTime(gitTime);
+        // Push merged result back to git to keep it complete
+        const pushPayload: ConfigData = { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() };
+        await saveConfig(repo, token, pushPayload);
+        setSyncTime(pushPayload.updatedAt);
         return { settings: mergedSettings, todos: mergedTodos };
       } else if (localTime && localTime > gitTime) {
         // Local is newer → push to git
