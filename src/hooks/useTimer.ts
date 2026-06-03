@@ -351,16 +351,16 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const startTime = startTimeRef.current || formatTime(new Date());
       startTimeRef.current = '';
 
-      if (elapsedSeconds > 0) {
+      if (elapsedSeconds >= 60) {
+        // Only record if >= 1 minute
         if (soundEnabledRef.current) playWorkComplete();
         setTotalPomodoros(p => p + 1);
-        setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
+        setPendingAssignments(prev => [...prev, { start: startTime, duration: elapsed }]);
 
         const nextDot = cycleCountRef.current + 1;
         setCycleCount(nextDot);
 
         if (nextDot >= cycleIntervalRef.current) {
-          // Completed a full cycle → long break + settle
           setCycleCount(0);
           isLongBreakRef.current = true;
           startBreak(true);
@@ -369,7 +369,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           startBreak(false);
         }
       } else {
-        // No time elapsed, just skip to break
+        // Less than 1 minute, just skip without recording
         isLongBreakRef.current = false;
         startBreak(false);
       }
