@@ -804,6 +804,7 @@ body { background: var(--bg); margin: 0; }
   background: var(--bg); border-radius: 10px;
 }
 .category-chips-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.category-chip-wrap { position: relative; display: inline-flex; }
 .category-chip {
   padding: 3px 12px; border-radius: 4px; font-size: 13px; font-weight: 500;
   border-width: 1px; border-style: solid; border-color: var(--border);
@@ -813,6 +814,15 @@ body { background: var(--bg); margin: 0; }
 }
 .category-chip.active { font-weight: 600; opacity: 0.7; }
 .category-chip.add { border-color: var(--accent); color: var(--accent) !important; font-weight: 700; }
+.category-chip-del {
+  position: absolute; top: -6px; right: -6px; width: 16px; height: 16px;
+  border-radius: 50%; border: none; background: #e74c3c; color: white;
+  font-size: 10px; line-height: 1; cursor: pointer; display: flex;
+  align-items: center; justify-content: center; opacity: 0;
+  transition: opacity 0.15s;
+}
+.category-chip-wrap:hover .category-chip-del { opacity: 1; }
+.category-chip-del:hover { background: #c0392b; }
 .cat-edit-hint { font-size: 10px; color: var(--text-muted); margin-top: 6px; }
 
 /* Category edit panel */

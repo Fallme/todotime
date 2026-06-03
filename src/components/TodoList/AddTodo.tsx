@@ -118,13 +118,16 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
             <>
               <div className="category-chips-row">
                 {categories.map(cat => (
-                  <button key={cat.name} type="button"
-                    className={`category-chip ${cat.name === category ? 'active' : ''}`}
-                    style={{ color: 'var(--text)', borderColor: cat.color }}
-                    onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}
-                    onDoubleClick={(e) => { e.stopPropagation(); startEdit(cat); }}>
-                    {cat.name}
-                  </button>
+                  <div key={cat.name} className="category-chip-wrap">
+                    <button type="button"
+                      className={`category-chip ${cat.name === category ? 'active' : ''}`}
+                      style={{ color: 'var(--text)', borderColor: cat.color }}
+                      onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}
+                      onDoubleClick={(e) => { e.stopPropagation(); startEdit(cat); }}>
+                      {cat.name}
+                    </button>
+                    <button type="button" className="category-chip-del" onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (category === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '数学'); }} title="删除板块">×</button>
+                  </div>
                 ))}
                 <button type="button" className="category-chip add" onClick={() => { setShowCatAdd(!showCatAdd); }}>+</button>
               </div>
