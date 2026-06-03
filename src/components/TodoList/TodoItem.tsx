@@ -1,7 +1,19 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
+import { Check, Trash2, Play, RotateCcw, Plus, Flame } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
+
+function formatIsoTime(iso: string): string {
+  if (!iso) return '';
+  try {
+    const d = new Date(iso);
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const h = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    return `${m}-${day} ${h}:${min}`;
+  } catch { return iso; }
+}
 
 interface TodoItemProps {
   todo: Todo;
@@ -91,13 +103,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
 
         <div className="todo-card-meta">
           {todo.done && todo.completedAt ? (
-            <span className="todo-card-time done-time">{todo.completedAt}</span>
+            <span className="todo-card-time done-time">{formatIsoTime(todo.completedAt)}</span>
           ) : todo.abandoned && todo.abandonedAt ? (
-            <span className="todo-card-time abandoned-time">{todo.abandonedAt}</span>
+            <span className="todo-card-time abandoned-time">{formatIsoTime(todo.abandonedAt)}</span>
           ) : todo.createdAt ? (
-            <span className="todo-card-time">{todo.createdAt}</span>
+            <span className="todo-card-time">{formatIsoTime(todo.createdAt)}</span>
           ) : null}
-          <span className="todo-card-pom">{todo.completedPomodoros}个</span>
+          <span className="todo-card-pom"><Flame size={11} /> {todo.completedPomodoros}</span>
         </div>
 
         <div className="todo-card-actions">
@@ -135,8 +147,8 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
                 </>
               )}
               <span className="sub-text">{sub.title}</span>
-              {sub.createdAt && <span className="sub-time">{sub.createdAt}</span>}
-              <span className="sub-pom">{sub.completedPomodoros}个</span>
+              {sub.createdAt && <span className="sub-time">{formatIsoTime(sub.createdAt)}</span>}
+              <span className="sub-pom"><Flame size={10} /> {sub.completedPomodoros}</span>
               {!sub.done && !sub.abandoned && (
                 <button className="sub-play" onClick={e => { e.stopPropagation(); onQuickStartSubtask({ id: sub.id, title: sub.title, category: todo.category }); }} title="开始番茄"><Play size={11} /></button>
               )}

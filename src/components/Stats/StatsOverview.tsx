@@ -1,10 +1,10 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, Flame, CheckCircle2, Calendar, BarChart3, PieChart, TrendingUp, TrendingDown, Minus, Timer, Target, Award, Sparkles, RefreshCw, Download } from 'lucide-react';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
 type Period = 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
@@ -90,11 +90,10 @@ function computePeriodData(
   const daily = days.map(date => {
     const dayData = dayDataMap.get(date);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
-    // Count completed tasks from local todos by completedAt date
-    const md = date.slice(5); // "MM-DD"
-    const doneToday = todos.filter(t => t.done && t.completedAt.startsWith(md));
+    // Count completed tasks from local todos by completedAt date (ISO format: 2026-06-03T...)
+    const doneToday = todos.filter(t => t.done && t.completedAt.startsWith(date));
     let tasksDone = doneToday.length;
-    const totalTasksDay = todos.filter(t => t.createdAt.startsWith(md)).length || tasksDone;
+    const totalTasksDay = todos.filter(t => t.createdAt.startsWith(date)).length || tasksDone;
     if (date === today) {
       const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
       poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
@@ -164,8 +163,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
     poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0);
-    const todayMd = today.slice(5);
-    const tasksDone = todos.filter(t => t.done && t.completedAt.startsWith(todayMd)).length;
+    const tasksDone = todos.filter(t => t.done && t.completedAt.startsWith(today)).length;
     return { pomodoros: poms.length, minutes: mins, tasksDone };
   }, [dayDataMap, todayPomodoros, today, todos]);
 
@@ -310,6 +308,33 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     ],
   };
   const reportBarOptions = {
+    responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
+    plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
+      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999' } },
+    },
+  };
+
+  // Combined trend chart: duration + pomodoros + tasks as grouped bars
+  const trendData = {
+    labels: reportData.rd.daily.map(d => d.date.slice(5)),
+    datasets: [
+      {
+        label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes),
+        backgroundColor: '#6c5ce7aa', borderRadius: 4, maxBarThickness: 16,
+      },
+      {
+        label: '番茄数', data: reportData.rd.daily.map(d => d.pomodoros),
+        backgroundColor: '#FF6B6Baa', borderRadius: 4, maxBarThickness: 16,
+      },
+      {
+        label: '任务数', data: reportData.rd.daily.map(d => d.tasksDone),
+        backgroundColor: '#27ae60aa', borderRadius: 4, maxBarThickness: 16,
+      },
+    ],
+  };
+  const trendOptions = {
     responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
@@ -516,6 +541,10 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
                 <div>
                   <h4><BarChart3 size={14} /> 每日趋势</h4>
                   <div className="report-bar-wrap"><Bar data={reportBarData} options={reportBarOptions} /></div>
+                </div>
+                <div style={{ marginTop: 16 }}>
+                  <h4><TrendingUp size={14} /> 综合趋势</h4>
+                  <div className="report-bar-wrap"><Line data={trendData} options={trendOptions} /></div>
                 </div>
               </div>
 
