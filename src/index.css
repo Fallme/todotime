@@ -312,6 +312,11 @@ body { background: var(--bg); margin: 0; }
 }
 .report-section-apple { padding: 16px 20px; }
 .report-section-apple h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 12px; }
+.report-summary-text {
+  padding: 12px 20px; margin: 0 20px; background: var(--bg-hover);
+  border-radius: 10px; font-size: 13px; color: var(--text-secondary);
+  line-height: 1.5; border-left: 3px solid var(--accent);
+}
 .report-pie-layout { display: flex; gap: 16px; align-items: center; }
 .report-pie-chart { width: 120px; height: 120px; flex-shrink: 0; }
 .report-pie-legend { flex: 1; min-width: 0; }
