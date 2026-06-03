@@ -773,6 +773,18 @@ body { background: var(--bg); margin: 0; }
 }
 .cat-pick-btn.active { font-weight: 600; }
 .cat-pick-btn:hover { opacity: 0.8; }
+
+/* Inline category picker */
+.cat-picker-inline {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 6px 10px;
+  background: var(--bg-hover); border-top: 1px solid var(--border);
+}
+.cat-pick-btn-inline {
+  padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;
+  border-width: 1px; border-style: solid; background: var(--bg-card);
+  cursor: pointer; transition: all 0.15s;
+}
+.cat-pick-btn-inline:hover { transform: scale(1.05); }
 .todo-content { position: relative; }
 .category-badge-add {
   display: inline-flex; align-items: center; gap: 2px;

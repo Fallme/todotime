@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
@@ -37,28 +37,15 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
-  const [popupPos, setPopupPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
-  const catTagRef = useRef<HTMLSpanElement>(null);
   const catPickerRef = useRef<HTMLDivElement>(null);
   const isActive = !todo.done && !todo.abandoned;
   const catColor = getCategoryColor(categories, todo.category);
 
-  const toggleCatPicker = useCallback(() => {
-    if (showCatPicker) {
-      setShowCatPicker(false);
-    } else if (catTagRef.current) {
-      const rect = catTagRef.current.getBoundingClientRect();
-      setPopupPos({ top: rect.bottom + 4, left: rect.left });
-      setShowCatPicker(true);
-    }
-  }, [showCatPicker]);
-
-  // Click outside to close category picker
+  // Click outside to close
   useEffect(() => {
     if (!showCatPicker) return;
     const handleClick = (e: MouseEvent) => {
-      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)
-        && catTagRef.current && !catTagRef.current.contains(e.target as Node)) {
+      if (catPickerRef.current && !catPickerRef.current.contains(e.target as Node)) {
         setShowCatPicker(false);
       }
     };
@@ -92,8 +79,8 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-body">
-          <span className="todo-card-cat" ref={catTagRef} style={{ color: catColor, borderColor: catColor }}
-            onClick={e => { e.stopPropagation(); toggleCatPicker(); }}>
+          <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
+            onClick={e => { e.stopPropagation(); setShowCatPicker(!showCatPicker); }}>
             {todo.category}
           </span>
           <span className="todo-card-title">{todo.title}</span>
@@ -118,11 +105,12 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
       </div>
 
-      {/* Category picker - works for all tasks */}
+      {/* Category picker - inline dropdown */}
       {showCatPicker && (
-        <div className="cat-picker-popup" ref={catPickerRef} style={{ position: 'fixed', top: popupPos.top, left: popupPos.left, zIndex: 9999 }}>
+        <div className="cat-picker-inline" ref={catPickerRef}>
           {categories.map(c => (
-            <button key={c.name} className="cat-pick-btn" style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
+            <button key={c.name} className="cat-pick-btn-inline"
+              style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
               onClick={e => { e.stopPropagation(); onChangeCategory(c.name); setShowCatPicker(false); }}>
               {c.name}
             </button>
