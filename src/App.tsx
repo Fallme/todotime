@@ -81,10 +81,35 @@ export default function App() {
       if (cancelled) return;
       mergeGitData(result);
       configLoadedRef.current = true;
+      // Also bidirectional sync on open to pull latest config
+      syncBidirectional(settings, todos).then((syncResult) => {
+        if (syncResult) {
+          setSettings(prev => ({ ...syncResult.settings, githubToken: prev.githubToken }));
+          todosHook.mergeTodos(syncResult.todos);
+        }
+      });
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // --- Sync when tab becomes visible again (cross-device sync) ---
+  useEffect(() => {
+    if (!settings.githubToken || !settings.githubRepo) return;
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        loadAll();
+        syncBidirectional(settings, todos).then((result) => {
+          if (result) {
+            setSettings(prev => ({ ...result.settings, githubToken: prev.githubToken }));
+            todosHook.mergeTodos(result.todos);
+          }
+        });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [settings.githubToken, settings.githubRepo, loadAll, syncBidirectional, settings, todos, todosHook]);
 
   // --- Periodic sync: bidirectional every 30s for cross-device consistency ---
   useEffect(() => {
