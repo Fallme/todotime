@@ -220,10 +220,22 @@ export default function App() {
     }
   };
 
+  // Swipe support for mobile tab switching
+  const touchStartX = useRef(0);
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX; };
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) < 80) return; // min swipe distance
+    const tabs: TabId[] = ['timer', 'stats', 'settings'];
+    const idx = tabs.indexOf(tab);
+    if (diff > 0 && idx < tabs.length - 1) setTab(tabs[idx + 1]); // swipe left → next
+    else if (diff < 0 && idx > 0) setTab(tabs[idx - 1]); // swipe right → prev
+  };
+
   return (
     <div className="app">
       <Header darkMode={settings.darkMode} onToggleTheme={handleToggleTheme} syncing={syncing} syncError={syncError} />
-      <main className="main-content">
+      <main className="main-content" onTouchStart={handleTouchStart} onTouchEnd={handleTouchEnd}>
         {tab === 'timer' && (
           <div className="timer-page">
             <CountdownTimer title={settings.countdownTitle} targetDate={settings.countdownDate} onUpdate={handleCountdownUpdate} />

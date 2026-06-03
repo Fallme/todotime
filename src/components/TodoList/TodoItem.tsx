@@ -93,11 +93,11 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-body">
-          <span className="todo-card-title">{todo.title}</span>
           <span className="todo-card-cat" ref={catTagRef} style={{ color: catColor, borderColor: catColor }}
             onClick={e => { e.stopPropagation(); toggleCatPicker(); }}>
             {todo.category}
           </span>
+          <span className="todo-card-title">{todo.title}</span>
           {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
         </div>
 
