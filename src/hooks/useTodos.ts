@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Todo, Priority, Category } from '../types';
-import { generateId, formatTime } from '../utils/dateUtils';
+import { generateId } from '../utils/dateUtils';
 
 interface UseTodosReturn {
   todos: Todo[];
@@ -21,6 +21,8 @@ interface UseTodosReturn {
   selectTodo: (id: string | null) => void;
 }
 
+const now = () => new Date().toISOString();
+
 export function useTodos(): UseTodosReturn {
   const [todos, setTodos] = useState<Todo[]>(() => {
     try {
@@ -37,6 +39,7 @@ export function useTodos(): UseTodosReturn {
           done: (t.done as boolean) || false,
           abandoned: (t.abandoned as boolean) || false,
           createdAt: (t.createdAt as string) || '',
+          updatedAt: (t.updatedAt as string) || (t.createdAt as string) || '',
           completedAt: (t.completedAt as string) || '',
           abandonedAt: (t.abandonedAt as string) || '',
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
@@ -51,28 +54,33 @@ export function useTodos(): UseTodosReturn {
   useEffect(() => { localStorage.setItem('todotime_todos', JSON.stringify(todos)); }, [todos]);
 
   const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
+    const ts = now();
     setTodos(prev => [{
       id: generateId(), title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
-      done: false, abandoned: false, createdAt: formatTime(new Date()), completedAt: '', abandonedAt: '',
+      done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
       subtasks: [],
     }, ...prev]);
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
+    const ts = now();
     setTodos(prev => prev.map(t => t.id === id ? {
       ...t,
       done: !t.done,
-      completedAt: !t.done ? formatTime(new Date()) : '',
+      updatedAt: ts,
+      completedAt: !t.done ? ts : '',
     } : t));
   }, []);
 
   const abandonTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true, abandonedAt: formatTime(new Date()) } : t));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: true, abandonedAt: ts, updatedAt: ts } : t));
   }, []);
 
   const restoreTodo = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: false, abandonedAt: '' } : t));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, abandoned: false, abandonedAt: '', updatedAt: ts } : t));
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
@@ -81,50 +89,95 @@ export function useTodos(): UseTodosReturn {
   }, []);
 
   const updateTodoPomodoros = useCallback((id: string) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1 } : t));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1, updatedAt: ts } : t));
   }, []);
 
   const addSubtask = useCallback((todoId: string, title: string) => {
+    const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
-      ...t, subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false }],
+      ...t, updatedAt: ts,
+      subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false, updatedAt: ts }],
     } : t));
   }, []);
 
   const toggleSubtask = useCallback((todoId: string, subId: string) => {
+    const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
-      ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done } : s),
+      ...t, updatedAt: ts,
+      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: !s.done, updatedAt: ts } : s),
     } : t));
   }, []);
 
   const abandonSubtask = useCallback((todoId: string, subId: string) => {
+    const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
-      ...t, subtasks: t.subtasks.map(s => s.id === subId ? { ...s, abandoned: true } : s),
+      ...t, updatedAt: ts,
+      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, abandoned: true, updatedAt: ts } : s),
     } : t));
   }, []);
 
   const deleteSubtask = useCallback((todoId: string, subId: string) => {
+    const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
-      ...t, subtasks: t.subtasks.filter(s => s.id !== subId),
+      ...t, updatedAt: ts,
+      subtasks: t.subtasks.filter(s => s.id !== subId),
     } : t));
   }, []);
 
   const selectTodo = useCallback((id: string | null) => setSelectedTodoId(id), []);
 
   const changeCategory = useCallback((id: string, category: Category) => {
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, category } : t));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, category, updatedAt: ts } : t));
   }, []);
 
   const renameTodosCategory = useCallback((oldName: string, newName: string) => {
-    setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName } : t));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName, updatedAt: ts } : t));
   }, []);
 
+  // Bidirectional merge: per-todo updatedAt comparison, latest wins
   const mergeTodos = useCallback((gitTodos: Todo[]) => {
     setTodos(prev => {
-      const localIds = new Set(prev.map(t => t.id));
-      // Add git-only todos (not in local)
-      const gitOnly = gitTodos.filter(t => !localIds.has(t.id));
-      if (gitOnly.length === 0) return prev;
-      return [...prev, ...gitOnly];
+      const localMap = new Map(prev.map(t => [t.id, t]));
+      const gitMap = new Map(gitTodos.map(t => [t.id, t]));
+      const result: Todo[] = [];
+      let changed = false;
+
+      // Process all todos that exist in either local or git
+      const allIds = new Set([...localMap.keys(), ...gitMap.keys()]);
+      for (const id of allIds) {
+        const local = localMap.get(id);
+        const git = gitMap.get(id);
+
+        if (local && !git) {
+          // Local only → keep (will be pushed to git)
+          result.push(local);
+        } else if (!local && git) {
+          // Git only → add
+          result.push(git);
+          changed = true;
+        } else if (local && git) {
+          // Both exist → compare updatedAt, latest wins
+          const localTime = local.updatedAt || local.createdAt || '';
+          const gitTime = git.updatedAt || git.createdAt || '';
+          if (gitTime > localTime) {
+            // Git is newer → use git version
+            result.push(git);
+            if (git.done !== local.done || git.abandoned !== local.abandoned
+              || git.completedPomodoros !== local.completedPomodoros
+              || git.title !== local.title || git.category !== local.category) {
+              changed = true;
+            }
+          } else {
+            // Local is newer or equal → keep local
+            result.push(local);
+          }
+        }
+      }
+
+      return changed ? result : prev;
     });
   }, []);
 

@@ -21,6 +21,7 @@ interface UseTimerReturn {
   pendingAssignments: PendingAssignment[];
   groupPhase: GroupPhase;
   toast: string | null;
+  runningMinutes: number;
   start: () => void;
   pause: () => void;
   reset: () => void;
@@ -57,6 +58,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const [pendingAssignments, setPendingAssignments] = useState<PendingAssignment[]>([]);
   const [groupPhase, setGroupPhase] = useState<GroupPhase>('working');
   const [toast, setToast] = useState<string | null>(null);
+  const [runningMinutes, setRunningMinutes] = useState(0);
 
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string>('');
@@ -100,26 +102,21 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     localStorage.setItem('todotime_today_pomodoros', JSON.stringify(todayPomodoros));
   }, [todayPomodoros]);
 
-  // Settle: assign pending pomodoros to task or show modal
+  // Settle: assign pending pomodoros to task or auto-assign to 其他
   const settlePending = useCallback((taskInfo: { id: string | null; title: string; category: Category } | null) => {
     const pending = pendingAssignRef.current;
     if (pending.length === 0) return;
 
-    if (taskInfo) {
-      // Auto-assign all to task
-      pending.forEach(pa => {
-        recordPomodoro({
-          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-          taskId: taskInfo.id, taskTitle: taskInfo.title, category: taskInfo.category,
-          completed: true, createdAt: formatTime(new Date()),
-        });
+    const assignTo = taskInfo ?? { id: null, title: '未分配', category: '其他' as Category };
+    pending.forEach(pa => {
+      recordPomodoro({
+        start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+        taskId: assignTo.id, taskTitle: assignTo.title, category: assignTo.category,
+        completed: true, createdAt: formatTime(new Date()),
       });
-      setPendingAssignments([]);
-      showToast(`🍅 已结算 ${pending.length} 个番茄 → 「${taskInfo.title}」`);
-    } else {
-      // No task → show assignment modal
-      setGroupPhase('settle');
-    }
+    });
+    setPendingAssignments([]);
+    showToast(`已结算 ${pending.length} 个番茄 →「${assignTo.title}」`);
   }, [recordPomodoro, showToast]);
 
   // Start break then auto-continue
@@ -187,11 +184,25 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, startBreak]);
 
-  // Work countdown
+  // Work countdown — tracks running minutes for real-time stats
+  const workSecondsRef = useRef(0);
   useEffect(() => {
-    if (!isRunning || mode !== 'work') return;
+    if (!isRunning || mode !== 'work') {
+      // Only reset when entering break mode, not when pausing in work mode
+      if (mode !== 'work') setRunningMinutes(0);
+      workSecondsRef.current = 0;
+      return;
+    }
     if (!startTimeRef.current) startTimeRef.current = formatTime(new Date());
+    // Initialize from current elapsed
+    workSecondsRef.current = totalTimeRef.current - timeLeftRef.current;
+    setRunningMinutes(Math.floor(workSecondsRef.current / 60));
     intervalRef.current = window.setInterval(() => {
+      workSecondsRef.current++;
+      // Update running minutes every 60 seconds
+      if (workSecondsRef.current % 60 === 0) {
+        setRunningMinutes(Math.floor(workSecondsRef.current / 60));
+      }
       setTimeLeft(prev => { if (prev <= 1) { completeOne(); return 0; } return prev - 1; });
     }, 1000);
     return clearTimer;
@@ -213,13 +224,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const a = results[i] || results[results.length - 1];
       recordPomodoro({
         start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '数学',
+        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他',
         completed: true, createdAt: formatTime(new Date()),
       });
     });
     setPendingAssignments([]);
     setGroupPhase('working');
-    showToast(`🍅 已分配 ${pending.length} 个番茄`);
+    showToast(`已分配 ${pending.length} 个番茄`);
   }, [recordPomodoro, showToast]);
 
   // Start next group
@@ -237,6 +248,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setCycleCount(0); startTimeRef.current = '';
     isLongBreakRef.current = false;
     setPendingAssignments([]);
+    setRunningMinutes(0);
   }, [clearTimer]);
 
   // End now: if ≥1 pomodoro, settle; then reset
@@ -257,24 +269,20 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     if (currentWork.length > 0 && soundEnabledRef.current) playWorkComplete();
 
     setIsRunning(false);
+    setRunningMinutes(0);
 
     // Settle if at least 1 pomodoro exists
     if (allPending.length > 0) {
-      const task = currentTaskRef.current;
-      if (task) {
-        allPending.forEach(pa => {
-          recordPomodoro({
-            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-            taskId: task.id, taskTitle: task.title, category: task.category,
-            completed: true, createdAt: formatTime(new Date()),
-          });
+      const task = currentTaskRef.current ?? { id: null, title: '未分配', category: '其他' as Category };
+      allPending.forEach(pa => {
+        recordPomodoro({
+          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+          taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
         });
-        setPendingAssignments([]);
-        showToast(`🍅 已结算 ${allPending.length} 个番茄 → 「${task.title}」`);
-      } else {
-        setPendingAssignments(allPending);
-        setGroupPhase('settle');
-      }
+      });
+      setPendingAssignments([]);
+      showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
     }
 
     // Reset
@@ -300,7 +308,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     if (soundEnabledRef.current) playStart();
   }, []);
 
-  const pause = useCallback(() => { setIsRunning(false); clearTimer(); }, [clearTimer]);
+  const pause = useCallback(() => {
+    // Immediately update runningMinutes to reflect current elapsed
+    if (modeRef.current === 'work') {
+      const elapsed = totalTimeRef.current - timeLeftRef.current;
+      setRunningMinutes(Math.floor(elapsed / 60));
+    }
+    setIsRunning(false); clearTimer();
+  }, [clearTimer]);
   const reset = useCallback(() => { endNow(); }, [endNow]);
 
   // Skip: same as completeOne for work, or skip break
@@ -319,7 +334,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
-    pendingAssignments, groupPhase, toast,
+    pendingAssignments, groupPhase, toast, runningMinutes,
     start, pause, reset, skip, setTotalTime, setTaskInfo,
     assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, setOnComplete,
   };

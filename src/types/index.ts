@@ -13,6 +13,7 @@ export const DEFAULT_CATEGORIES: CategoryItem[] = [
   { name: '英语', color: '#e84393' },
   { name: '政治', color: '#d63031' },
   { name: '运动', color: '#00cec9' },
+  { name: '其他', color: '#636e72' },
 ];
 
 export function getCategoryColor(categories: CategoryItem[], name: string): string {
@@ -29,6 +30,7 @@ export interface SubTask {
   title: string;
   done: boolean;
   abandoned: boolean;
+  updatedAt: string;
 }
 
 export interface Todo {
@@ -41,6 +43,7 @@ export interface Todo {
   done: boolean;
   abandoned: boolean;
   createdAt: string;
+  updatedAt: string;
   completedAt: string;
   abandonedAt: string;
   subtasks: SubTask[];

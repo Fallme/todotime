@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AppSettings, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -13,7 +13,6 @@ import { StatsOverview } from './components/Stats/StatsOverview';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
-import { useStats } from './hooks/useStats';
 import { useGithubSync } from './hooks/useGithubSync';
 
 type TabId = 'timer' | 'stats' | 'settings';
@@ -38,7 +37,7 @@ export default function App() {
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
   useEffect(() => { localStorage.setItem('todotime_settings', JSON.stringify(settings)); }, [settings]);
 
-  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll } = useGithubSync(settings.githubRepo, settings.githubToken);
+  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional } = useGithubSync(settings.githubRepo, settings.githubToken);
   const todosHook = useTodos();
   const { todos, selectedTodoId } = todosHook;
   const currentTask = todos.find(t => t.id === currentTaskId);
@@ -55,28 +54,59 @@ export default function App() {
     });
   }, [timer.setOnComplete, todosHook]);
 
+  // --- Merge git data into local state ---
+  const mergeGitData = useCallback(({ settings: gitSettings, todos: gitTodos }: { settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }) => {
+    if (gitSettings) {
+      setSettings(prev => ({
+        ...gitSettings,
+        githubToken: prev.githubToken,
+        categories: gitSettings.categories.length > 0 ? gitSettings.categories : prev.categories,
+      }));
+    }
+    if (gitTodos && gitTodos.length > 0) {
+      todosHook.mergeTodos(gitTodos);
+    }
+  }, [todosHook]);
+
   // --- App open: load all data from git and merge ---
   useEffect(() => {
     let cancelled = false;
-    loadAll().then(({ settings: gitSettings, todos: gitTodos }) => {
+    loadAll().then((result) => {
       if (cancelled) return;
-      // Merge settings: local githubToken preserved, rest from git
-      if (gitSettings) {
-        setSettings(prev => ({
-          ...gitSettings,
-          githubToken: prev.githubToken,
-          categories: gitSettings.categories.length > 0 ? gitSettings.categories : prev.categories,
-        }));
-      }
-      // Merge todos: add any git-only todos to local
-      if (gitTodos && gitTodos.length > 0) {
-        todosHook.mergeTodos(gitTodos);
-      }
+      mergeGitData(result);
       configLoadedRef.current = true;
     });
     return () => { cancelled = true; };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // --- Periodic sync: bidirectional every 30s for cross-device consistency ---
+  useEffect(() => {
+    if (!settings.githubToken || !settings.githubRepo) return;
+    const interval = setInterval(() => {
+      if (syncing) return; // skip if mid-sync to avoid race
+      syncBidirectional(settings, todos).then((result) => {
+        if (result) {
+          // Git was newer → apply merged settings + todos
+          setSettings(prev => ({
+            ...result.settings,
+            githubToken: prev.githubToken,
+          }));
+          todosHook.mergeTodos(result.todos);
+        }
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [settings.githubToken, settings.githubRepo, settings, todos, syncBidirectional, syncing, todosHook]);
+
+  // --- Periodic refresh: reload daily pomodoro data every 3 minutes for charts ---
+  useEffect(() => {
+    if (!settings.githubToken || !settings.githubRepo) return;
+    const interval = setInterval(() => {
+      loadAll(); // refresh dayDataMap from git
+    }, 180000);
+    return () => clearInterval(interval);
+  }, [settings.githubToken, settings.githubRepo, loadAll]);
 
   // --- Sync pomodoro data: on every new pomodoro ---
   useEffect(() => {
@@ -91,15 +121,16 @@ export default function App() {
     syncConfig(settings, todos);
   }, [settings, todos, syncConfig]);
 
-  useStats(dayDataMap, timer.todayPomodoros, today);
-
   const handleSaveSettings = (s: AppSettings) => setSettings(s);
 
   const handleQuickStart = (todo: Todo) => {
     setCurrentTaskId(todo.id);
     timer.setTaskInfo(todo.id, todo.title, todo.category);
-    timer.setTotalTime(settings.workMinutes * 60);
-    timer.start();
+    // If timer is already running, just switch task without restarting
+    if (!timer.isRunning) {
+      timer.setTotalTime(settings.workMinutes * 60);
+      timer.start();
+    }
   };
 
   const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
@@ -183,7 +214,17 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories}
+            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories} todos={todos}
+              onRefresh={async () => {
+                // First refresh dayDataMap from git (daily pomodoro data)
+                await loadAll();
+                // Then bidirectional sync for config (settings + todos)
+                const result = await syncBidirectional(settings, todos);
+                if (result) {
+                  setSettings(prev => ({ ...result.settings, githubToken: prev.githubToken }));
+                  todosHook.mergeTodos(result.todos);
+                }
+              }}
               onAddTestData={(testMap) => {
                 setDayDataMap(prev => {
                   const merged = new Map(prev);

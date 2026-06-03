@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { DayData, PomodoroRecord } from '../types';
+import type { DayData, PomodoroRecord, Todo } from '../types';
 
 export interface UseStatsReturn {
   todayPomodoros: number;
@@ -16,14 +16,19 @@ export function useStats(
   dayDataMap: Map<string, DayData>,
   todayPomodoros: PomodoroRecord[],
   todayDate: string,
+  runningMinutes: number = 0,
+  todos: Todo[] = [],
 ): UseStatsReturn {
   return useMemo(() => {
     const todayData = dayDataMap.get(todayDate);
     const todayPomCount = todayData ? todayData.totalPomodoros + todayPomodoros.length : todayPomodoros.length;
-    const todayMinutes = todayData
+    const todayCompletedMinutes = todayData
       ? todayData.totalFocusMinutes + todayPomodoros.reduce((s, p) => s + p.duration, 0)
       : todayPomodoros.reduce((s, p) => s + p.duration, 0);
-    const todayTasks = todayData ? todayData.totalTasksCompleted : 0;
+    const todayMinutes = todayCompletedMinutes + runningMinutes;
+    // Count tasks completed today from local todos (completedAt format: "MM-DD HH:mm")
+    const todayMd = todayDate.slice(5); // "06-03"
+    const todayTasks = todos.filter(t => t.done && t.completedAt.startsWith(todayMd)).length;
 
     // Weekly data
     const weekly: { date: string; minutes: number }[] = [];
@@ -35,7 +40,7 @@ export function useStats(
       const data = dayDataMap.get(dateStr);
       let mins = data ? data.totalFocusMinutes : 0;
       if (dateStr === todayDate) {
-        mins += todayPomodoros.reduce((s, p) => s + p.duration, 0);
+        mins += todayCompletedMinutes + runningMinutes;
       }
       weekly.push({ date: dateStr, minutes: mins });
     }
@@ -50,7 +55,7 @@ export function useStats(
       const data = dayDataMap.get(dateStr);
       let mins = data ? data.totalFocusMinutes : 0;
       if (dateStr === todayDate) {
-        mins += todayPomodoros.reduce((s, p) => s + p.duration, 0);
+        mins += todayCompletedMinutes + runningMinutes;
       }
       monthly.push({ date: dateStr, minutes: mins });
     }
@@ -83,7 +88,7 @@ export function useStats(
       totalMins += d.totalFocusMinutes;
     });
     totalPom += todayPomodoros.length;
-    totalMins += todayPomodoros.reduce((s, p) => s + p.duration, 0);
+    totalMins += todayPomodoros.reduce((s, p) => s + p.duration, 0) + runningMinutes;
 
     return {
       todayPomodoros: todayPomCount,
@@ -95,5 +100,5 @@ export function useStats(
       totalPomodoros: totalPom,
       totalFocusHours: Math.round(totalMins / 60 * 10) / 10,
     };
-  }, [dayDataMap, todayPomodoros, todayDate]);
+  }, [dayDataMap, todayPomodoros, todayDate, runningMinutes, todos]);
 }

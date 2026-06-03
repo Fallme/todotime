@@ -68,9 +68,9 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       <div className="todo-card-row" onClick={onSelect}>
         <div className="todo-card-status">
           {todo.done ? (
-            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={14} /></button>
+            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={15} /></button>
           ) : todo.abandoned ? (
-            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={12} /></button>
+            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={14} /></button>
           ) : (
             <>
               <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
@@ -80,12 +80,12 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-body">
-          {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
           <span className="todo-card-title">{todo.title}</span>
           <span className="todo-card-cat" ref={catTagRef} style={{ color: catColor, borderColor: catColor }}
             onClick={e => { e.stopPropagation(); toggleCatPicker(); }}>
             {todo.category}
           </span>
+          {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
         </div>
 
         <div className="todo-card-meta">
@@ -96,13 +96,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           ) : todo.createdAt ? (
             <span className="todo-card-time">{todo.createdAt}</span>
           ) : null}
-          <span className="todo-card-pom">{todo.completedPomodoros}🍅</span>
+          <span className="todo-card-pom">{todo.completedPomodoros}个</span>
         </div>
 
         <div className="todo-card-actions">
-          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={13} /></button>}
-          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="子任务"><Plus size={13} /></button>}
-          <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={13} /></button>
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={14} /></button>}
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="子任务"><Plus size={14} /></button>}
+          <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={14} /></button>
         </div>
       </div>
 

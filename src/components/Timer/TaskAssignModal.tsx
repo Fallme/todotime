@@ -14,7 +14,7 @@ interface TaskAssignModalProps {
 
 export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.done && !t.abandoned);
-  const [selectedTodoId, setSelectedTodoId] = useState('');
+  const [selectedTodoId, setSelectedTodoId] = useState('other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
   const getResult = (todoId: string | null) => {
@@ -22,11 +22,12 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
     return {
       taskId: todo?.id ?? null,
       taskTitle: todo?.title ?? '未分配',
-      category: (todo?.category ?? '数学') as Category,
+      category: (todo?.category ?? '其他') as Category,
     };
   };
 
   const getSelectedTodoId = () => {
+    if (selectedTodoId === 'other') return null;
     if (currentTaskName) {
       const todo = activeTodos.find(t => t.title === currentTaskName);
       return todo?.id ?? null;
@@ -51,7 +52,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
   return (
     <div className="modal-overlay">
       <div className="modal-content">
-        <h3 className="modal-title">🍅 一组完成！</h3>
+        <h3 className="modal-title">一组完成!</h3>
         <p className="modal-desc">{assignments.length} 个番茄 · 共 {totalMinutes} 分钟</p>
 
         {currentTaskName ? (
@@ -63,7 +64,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
           <div className="modal-single-assign">
             <label className="modal-assign-label">分配给：</label>
             <select className="modal-assign-select" value={selectedTodoId} onChange={e => setSelectedTodoId(e.target.value)}>
-              <option value="">选择一个任务...</option>
+              <option value="other">其他 (不分配任务)</option>
               {activeTodos.map(t => (
                 <option key={t.id} value={t.id}>{t.title} ({t.category})</option>
               ))}
