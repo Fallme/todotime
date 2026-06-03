@@ -345,31 +345,28 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const skip = useCallback(() => {
     clearTimer(); setIsRunning(false);
     if (modeRef.current === 'work') {
-      // Skip work → count as completed pomodoro, go to break
+      // Skip work → always count as pomodoro, go to break
       const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
       const elapsed = Math.round(elapsedSeconds / 60);
       const startTime = startTimeRef.current || formatTime(new Date());
       startTimeRef.current = '';
 
+      if (soundEnabledRef.current) playWorkComplete();
+      setTotalPomodoros(p => p + 1);
+
+      // Only record time if >= 1 minute
       if (elapsedSeconds >= 60) {
-        // Only record if >= 1 minute
-        if (soundEnabledRef.current) playWorkComplete();
-        setTotalPomodoros(p => p + 1);
         setPendingAssignments(prev => [...prev, { start: startTime, duration: elapsed }]);
+      }
 
-        const nextDot = cycleCountRef.current + 1;
-        setCycleCount(nextDot);
+      const nextDot = cycleCountRef.current + 1;
+      setCycleCount(nextDot);
 
-        if (nextDot >= cycleIntervalRef.current) {
-          setCycleCount(0);
-          isLongBreakRef.current = true;
-          startBreak(true);
-        } else {
-          isLongBreakRef.current = false;
-          startBreak(false);
-        }
+      if (nextDot >= cycleIntervalRef.current) {
+        setCycleCount(0);
+        isLongBreakRef.current = true;
+        startBreak(true);
       } else {
-        // Less than 1 minute, just skip without recording
         isLongBreakRef.current = false;
         startBreak(false);
       }
