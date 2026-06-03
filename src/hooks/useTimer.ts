@@ -252,7 +252,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: settle all pending time as ONE pomodoro
+  // End now: settle if ≥20 min, update cycle count
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -269,14 +269,17 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setIsRunning(false);
     setRunningMinutes(0);
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-    setCycleCount(0);
     isLongBreakRef.current = false;
 
-    if (totalMinutes > 0) {
-      // Show assignment modal with merged time
+    // Only count as pomodoro if ≥20 minutes
+    if (totalMinutes >= 20) {
+      const newCycleCount = cycleCountRef.current + 1;
+      setCycleCount(newCycleCount);
       setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
       setGroupPhase('settle');
     } else {
+      // Less than 20 min, just reset without pomodoro
+      setCycleCount(0);
       setGroupPhase('working');
     }
   }, [clearTimer]);
