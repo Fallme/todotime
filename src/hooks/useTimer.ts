@@ -279,7 +279,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: settle and reset
+  // End now: directly settle to current task, or show popup if no task
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -287,7 +287,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Build full pending list locally (old + current work session)
+    // Build full pending list
     const oldPending = pendingAssignRef.current;
     const currentWork = (modeRef.current === 'work' && elapsedSeconds >= 60)
       ? [{ start: startTime, duration: elapsed }]
@@ -300,36 +300,26 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setCycleCount(0);
     isLongBreakRef.current = false;
 
-    if (allPending.length > 0) {
-      // Has pending pomodoros → settle them
+    const task = currentTaskRef.current;
+    if (allPending.length > 0 && task) {
+      // Has pending + task → directly settle
       if (soundEnabledRef.current) playWorkComplete();
-      const task = currentTaskRef.current;
-      if (task) {
-        // Has task → auto-assign
-        allPending.forEach(pa => {
-          recordPomodoro({
-            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-            taskId: task.id, taskTitle: task.title, category: task.category,
-            completed: true, createdAt: formatTime(new Date()),
-          });
+      allPending.forEach(pa => {
+        recordPomodoro({
+          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+          taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
         });
-        setPendingAssignments([]);
-        showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
-      } else {
-        // No task → show assignment modal
-        setPendingAssignments(allPending);
-        setGroupPhase('settle');
-      }
+      });
+      setPendingAssignments([]);
+      showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
+    } else if (allPending.length > 0 && !task) {
+      // Has pending but no task → show assignment modal
+      setPendingAssignments(allPending);
+      setGroupPhase('settle');
     } else {
-      // No pending but still show settlement popup for current task
-      const task = currentTaskRef.current;
-      if (task) {
-        showToast(`已重置轮次，当前任务：「${task.title}」`);
-      } else {
-        // No task → show assignment modal with empty list (user can add task)
-        setPendingAssignments([{ start: formatTime(new Date()), duration: 0 }]);
-        setGroupPhase('settle');
-      }
+      // No pending → just reset
+      setGroupPhase('working');
     }
   }, [clearTimer, recordPomodoro, showToast]);
 
