@@ -266,7 +266,7 @@ export default function App() {
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
-              todayPomodoros={timer.totalPomodoros}
+              todayPomodoros={timer.cycleCount}
               categories={settings.categories}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
