@@ -205,24 +205,37 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, startBreak]);
 
-  // Work countdown — tracks running minutes for real-time stats
+  // Work countdown — records time every minute
   const workSecondsRef = useRef(0);
+  const lastMinuteRef = useRef(0);
   useEffect(() => {
     if (!isRunning || mode !== 'work') {
-      // Only reset when entering break mode, not when pausing in work mode
       if (mode !== 'work') setRunningMinutes(0);
       workSecondsRef.current = 0;
+      lastMinuteRef.current = 0;
       return;
     }
     if (!startTimeRef.current) startTimeRef.current = formatTime(new Date());
-    // Initialize from current elapsed
     workSecondsRef.current = totalTimeRef.current - timeLeftRef.current;
-    setRunningMinutes(Math.floor(workSecondsRef.current / 60));
+    lastMinuteRef.current = Math.floor(workSecondsRef.current / 60);
+    setRunningMinutes(lastMinuteRef.current);
     intervalRef.current = window.setInterval(() => {
       workSecondsRef.current++;
-      // Update running minutes every 60 seconds
-      if (workSecondsRef.current % 60 === 0) {
-        setRunningMinutes(Math.floor(workSecondsRef.current / 60));
+      const currentMinute = Math.floor(workSecondsRef.current / 60);
+      // Record time every minute
+      if (currentMinute > lastMinuteRef.current && currentMinute > 0) {
+        lastMinuteRef.current = currentMinute;
+        setRunningMinutes(currentMinute);
+        // Add 1 minute to pending assignments
+        setPendingAssignments(prev => {
+          const last = prev[prev.length - 1];
+          const startTime = startTimeRef.current || formatTime(new Date());
+          // If last entry is from same start time, increment duration
+          if (last && last.start === startTime) {
+            return [...prev.slice(0, -1), { start: last.start, duration: last.duration + 1 }];
+          }
+          return [...prev, { start: startTime, duration: 1 }];
+        });
       }
       setTimeLeft(prev => { if (prev <= 1) { completeOne(); return 0; } return prev - 1; });
     }, 1000);
@@ -272,7 +285,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: settle all time to current task
+  // End now: settle all pending time to task
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -280,10 +293,10 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Collect ALL pending + current work time
+    // Collect all pending + current minute
     const oldPending = pendingAssignRef.current;
-    const currentWork = elapsedSeconds >= 60 ? [{ start: startTime, duration: elapsed }] : [];
-    const allPending = [...oldPending, ...currentWork];
+    const currentMinute = elapsedSeconds >= 60 ? [{ start: startTime, duration: elapsed }] : [];
+    const allPending = [...oldPending, ...currentMinute];
 
     setIsRunning(false);
     setRunningMinutes(0);
@@ -292,26 +305,23 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     isLongBreakRef.current = false;
 
     const task = currentTaskRef.current;
-    if (allPending.length > 0) {
+    if (allPending.length > 0 && task) {
+      // Settle all to task
       if (soundEnabledRef.current) playWorkComplete();
-      if (task) {
-        // Has task → settle all to task
-        allPending.forEach(pa => {
-          recordPomodoro({
-            start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-            taskId: task.id, taskTitle: task.title, category: task.category,
-            completed: true, createdAt: formatTime(new Date()),
-          });
+      allPending.forEach(pa => {
+        recordPomodoro({
+          start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+          taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
         });
-        setPendingAssignments([]);
-        showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
-      } else {
-        // No task → show assignment modal
-        setPendingAssignments(allPending);
-        setGroupPhase('settle');
-      }
+      });
+      setPendingAssignments([]);
+      showToast(`已结算 ${allPending.length} 个番茄 →「${task.title}」`);
+    } else if (allPending.length > 0) {
+      // No task → show assignment modal
+      setPendingAssignments(allPending);
+      setGroupPhase('settle');
     } else {
-      // No time to record
       setGroupPhase('working');
     }
   }, [clearTimer, recordPomodoro, showToast]);
