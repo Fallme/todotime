@@ -252,7 +252,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setRunningMinutes(0);
   }, [clearTimer]);
 
-  // End now: settle if ≥20 min, update cycle count
+  // End now: settle completed pomodoros, update cycle
   const endNow = useCallback(() => {
     clearTimer();
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -271,14 +271,19 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     isLongBreakRef.current = false;
 
-    // Only count as pomodoro if ≥20 minutes
-    if (totalMinutes >= 20) {
-      const newCycleCount = cycleCountRef.current + 1;
-      setCycleCount(newCycleCount);
+    // Check if current work is ≥20 min (counts as pomodoro)
+    const currentIsPomodoro = currentMinute >= 20;
+    if (currentIsPomodoro) {
+      setCycleCount(cycleCountRef.current + 1);
+    }
+
+    // Settle if there are completed pomodoros (from pending or current)
+    const completedPomodoros = cycleCountRef.current + (currentIsPomodoro ? 1 : 0);
+    if (completedPomodoros > 0 && totalMinutes > 0) {
       setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
       setGroupPhase('settle');
     } else {
-      // Less than 20 min, just reset without pomodoro
+      // No completed pomodoros, just reset
       setCycleCount(0);
       setGroupPhase('working');
     }
