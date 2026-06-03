@@ -155,6 +155,21 @@ export default function App() {
 
   const handleSaveSettings = (s: AppSettings) => setSettings(s);
 
+  const handleSelectTodo = (id: string | null) => {
+    todosHook.selectTodo(id);
+    // Also set as current task for timer
+    if (id) {
+      const todo = todos.find(t => t.id === id);
+      if (todo) {
+        setCurrentTaskId(todo.id);
+        timer.setTaskInfo(todo.id, todo.title, todo.category);
+      }
+    } else {
+      setCurrentTaskId(null);
+      timer.setTaskInfo(null, '', '其他');
+    }
+  };
+
   const handleQuickStart = (todo: Todo) => {
     setCurrentTaskId(todo.id);
     timer.setTaskInfo(todo.id, todo.title, todo.category);
@@ -256,7 +271,7 @@ export default function App() {
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
               onAbandon={todosHook.abandonTodo} onRestore={todosHook.restoreTodo}
-              onSelect={todosHook.selectTodo} onQuickStart={handleQuickStart}
+              onSelect={handleSelectTodo} onQuickStart={handleQuickStart}
               onQuickStartSubtask={handleQuickStartSubtask}
               onAddSubtask={todosHook.addSubtask} onToggleSubtask={todosHook.toggleSubtask}
               onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
