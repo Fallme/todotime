@@ -341,19 +341,19 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [clearTimer]);
   const reset = useCallback(() => { endNow(); }, [endNow]);
 
-  // Skip: same as completeOne for work, or skip break
+  // Skip: quickly skip current phase (work→break or break→work), no settlement
   const skip = useCallback(() => {
-    if (modeRef.current === 'work') { completeOne(true); }
-    else {
-      clearTimer(); setIsRunning(false);
-      if (isLongBreakRef.current) {
-        settlePending(currentTaskRef.current);
-        isLongBreakRef.current = false;
-      }
+    clearTimer(); setIsRunning(false);
+    if (modeRef.current === 'work') {
+      // Skip work → go to break
+      isLongBreakRef.current = false;
+      startBreak(false);
+    } else {
+      // Skip break → go to work
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
     }
-  }, [clearTimer, completeOne, settlePending]);
+  }, [clearTimer, startBreak]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,

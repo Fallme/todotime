@@ -200,8 +200,8 @@ body { background: var(--bg); margin: 0; }
 .report-sum-val { font-size: 22px; font-weight: 800; color: var(--text); line-height: 1.1; }
 .report-sum-label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .report-sum-diff { display: inline-flex; align-items: center; gap: 3px; margin-top: 6px; font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 6px; }
-.report-sum-diff.up { color: #27ae60; background: rgba(39,174,96,0.1); }
-.report-sum-diff.down { color: #e74c3c; background: rgba(231,76,60,0.1); }
+.report-sum-diff.up { color: #e74c3c; background: rgba(231,76,60,0.1); }
+.report-sum-diff.down { color: #27ae60; background: rgba(39,174,96,0.1); }
 .report-sum-diff.same { color: var(--text-muted); background: var(--border); }
 
 /* Section titles */
@@ -279,8 +279,8 @@ body { background: var(--bg); margin: 0; }
 .report-big-val { font-size: 32px; font-weight: 700; color: var(--text); letter-spacing: -0.5px; }
 .report-big-label { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
 .report-big-diff { font-size: 12px; margin-top: 8px; display: flex; align-items: center; justify-content: center; gap: 4px; }
-.report-big-diff.up { color: #00b894; }
-.report-big-diff.down { color: #e74c3c; }
+.report-big-diff.up { color: #e74c3c; }
+.report-big-diff.down { color: #27ae60; }
 .report-big-diff.flat { color: var(--text-muted); }
 .report-apple-chart { padding: 0 20px 20px; }
 .report-bar-wrap { height: 160px; }
@@ -301,8 +301,8 @@ body { background: var(--bg); margin: 0; }
 .report-apple-stat-val { display: block; font-size: 16px; font-weight: 600; color: var(--text); }
 .report-apple-stat-label { font-size: 11px; color: var(--text-muted); }
 .report-apple-stat-diff { font-size: 10px; margin-top: 2px; display: block; }
-.report-apple-stat-diff.up { color: #00b894; }
-.report-apple-stat-diff.down { color: #e74c3c; }
+.report-apple-stat-diff.up { color: #e74c3c; }
+.report-apple-stat-diff.down { color: #27ae60; }
 .report-apple-stat-diff.same { color: var(--text-muted); }
 .report-apple-trend { padding: 20px; }
 .report-apple-trend h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 12px; }
