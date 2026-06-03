@@ -137,7 +137,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setIsRunning(true);
   }, []);
 
-  // Break countdown → after break, settle or continue
+  // Break countdown → after break, auto-continue to next work or settle
   useEffect(() => {
     if (!isRunning || mode === 'work') return;
     intervalRef.current = window.setInterval(() => {
@@ -145,21 +145,29 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         if (prev <= 1) {
           clearTimer();
           if (soundEnabledRef.current) playBreakComplete();
-          setIsRunning(false);
-          // Only settle after long break (4 pomodoros complete)
+          // Long break completed → settle and reset cycle
           if (isLongBreakRef.current) {
             settlePending(currentTaskRef.current);
             isLongBreakRef.current = false;
+            setCycleCount(0);
+            setPendingAssignments([]);
+            setIsRunning(false);
+            setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+            startTimeRef.current = '';
+            showToast('一轮完成！已重置轮次');
+            return 0;
           }
+          // Short break completed → auto-start next work
           setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
-          return 0;
+          setIsRunning(true);
+          return workMinutesRef.current * 60;
         }
         return prev - 1;
       });
     }, 1000);
     return clearTimer;
-  }, [isRunning, mode, clearTimer, settlePending]);
+  }, [isRunning, mode, clearTimer, settlePending, showToast]);
 
   // Complete one work pomodoro
   const completeOne = useCallback((force = false) => {
