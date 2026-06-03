@@ -341,13 +341,38 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [clearTimer]);
   const reset = useCallback(() => { endNow(); }, [endNow]);
 
-  // Skip: quickly skip current phase (work→break or break→work), no settlement
+  // Skip: quickly complete current phase and move to next
   const skip = useCallback(() => {
     clearTimer(); setIsRunning(false);
     if (modeRef.current === 'work') {
-      // Skip work → go to break
-      isLongBreakRef.current = false;
-      startBreak(false);
+      // Skip work → count as completed pomodoro, go to break
+      const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
+      const elapsed = Math.round(elapsedSeconds / 60);
+      const startTime = startTimeRef.current || formatTime(new Date());
+      startTimeRef.current = '';
+
+      if (elapsedSeconds > 0) {
+        if (soundEnabledRef.current) playWorkComplete();
+        setTotalPomodoros(p => p + 1);
+        setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
+
+        const nextDot = cycleCountRef.current + 1;
+        setCycleCount(nextDot);
+
+        if (nextDot >= cycleIntervalRef.current) {
+          // Completed a full cycle → long break + settle
+          setCycleCount(0);
+          isLongBreakRef.current = true;
+          startBreak(true);
+        } else {
+          isLongBreakRef.current = false;
+          startBreak(false);
+        }
+      } else {
+        // No time elapsed, just skip to break
+        isLongBreakRef.current = false;
+        startBreak(false);
+      }
     } else {
       // Skip break → go to work
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
