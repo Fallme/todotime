@@ -319,6 +319,7 @@ export default function App() {
           currentTaskName={currentTask?.title ?? null}
           onAssignAll={handleAssignAll} onStartNextGroup={timer.startNextGroup}
           onStop={timer.stop} onResetCycle={timer.resetCycle}
+          onSelectTask={(id, title, cat) => { setCurrentTaskId(id); timer.setTaskInfo(id, title, cat); }}
         />
       )}
 

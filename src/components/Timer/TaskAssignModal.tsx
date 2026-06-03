@@ -10,9 +10,10 @@ interface TaskAssignModalProps {
   onStartNextGroup: () => void;
   onStop: () => void;
   onResetCycle: () => void;
+  onSelectTask: (id: string | null, title: string, category: Category) => void;
 }
 
-export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop }: TaskAssignModalProps) {
+export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop, onSelectTask }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.done && !t.abandoned);
   const [selectedTodoId, setSelectedTodoId] = useState('other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
@@ -46,6 +47,8 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
   const handleAssignAndContinue = () => {
     const result = getResult(getSelectedTodoId());
     onAssignAll(assignments.map(() => result));
+    // Set the selected task as current for next group
+    onSelectTask(result.taskId, result.taskTitle, result.category);
     onStartNextGroup();
   };
 
