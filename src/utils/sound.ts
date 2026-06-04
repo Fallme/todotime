@@ -1,4 +1,7 @@
-// Sound system using pre-created HTML5 Audio elements
+// Sound system - create Audio on first user interaction
+
+let players: (() => void)[] = [];
+let ready = false;
 
 function makeTone(freq: number, duration: number, vol: number = 0.3): string {
   const sr = 44100, n = Math.floor(sr * duration);
@@ -18,36 +21,31 @@ function makeTone(freq: number, duration: number, vol: number = 0.3): string {
   return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
 }
 
-// Pre-create Audio elements (reuse, don't recreate)
-function makePlayer(url: string): () => void {
-  let a: HTMLAudioElement | null = null;
-  return () => {
-    if (!a) a = new Audio(url);
-    a.currentTime = 0;
-    a.play().catch(() => {});
-  };
-}
-
-const play1 = makePlayer(makeTone(523, 0.15, 0.3));
-const play2 = makePlayer(makeTone(659, 0.15, 0.25));
-const play3 = makePlayer(makeTone(392, 0.4, 0.15));
-const play4 = makePlayer(makeTone(523, 0.35, 0.12));
-const play5 = makePlayer(makeTone(784, 0.12, 0.2));
-const play6 = makePlayer(makeTone(1047, 0.18, 0.15));
-
+// Must be called on first user interaction (click/tap)
 export function initAudio(): void {
-  try {
-    const a = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
-    a.volume = 0; a.play().catch(() => {});
-  } catch { /* ignore */ }
+  if (ready) return;
+  ready = true;
+  const urls = [
+    makeTone(523, 0.15, 0.3), makeTone(659, 0.15, 0.25),
+    makeTone(392, 0.4, 0.15), makeTone(523, 0.35, 0.12),
+    makeTone(784, 0.12, 0.2), makeTone(1047, 0.18, 0.15),
+  ];
+  players = urls.map(url => {
+    const a = new Audio(url);
+    return () => { a.currentTime = 0; a.play().catch(() => {}); };
+  });
 }
 
-// 进入专注 / 开始 / 继续
-export function playStart(): void { play1(); setTimeout(play2, 120); }
+function p(idx: number): void {
+  if (ready && players[idx]) players[idx]();
+}
+
+// 进入专注 / 开始 / 继续 / 跳过休息 / 休息结束
+export function playStart(): void { p(0); setTimeout(() => p(1), 120); }
 // 进入休息
-export function playEnterBreak(): void { play3(); setTimeout(play4, 120); }
+export function playEnterBreak(): void { p(2); setTimeout(() => p(3), 120); }
 // 完成轮次
-export function playCycleComplete(): void { play1(); setTimeout(play2, 100); setTimeout(play5, 200); setTimeout(play6, 300); }
+export function playCycleComplete(): void { p(0); setTimeout(() => p(1), 100); setTimeout(() => p(4), 200); setTimeout(() => p(5), 300); }
 export function playWorkComplete(): void { playStart(); }
 export function playBreakComplete(): void { playEnterBreak(); }
-export function playTick(): void { /* no tick */ }
+export function playTick(): void {}
