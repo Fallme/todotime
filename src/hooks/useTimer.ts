@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatTime, formatDate } from '../utils/dateUtils';
-import { playWorkComplete, playBreakComplete, playStart } from '../utils/sound';
+import { playWorkComplete, playBreakComplete, playStart, playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
 
 export interface PendingAssignment {
   start: string;
@@ -109,6 +109,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       setMode('shortBreak'); setTimeLeft(shortBreakMinutesRef.current * 60); setTotalTimeState(shortBreakMinutesRef.current * 60);
     }
+    if (soundEnabledRef.current) playEnterBreak();
     setIsRunning(true);
   }, []);
 
@@ -123,6 +124,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           // Long break completed → merge all into one pomodoro and show modal
           if (isLongBreakRef.current) {
             isLongBreakRef.current = false;
+            if (soundEnabledRef.current) playCycleComplete();
             setTimeout(() => {
               const pending = pendingAssignRef.current;
               const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
@@ -139,6 +141,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
             return 0;
           }
           // Short break → auto-start next work
+          if (soundEnabledRef.current) playEnterWork();
           setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
           setIsRunning(true);
