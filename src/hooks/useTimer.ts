@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatTime, formatDate } from '../utils/dateUtils';
-import { playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
+import { playStart, playEnterBreak, playCycleComplete } from '../utils/sound';
 
 export interface PendingAssignment {
   start: string;
@@ -157,8 +157,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
             }, 0);
             return 0;
           }
-          // Short break → auto-start next work (sound outside state setter)
-          setTimeout(() => { if (soundEnabledRef.current) playEnterWork(); }, 0);
+          // Short break → auto-start next work
+          setTimeout(() => { if (soundEnabledRef.current) playStart(); }, 0);
           setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
           setIsRunning(true);
@@ -259,6 +259,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setGroupPhase('working');
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     setIsRunning(true); startTimeRef.current = '';
+    if (soundEnabledRef.current) playStart();
   }, []);
 
   // Stop
@@ -335,7 +336,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
-    if (soundEnabledRef.current) playEnterWork();
+    if (soundEnabledRef.current) playStart();
   }, []);
 
   const pause = useCallback(() => {
