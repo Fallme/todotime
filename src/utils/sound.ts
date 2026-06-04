@@ -1,72 +1,65 @@
-// Sound system - always creates fresh AudioContext to avoid suspension issues
-const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+// Sound system using HTML5 Audio (more reliable than Web Audio API)
 
-let savedCtx: AudioContext | null = null;
+// Generate simple beep sounds as data URIs
+function makeBeep(freq: number, duration: number, volume: number = 0.3): string {
+  const sampleRate = 22050;
+  const samples = Math.floor(sampleRate * duration);
+  const buffer = new ArrayBuffer(44 + samples * 2);
+  const view = new DataView(buffer);
 
-// Unlock on first user interaction
-export function initAudio(): void {
-  try {
-    const ctx = new AudioCtx();
-    // Play silent buffer to unlock
-    const buf = ctx.createBuffer(1, 1, 22050);
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-    savedCtx = ctx;
-  } catch { /* ignore */ }
-}
+  // WAV header
+  const writeStr = (offset: number, str: string) => { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); };
+  writeStr(0, 'RIFF');
+  view.setUint32(4, 36 + samples * 2, true);
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeStr(36, 'data');
+  view.setUint32(40, samples * 2, true);
 
-function getCtx(): AudioContext | null {
-  if (savedCtx && savedCtx.state === 'running') return savedCtx;
-  if (savedCtx && savedCtx.state === 'suspended') {
-    savedCtx.resume();
-    return savedCtx;
+  for (let i = 0; i < samples; i++) {
+    const t = i / sampleRate;
+    const envelope = Math.exp(-t * 4) * volume;
+    const val = Math.sin(2 * Math.PI * freq * t) * envelope;
+    view.setInt16(44 + i * 2, Math.max(-32768, Math.min(32767, val * 32767)), true);
   }
-  // Try to create new context
-  try {
-    savedCtx = new AudioCtx();
-    if (savedCtx.state === 'suspended') savedCtx.resume();
-    return savedCtx;
-  } catch { return null; }
+
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
 }
 
-function playTone(freq: number, start: number, duration: number, volume: number, type: OscillatorType = 'sine'): void {
-  const ctx = getCtx();
-  if (!ctx) return;
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
-  gain.gain.setValueAtTime(0, ctx.currentTime + start);
-  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.02);
-  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
-  osc.start(ctx.currentTime + start);
-  osc.stop(ctx.currentTime + start + duration);
+// Pre-generate sounds
+const SOUNDS = {
+  start: [makeBeep(523, 0.12, 0.3), makeBeep(659, 0.12, 0.25)],
+  break: [makeBeep(392, 0.5, 0.15), makeBeep(523, 0.4, 0.12)],
+  cycle: [makeBeep(523, 0.15, 0.25), makeBeep(659, 0.15, 0.25), makeBeep(784, 0.15, 0.25), makeBeep(1047, 0.2, 0.2)],
+};
+
+function playSequence(urls: string[], gap: number = 0.12): void {
+  urls.forEach((url, i) => {
+    setTimeout(() => {
+      const audio = new Audio(url);
+      audio.volume = 1;
+      audio.play().catch(() => {});
+    }, i * gap * 1000);
+  });
 }
 
-// 进入专注 / 开始 / 继续
-export function playStart(): void {
-  playTone(523, 0, 0.15, 0.3);
-  playTone(659, 0.1, 0.15, 0.25);
+export function initAudio(): void {
+  // Play a silent audio to unlock autoplay
+  const silent = new Audio('data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=');
+  silent.volume = 0;
+  silent.play().catch(() => {});
 }
 
-// 进入休息 - 柔和双音
-export function playEnterBreak(): void {
-  playTone(392, 0, 0.6, 0.15);
-  playTone(523, 0.12, 0.5, 0.12);
-}
-
-// 完成轮次 - 庆祝
-export function playCycleComplete(): void {
-  playTone(523, 0, 0.2, 0.25);
-  playTone(659, 0.12, 0.2, 0.25);
-  playTone(784, 0.24, 0.2, 0.25);
-  playTone(1047, 0.36, 0.3, 0.2);
-}
-
+export function playStart(): void { playSequence(SOUNDS.start); }
+export function playEnterBreak(): void { playSequence(SOUNDS.break); }
+export function playCycleComplete(): void { playSequence(SOUNDS.cycle); }
 export function playWorkComplete(): void { playStart(); }
 export function playBreakComplete(): void { playEnterBreak(); }
-export function playTick(): void { playTone(600, 0, 0.05, 0.1); }
+export function playTick(): void { /* no tick sound */ }
