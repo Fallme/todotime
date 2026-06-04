@@ -50,6 +50,7 @@ body { background: var(--bg); margin: 0; }
   flex-direction: column;
   position: relative;
   overflow-x: hidden;
+  padding: 0 4px;
 }
 
 /* Header */
@@ -1119,4 +1120,13 @@ body { background: var(--bg); margin: 0; }
   .stats-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
   .settings-row input[type="password"],
   .settings-row input[type="text"] { width: 150px; }
+}
+@media (min-width: 481px) {
+  .app { max-width: 560px; }
+}
+@media (min-width: 768px) {
+  .app { max-width: 640px; }
+}
+@media (min-width: 1024px) {
+  .app { max-width: 720px; }
 }

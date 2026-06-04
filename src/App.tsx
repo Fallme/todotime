@@ -47,14 +47,11 @@ export default function App() {
   // Callback for when a pomodoro is recorded - update task's completedPomodoros
   const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
     if (record.taskId) {
-      const isSubtask = todos.some(t => t.subtasks.some(s => s.id === record.taskId));
-      if (isSubtask) {
-        todosHook.updateSubtaskPomodoros(record.taskId);
-      } else {
-        todosHook.updateTodoPomodoros(record.taskId);
-      }
+      // Use functional updates to avoid stale closure issues
+      todosHook.updateTodoPomodoros(record.taskId);
+      todosHook.updateSubtaskPomodoros(record.taskId);
     }
-  }, [todos, todosHook]);
+  }, [todosHook]);
 
   const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled, handlePomodoroRecorded);
 
