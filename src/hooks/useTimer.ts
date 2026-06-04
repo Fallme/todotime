@@ -147,14 +147,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
                     });
                   });
                   setPendingAssignments([]);
-                  showToast(`一轮完成！已结算 →「${task.title}」`);
+                  showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`);
                 } else {
                   // No task → show modal
                   setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
                   setGroupPhase('settle');
                 }
               } else {
-                showToast('一轮完成！');
+                showToast('一轮完成！无记录');
               }
             }, 0);
             return 0;
@@ -311,7 +311,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         });
         setPendingAssignments([]);
         setCycleCount(0);
-        showToast(`已结算 →「${task.title}」`);
+        const pomCount = completedPomodoros;
+        showToast(`${totalMinutes}分钟${pomCount > 0 ? ` · ${pomCount}个番茄` : ''} →「${task.title}」`);
       } else {
         // No task → show assignment modal
         setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
