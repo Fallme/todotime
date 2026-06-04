@@ -101,7 +101,19 @@ export default function App() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // --- Sync when tab becomes visible again (cross-device sync) ---
+  // --- Load data when GitHub config is set (new device setup) ---
+  useEffect(() => {
+    if (!settings.githubToken || !settings.githubRepo) return;
+    loadAll().then((result) => {
+      mergeGitData(result);
+      syncBidirectional(settings, todos).then((syncResult) => {
+        if (syncResult) {
+          setSettings(prev => ({ ...syncResult.settings, githubToken: prev.githubToken }));
+          todosHook.mergeTodos(syncResult.todos);
+        }
+      });
+    });
+  }, [settings.githubToken, settings.githubRepo]);
   useEffect(() => {
     if (!settings.githubToken || !settings.githubRepo) return;
     const handleVisibility = () => {
