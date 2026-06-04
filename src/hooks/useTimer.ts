@@ -119,7 +119,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, []);
 
   const playSound = useCallback((fn: () => void) => {
-    if (soundEnabledRef.current) fn();
+    if (soundEnabledRef.current) {
+      requestAnimationFrame(() => requestAnimationFrame(() => fn()));
+    }
   }, []);
 
   // Break completion signal
