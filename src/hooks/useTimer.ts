@@ -314,17 +314,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     isLongBreakRef.current = false;
 
-    // Only count current work as pomodoro if ≥20 min
-    const currentIsPomodoro = currentMinute >= 20;
-    if (currentIsPomodoro) {
+    // Settle: if total time ≥20 min, count as 1 pomodoro
+    if (totalMinutes >= 20) {
       setCycleCount(cycleCountRef.current + 1);
-    }
-
-    // Settle: only if current session is ≥20 min
-    if (currentIsPomodoro && totalMinutes > 0) {
       const task = currentTaskRef.current;
       if (task) {
-        // Has task → auto-assign, no modal
         recordPomodoro({
           start: startTime, end: formatTime(new Date()), duration: totalMinutes,
           taskId: task.id, taskTitle: task.title, category: task.category,
@@ -334,11 +328,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         setCycleCount(0);
         showToast(`${totalMinutes}分钟 · 1个番茄 →「${task.title}」`);
       } else {
-        // No task → show assignment modal
         setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
         setGroupPhase('settle');
       }
     } else {
+      // <20 min, no pomodoro, just reset
       setCycleCount(0);
       setGroupPhase('working');
     }
