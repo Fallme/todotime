@@ -44,22 +44,24 @@ export default function App() {
   const currentTask = todos.find(t => t.id === currentTaskId);
   const configLoadedRef = useRef(false);
 
-  const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled);
-
-  // Wire up onComplete callback to update task's completedPomodoros
-  useEffect(() => {
-    timer.setOnComplete((record) => {
-      if (record.taskId) {
-        // Check if it's a subtask (not a main todo)
-        const isSubtask = todos.some(t => t.subtasks.some(s => s.id === record.taskId));
-        if (isSubtask) {
-          todosHook.updateSubtaskPomodoros(record.taskId);
-        } else {
-          todosHook.updateTodoPomodoros(record.taskId);
-        }
+  // Callback for when a pomodoro is recorded - update task's completedPomodoros
+  const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
+    if (record.taskId) {
+      const isSubtask = todos.some(t => t.subtasks.some(s => s.id === record.taskId));
+      if (isSubtask) {
+        todosHook.updateSubtaskPomodoros(record.taskId);
+      } else {
+        todosHook.updateTodoPomodoros(record.taskId);
       }
-    });
-  }, [timer.setOnComplete, todosHook, todos]);
+    }
+  }, [todos, todosHook]);
+
+  const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled, handlePomodoroRecorded);
+
+  // Backup: also set via ref in case direct callback misses
+  useEffect(() => {
+    timer.setOnComplete(handlePomodoroRecorded);
+  }, [timer.setOnComplete, handlePomodoroRecorded]);
 
   // --- Merge git data into local state ---
   const mergeGitData = useCallback(({ settings: gitSettings, todos: gitTodos }: { settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }) => {

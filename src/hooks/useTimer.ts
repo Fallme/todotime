@@ -37,7 +37,7 @@ interface UseTimerReturn {
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
-export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes: number; longBreakMinutes: number; longBreakInterval: number }, soundEnabled: boolean = true): UseTimerReturn {
+export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes: number; longBreakMinutes: number; longBreakInterval: number }, soundEnabled: boolean = true, onRecorded?: (record: PomodoroRecord) => void): UseTimerReturn {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [totalTime, setTotalTimeState] = useState(25 * 60);
@@ -91,15 +91,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
   // Record a pomodoro
   const recordPomodoro = useCallback((record: PomodoroRecord) => {
-    console.log('recordPomodoro:', record.taskId, record.taskTitle, record.duration + 'min');
     setTodayPomodoros(prev => [...prev, record]);
-    if (onCompleteRef.current) {
-      console.log('onComplete callback exists, calling...');
-      onCompleteRef.current(record);
+    // Use direct callback if available, fallback to ref
+    if (onRecorded) {
+      onRecorded(record);
     } else {
-      console.log('WARNING: onComplete callback is null!');
+      onCompleteRef.current?.(record);
     }
-  }, []);
+  }, [onRecorded]);
 
   // Persist todayPomodoros to localStorage
   useEffect(() => {
