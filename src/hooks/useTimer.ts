@@ -392,11 +392,48 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         startBreak(false);
       }
     } else {
-      // Skip break → go to work (keep running)
-      playSound(playStart);
-      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-      startTimeRef.current = '';
-      setIsRunning(true);
+      // Skip break
+      if (isLongBreakRef.current) {
+        // Skip long break → settle + cycle complete sound
+        isLongBreakRef.current = false;
+        playSound(playCycleComplete);
+        setCycleCount(0);
+
+        setPendingAssignments(prev => {
+          const totalMinutes = prev.reduce((sum, p) => sum + p.duration, 0);
+          if (totalMinutes > 0) {
+            const task = currentTaskRef.current;
+            if (task) {
+              prev.forEach(pa => {
+                recordPomodoro({
+                  start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+                  taskId: task.id, taskTitle: task.title, category: task.category,
+                  completed: true, createdAt: formatTime(new Date()),
+                });
+              });
+              setTimeout(() => showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`), 0);
+              return [];
+            } else {
+              setGroupPhase('settle');
+              return [{ start: prev[0]?.start || formatTime(new Date()), duration: totalMinutes }];
+            }
+          } else {
+            setTimeout(() => showToast('一轮完成！无记录'), 0);
+            return [];
+          }
+        });
+
+        // Reset to work mode but DON'T auto-start
+        setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+        startTimeRef.current = '';
+        setIsRunning(false);
+      } else {
+        // Skip short break → auto-start next work
+        playSound(playStart);
+        setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+        startTimeRef.current = '';
+        setIsRunning(true);
+      }
     }
   }, [clearTimer, startBreak, playSound]);
 
