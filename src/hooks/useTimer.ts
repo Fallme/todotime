@@ -114,11 +114,22 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       setMode('shortBreak'); setTimeLeft(shortBreakMinutesRef.current * 60); setTotalTimeState(shortBreakMinutesRef.current * 60);
     }
-    if (soundEnabledRef.current) playEnterBreak();
+    if (soundEnabledRef.current) setSoundSignal('break');
     setIsRunning(true);
   }, []);
 
-  // Break completion signal (useState triggers re-render)
+  // Sound trigger via state (plays after render, outside setters)
+  const [soundSignal, setSoundSignal] = useState<'start' | 'break' | 'cycle' | null>(null);
+
+  useEffect(() => {
+    if (!soundSignal || !soundEnabledRef.current) return;
+    if (soundSignal === 'start') playStart();
+    else if (soundSignal === 'break') playEnterBreak();
+    else if (soundSignal === 'cycle') playCycleComplete();
+    setSoundSignal(null);
+  }, [soundSignal]);
+
+  // Break completion signal
   const [breakDone, setBreakDone] = useState(0);
   const breakWasLongRef = useRef(false);
 
@@ -146,7 +157,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     if (breakWasLongRef.current) {
       // Long break completed
       breakWasLongRef.current = false;
-      if (soundEnabledRef.current) playCycleComplete();
+      if (soundEnabledRef.current) setSoundSignal('cycle');
       const pending = pendingAssignRef.current;
       const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
       setCycleCount(0);
@@ -173,7 +184,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       }
     } else {
       // Short break → play sound and auto-start next work
-      if (soundEnabledRef.current) playStart();
+      if (soundEnabledRef.current) setSoundSignal('start');
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
       setIsRunning(true);
@@ -303,14 +314,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     isLongBreakRef.current = false;
 
-    // Check if current work is ≥20 min (counts as pomodoro)
+    // Only count current work as pomodoro if ≥20 min
     const currentIsPomodoro = currentMinute >= 20;
     if (currentIsPomodoro) {
       setCycleCount(cycleCountRef.current + 1);
     }
 
-    const completedPomodoros = cycleCountRef.current + (currentIsPomodoro ? 1 : 0);
-    if (completedPomodoros > 0 && totalMinutes > 0) {
+    // Settle: only if current session is ≥20 min
+    if (currentIsPomodoro && totalMinutes > 0) {
       const task = currentTaskRef.current;
       if (task) {
         // Has task → auto-assign, no modal
@@ -321,8 +332,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         });
         setPendingAssignments([]);
         setCycleCount(0);
-        const pomCount = completedPomodoros;
-        showToast(`${totalMinutes}分钟${pomCount > 0 ? ` · ${pomCount}个番茄` : ''} →「${task.title}」`);
+        showToast(`${totalMinutes}分钟 · 1个番茄 →「${task.title}」`);
       } else {
         // No task → show assignment modal
         setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
