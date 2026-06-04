@@ -387,6 +387,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       }
     } else {
       // Skip break → go to work (keep running)
+      playSound(playStart);
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
       setIsRunning(true);
