@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatTime, formatDate } from '../utils/dateUtils';
-import { playStart, playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
+import { playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
 
 export interface PendingAssignment {
   start: string;
@@ -128,8 +128,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           // Long break completed → merge all into one pomodoro and show modal
           if (isLongBreakRef.current) {
             isLongBreakRef.current = false;
-            if (soundEnabledRef.current) playCycleComplete();
             setTimeout(() => {
+              if (soundEnabledRef.current) playCycleComplete();
               const pending = pendingAssignRef.current;
               const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
               setCycleCount(0);
@@ -138,7 +138,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
               if (totalMinutes > 0) {
                 const task = currentTaskRef.current;
                 if (task) {
-                  // Has task → auto-assign
                   pending.forEach(pa => {
                     recordPomodoro({
                       start: pa.start, end: formatTime(new Date()), duration: pa.duration,
@@ -149,7 +148,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
                   setPendingAssignments([]);
                   showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`);
                 } else {
-                  // No task → show modal
                   setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
                   setGroupPhase('settle');
                 }
@@ -159,8 +157,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
             }, 0);
             return 0;
           }
-          // Short break → auto-start next work
-          if (soundEnabledRef.current) playEnterWork();
+          // Short break → auto-start next work (sound outside state setter)
+          setTimeout(() => { if (soundEnabledRef.current) playEnterWork(); }, 0);
           setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
           startTimeRef.current = '';
           setIsRunning(true);
@@ -337,7 +335,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
-    if (soundEnabledRef.current) playStart();
+    if (soundEnabledRef.current) playEnterWork();
   }, []);
 
   const pause = useCallback(() => {
