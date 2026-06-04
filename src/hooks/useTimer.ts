@@ -107,6 +107,10 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     localStorage.setItem('todotime_today_pomodoros', JSON.stringify(todayPomodoros));
   }, [todayPomodoros]);
 
+  const playSound = useCallback((fn: () => void) => {
+    if (soundEnabledRef.current) fn();
+  }, []);
+
   // Start break then auto-continue
   const startBreak = useCallback((isLong: boolean) => {
     if (isLong) {
@@ -116,11 +120,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
     playSound(playEnterBreak);
     setIsRunning(true);
-  }, []);
-
-  const playSound = useCallback((fn: () => void) => {
-    if (soundEnabledRef.current) fn();
-  }, []);
+  }, [playSound]);
 
   // Break completion signal
   const [breakDone, setBreakDone] = useState(0);
@@ -274,8 +274,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setGroupPhase('working');
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     setIsRunning(true); startTimeRef.current = '';
-    if (soundEnabledRef.current) playStart();
-  }, []);
+    playSound(playStart);
+  }, [playSound]);
 
   // Stop
   const stop = useCallback(() => {
@@ -344,8 +344,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const start = useCallback(() => {
     setGroupPhase('working');
     setIsRunning(true);
-    if (soundEnabledRef.current) playStart();
-  }, []);
+    playSound(playStart);
+  }, [playSound]);
 
   const pause = useCallback(() => {
     // Immediately update runningMinutes to reflect current elapsed
@@ -392,7 +392,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       startTimeRef.current = '';
       setIsRunning(true);
     }
-  }, [clearTimer, startBreak]);
+  }, [clearTimer, startBreak, playSound]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
