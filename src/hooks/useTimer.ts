@@ -118,19 +118,19 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setIsRunning(true);
   }, []);
 
-  // Break completion signal
-  const breakDoneRef = useRef(false);
+  // Break completion signal (useState triggers re-render)
+  const [breakDone, setBreakDone] = useState(0);
   const breakWasLongRef = useRef(false);
 
-  // Break countdown → after break, auto-continue to next work or settle
+  // Break countdown → signal when done
   useEffect(() => {
     if (!isRunning || mode === 'work') return;
     intervalRef.current = window.setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearTimer();
-          breakDoneRef.current = true;
           breakWasLongRef.current = isLongBreakRef.current;
+          setBreakDone(n => n + 1); // trigger re-render
           return 0;
         }
         return prev - 1;
@@ -139,10 +139,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     return clearTimer;
   }, [isRunning, mode, clearTimer]);
 
-  // Handle break completion OUTSIDE of setTimeLeft
+  // Handle break completion (runs after re-render)
   useEffect(() => {
-    if (!breakDoneRef.current) return;
-    breakDoneRef.current = false;
+    if (breakDone === 0) return;
 
     if (breakWasLongRef.current) {
       // Long break completed
@@ -173,13 +172,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         showToast('一轮完成！无记录');
       }
     } else {
-      // Short break → auto-start next work
+      // Short break → play sound and auto-start next work
       if (soundEnabledRef.current) playStart();
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
       setIsRunning(true);
     }
-  }, [breakDoneRef.current, recordPomodoro, showToast]); // eslint-disable-line
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [breakDone]);
 
   // Complete one work pomodoro
   const completeOne = useCallback((force = false) => {
