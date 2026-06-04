@@ -138,8 +138,23 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
               setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
               setIsRunning(false);
               if (totalMinutes > 0) {
-                setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
-                setGroupPhase('settle');
+                const task = currentTaskRef.current;
+                if (task) {
+                  // Has task → auto-assign
+                  pending.forEach(pa => {
+                    recordPomodoro({
+                      start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+                      taskId: task.id, taskTitle: task.title, category: task.category,
+                      completed: true, createdAt: formatTime(new Date()),
+                    });
+                  });
+                  setPendingAssignments([]);
+                  showToast(`一轮完成！已结算 →「${task.title}」`);
+                } else {
+                  // No task → show modal
+                  setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
+                  setGroupPhase('settle');
+                }
               } else {
                 showToast('一轮完成！');
               }
@@ -288,17 +303,29 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setCycleCount(cycleCountRef.current + 1);
     }
 
-    // Settle if there are completed pomodoros (from pending or current)
     const completedPomodoros = cycleCountRef.current + (currentIsPomodoro ? 1 : 0);
     if (completedPomodoros > 0 && totalMinutes > 0) {
-      setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
-      setGroupPhase('settle');
+      const task = currentTaskRef.current;
+      if (task) {
+        // Has task → auto-assign, no modal
+        recordPomodoro({
+          start: startTime, end: formatTime(new Date()), duration: totalMinutes,
+          taskId: task.id, taskTitle: task.title, category: task.category,
+          completed: true, createdAt: formatTime(new Date()),
+        });
+        setPendingAssignments([]);
+        setCycleCount(0);
+        showToast(`已结算 →「${task.title}」`);
+      } else {
+        // No task → show assignment modal
+        setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
+        setGroupPhase('settle');
+      }
     } else {
-      // No completed pomodoros, just reset
       setCycleCount(0);
       setGroupPhase('working');
     }
-  }, [clearTimer]);
+  }, [clearTimer, recordPomodoro, showToast]);
 
   const resetCycle = useCallback(() => {
     setCycleCount(0); setGroupPhase('working'); setPendingAssignments([]);
