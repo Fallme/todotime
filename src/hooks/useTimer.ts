@@ -151,30 +151,34 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       // Long break completed
       breakWasLongRef.current = false;
       playSound(playCycleComplete);
-      const pending = pendingAssignRef.current;
-      const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
       setCycleCount(0);
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       setIsRunning(false);
-      if (totalMinutes > 0) {
-        const task = currentTaskRef.current;
-        if (task) {
-          pending.forEach(pa => {
-            recordPomodoro({
-              start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-              taskId: task.id, taskTitle: task.title, category: task.category,
-              completed: true, createdAt: formatTime(new Date()),
+
+      // Use functional update to get latest pending
+      setPendingAssignments(prev => {
+        const totalMinutes = prev.reduce((sum, p) => sum + p.duration, 0);
+        if (totalMinutes > 0) {
+          const task = currentTaskRef.current;
+          if (task) {
+            prev.forEach(pa => {
+              recordPomodoro({
+                start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+                taskId: task.id, taskTitle: task.title, category: task.category,
+                completed: true, createdAt: formatTime(new Date()),
+              });
             });
-          });
-          setPendingAssignments([]);
-          showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`);
+            setTimeout(() => showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`), 0);
+            return [];
+          } else {
+            setGroupPhase('settle');
+            return [{ start: prev[0]?.start || formatTime(new Date()), duration: totalMinutes }];
+          }
         } else {
-          setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
-          setGroupPhase('settle');
+          setTimeout(() => showToast('一轮完成！无记录'), 0);
+          return [];
         }
-      } else {
-        showToast('一轮完成！无记录');
-      }
+      });
     } else {
       // Short break → play sound and auto-start next work
       playSound(playStart);
@@ -296,39 +300,41 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const startTime = startTimeRef.current || formatTime(new Date());
     startTimeRef.current = '';
 
-    // Calculate total pending minutes
-    const oldPending = pendingAssignRef.current;
-    const oldMinutes = oldPending.reduce((sum, p) => sum + p.duration, 0);
-    const currentMinute = elapsedSeconds >= 60 ? elapsed : 0;
-    const totalMinutes = oldMinutes + currentMinute;
-
     setIsRunning(false);
     setRunningMinutes(0);
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     isLongBreakRef.current = false;
 
-    // Settle: if total time ≥20 min, count as 1 pomodoro
-    if (totalMinutes >= 20) {
-      setCycleCount(cycleCountRef.current + 1);
-      const task = currentTaskRef.current;
-      if (task) {
-        recordPomodoro({
-          start: startTime, end: formatTime(new Date()), duration: totalMinutes,
-          taskId: task.id, taskTitle: task.title, category: task.category,
-          completed: true, createdAt: formatTime(new Date()),
-        });
-        setPendingAssignments([]);
-        setCycleCount(0);
-        showToast(`${totalMinutes}分钟 · 1个番茄 →「${task.title}」`);
+    // Use functional update to get latest pendingAssignments
+    setPendingAssignments(prev => {
+      const oldMinutes = prev.reduce((sum, p) => sum + p.duration, 0);
+      const currentMinute = elapsedSeconds >= 60 ? elapsed : 0;
+      const totalMinutes = oldMinutes + currentMinute;
+
+      if (totalMinutes >= 20) {
+        setCycleCount(cycleCountRef.current + 1);
+        const task = currentTaskRef.current;
+        if (task) {
+          // Has task → auto-assign
+          recordPomodoro({
+            start: startTime, end: formatTime(new Date()), duration: totalMinutes,
+            taskId: task.id, taskTitle: task.title, category: task.category,
+            completed: true, createdAt: formatTime(new Date()),
+          });
+          setCycleCount(0);
+          setTimeout(() => showToast(`${totalMinutes}分钟 · 1个番茄 →「${task.title}」`), 0);
+          return [];
+        } else {
+          // No task → show assignment modal
+          setGroupPhase('settle');
+          return [{ start: startTime, duration: totalMinutes }];
+        }
       } else {
-        setPendingAssignments([{ start: startTime, duration: totalMinutes }]);
-        setGroupPhase('settle');
+        // <20 min, no pomodoro
+        setCycleCount(0);
+        return [];
       }
-    } else {
-      // <20 min, no pomodoro, just reset
-      setCycleCount(0);
-      setGroupPhase('working');
-    }
+    });
   }, [clearTimer, recordPomodoro, showToast]);
 
   const resetCycle = useCallback(() => {
