@@ -6,11 +6,17 @@ function getAudioContext(): AudioContext {
   if (!audioCtx) {
     audioCtx = new AudioContextClass();
   }
-  // Resume if suspended (browser autoplay policy)
+  return audioCtx;
+}
+
+// Call this on first user interaction to unlock audio
+export function initAudio(): void {
+  if (!audioCtx) {
+    audioCtx = new AudioContextClass();
+  }
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
-  return audioCtx;
 }
 
 export function playWorkComplete(): void {

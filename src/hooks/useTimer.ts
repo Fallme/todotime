@@ -114,20 +114,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       setMode('shortBreak'); setTimeLeft(shortBreakMinutesRef.current * 60); setTotalTimeState(shortBreakMinutesRef.current * 60);
     }
-    if (soundEnabledRef.current) setSoundSignal('break');
+    playSound(playEnterBreak);
     setIsRunning(true);
   }, []);
 
-  // Sound trigger via state (plays after render, outside setters)
-  const [soundSignal, setSoundSignal] = useState<'start' | 'break' | 'cycle' | null>(null);
-
-  useEffect(() => {
-    if (!soundSignal || !soundEnabledRef.current) return;
-    if (soundSignal === 'start') playStart();
-    else if (soundSignal === 'break') playEnterBreak();
-    else if (soundSignal === 'cycle') playCycleComplete();
-    setSoundSignal(null);
-  }, [soundSignal]);
+  const playSound = useCallback((fn: () => void) => {
+    if (soundEnabledRef.current) fn();
+  }, []);
 
   // Break completion signal
   const [breakDone, setBreakDone] = useState(0);
@@ -157,7 +150,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     if (breakWasLongRef.current) {
       // Long break completed
       breakWasLongRef.current = false;
-      if (soundEnabledRef.current) setSoundSignal('cycle');
+      playSound(playCycleComplete);
       const pending = pendingAssignRef.current;
       const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
       setCycleCount(0);
@@ -184,7 +177,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       }
     } else {
       // Short break → play sound and auto-start next work
-      if (soundEnabledRef.current) setSoundSignal('start');
+      playSound(playStart);
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       startTimeRef.current = '';
       setIsRunning(true);

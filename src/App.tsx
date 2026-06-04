@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AppSettings, Category, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
+import { initAudio } from './utils/sound';
 import { Header } from './components/Layout/Header';
 import { CountdownTimer } from './components/Timer/CountdownTimer';
 import { TabNav } from './components/Layout/TabNav';
@@ -37,6 +38,13 @@ export default function App() {
 
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
   useEffect(() => { localStorage.setItem('todotime_settings', JSON.stringify(settings)); }, [settings]);
+
+  // Unlock audio on first user interaction
+  useEffect(() => {
+    const unlock = () => { initAudio(); document.removeEventListener('click', unlock); };
+    document.addEventListener('click', unlock);
+    return () => document.removeEventListener('click', unlock);
+  }, []);
 
   const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional } = useGithubSync(settings.githubRepo, settings.githubToken);
   const todosHook = useTodos();
