@@ -91,8 +91,14 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
   // Record a pomodoro
   const recordPomodoro = useCallback((record: PomodoroRecord) => {
+    console.log('recordPomodoro:', record.taskId, record.taskTitle, record.duration + 'min');
     setTodayPomodoros(prev => [...prev, record]);
-    onCompleteRef.current?.(record);
+    if (onCompleteRef.current) {
+      console.log('onComplete callback exists, calling...');
+      onCompleteRef.current(record);
+    } else {
+      console.log('WARNING: onComplete callback is null!');
+    }
   }, []);
 
   // Persist todayPomodoros to localStorage

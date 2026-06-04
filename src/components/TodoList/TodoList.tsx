@@ -41,8 +41,24 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
 
   let filtered = todos;
   if (statusTab === 'active') filtered = todos.filter(t => !t.done && !t.abandoned);
-  else if (statusTab === 'done') filtered = todos.filter(t => t.done && !t.abandoned);
+  else if (statusTab === 'done') {
+    // Hide completed tasks older than 3 days
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const cutoff = threeDaysAgo.toISOString().slice(0, 10);
+    filtered = todos.filter(t => t.done && !t.abandoned && t.completedAt && t.completedAt >= cutoff);
+  }
   else if (statusTab === 'abandoned') filtered = todos.filter(t => t.abandoned);
+  else {
+    // 'all' tab: hide old completed tasks
+    const threeDaysAgo = new Date();
+    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+    const cutoff = threeDaysAgo.toISOString().slice(0, 10);
+    filtered = todos.filter(t => {
+      if (t.done && t.completedAt && t.completedAt < cutoff) return false;
+      return true;
+    });
+  }
   if (filterCategory !== 'all') filtered = filtered.filter(t => t.category === filterCategory);
 
   const sorted = [...filtered].sort((a, b) => {
