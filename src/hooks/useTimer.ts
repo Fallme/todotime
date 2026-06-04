@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatTime, formatDate } from '../utils/dateUtils';
-import { playWorkComplete, playBreakComplete, playStart, playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
+import { playStart, playEnterBreak, playEnterWork, playCycleComplete } from '../utils/sound';
 
 export interface PendingAssignment {
   start: string;
@@ -125,7 +125,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearTimer();
-          if (soundEnabledRef.current) playBreakComplete();
           // Long break completed → merge all into one pomodoro and show modal
           if (isLongBreakRef.current) {
             isLongBreakRef.current = false;
@@ -186,8 +185,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
       return;
     }
-
-    if (soundEnabledRef.current) playWorkComplete();
 
     // Add to pending assignments
     setPendingAssignments(prev => [...prev, { start: startTime, duration: Math.max(1, elapsed) }]);
@@ -362,7 +359,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const startTime = startTimeRef.current || formatTime(new Date());
       startTimeRef.current = '';
 
-      if (soundEnabledRef.current) playWorkComplete();
       setTotalPomodoros(p => p + 1);
 
       // Only record time if >= 1 minute
