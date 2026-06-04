@@ -118,6 +118,10 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setIsRunning(true);
   }, []);
 
+  // Break completion signal
+  const breakDoneRef = useRef(false);
+  const breakWasLongRef = useRef(false);
+
   // Break countdown → after break, auto-continue to next work or settle
   useEffect(() => {
     if (!isRunning || mode === 'work') return;
@@ -125,50 +129,57 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setTimeLeft(prev => {
         if (prev <= 1) {
           clearTimer();
-          // Long break completed → merge all into one pomodoro and show modal
-          if (isLongBreakRef.current) {
-            isLongBreakRef.current = false;
-            setTimeout(() => {
-              if (soundEnabledRef.current) playCycleComplete();
-              const pending = pendingAssignRef.current;
-              const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
-              setCycleCount(0);
-              setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-              setIsRunning(false);
-              if (totalMinutes > 0) {
-                const task = currentTaskRef.current;
-                if (task) {
-                  pending.forEach(pa => {
-                    recordPomodoro({
-                      start: pa.start, end: formatTime(new Date()), duration: pa.duration,
-                      taskId: task.id, taskTitle: task.title, category: task.category,
-                      completed: true, createdAt: formatTime(new Date()),
-                    });
-                  });
-                  setPendingAssignments([]);
-                  showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`);
-                } else {
-                  setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
-                  setGroupPhase('settle');
-                }
-              } else {
-                showToast('一轮完成！无记录');
-              }
-            }, 0);
-            return 0;
-          }
-          // Short break → auto-start next work
-          setTimeout(() => { if (soundEnabledRef.current) playStart(); }, 0);
-          setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
-          startTimeRef.current = '';
-          setIsRunning(true);
-          return workMinutesRef.current * 60;
+          breakDoneRef.current = true;
+          breakWasLongRef.current = isLongBreakRef.current;
+          return 0;
         }
         return prev - 1;
       });
     }, 1000);
     return clearTimer;
-  }, [isRunning, mode, clearTimer, recordPomodoro, showToast]);
+  }, [isRunning, mode, clearTimer]);
+
+  // Handle break completion OUTSIDE of setTimeLeft
+  useEffect(() => {
+    if (!breakDoneRef.current) return;
+    breakDoneRef.current = false;
+
+    if (breakWasLongRef.current) {
+      // Long break completed
+      breakWasLongRef.current = false;
+      if (soundEnabledRef.current) playCycleComplete();
+      const pending = pendingAssignRef.current;
+      const totalMinutes = pending.reduce((sum, p) => sum + p.duration, 0);
+      setCycleCount(0);
+      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+      setIsRunning(false);
+      if (totalMinutes > 0) {
+        const task = currentTaskRef.current;
+        if (task) {
+          pending.forEach(pa => {
+            recordPomodoro({
+              start: pa.start, end: formatTime(new Date()), duration: pa.duration,
+              taskId: task.id, taskTitle: task.title, category: task.category,
+              completed: true, createdAt: formatTime(new Date()),
+            });
+          });
+          setPendingAssignments([]);
+          showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`);
+        } else {
+          setPendingAssignments([{ start: pending[0]?.start || formatTime(new Date()), duration: totalMinutes }]);
+          setGroupPhase('settle');
+        }
+      } else {
+        showToast('一轮完成！无记录');
+      }
+    } else {
+      // Short break → auto-start next work
+      if (soundEnabledRef.current) playStart();
+      setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
+      startTimeRef.current = '';
+      setIsRunning(true);
+    }
+  }, [breakDoneRef.current, recordPomodoro, showToast]); // eslint-disable-line
 
   // Complete one work pomodoro
   const completeOne = useCallback((force = false) => {
