@@ -1,133 +1,72 @@
-const AudioContextClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+// Sound system - always creates fresh AudioContext to avoid suspension issues
+const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
 
-let audioCtx: AudioContext | null = null;
+let savedCtx: AudioContext | null = null;
 
-function getAudioContext(): AudioContext {
-  if (!audioCtx) {
-    audioCtx = new AudioContextClass();
-  }
-  return audioCtx;
-}
-
-// Call this on first user interaction to unlock audio
+// Unlock on first user interaction
 export function initAudio(): void {
-  if (!audioCtx) {
-    audioCtx = new AudioContextClass();
+  try {
+    const ctx = new AudioCtx();
+    // Play silent buffer to unlock
+    const buf = ctx.createBuffer(1, 1, 22050);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+    savedCtx = ctx;
+  } catch { /* ignore */ }
+}
+
+function getCtx(): AudioContext | null {
+  if (savedCtx && savedCtx.state === 'running') return savedCtx;
+  if (savedCtx && savedCtx.state === 'suspended') {
+    savedCtx.resume();
+    return savedCtx;
   }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+  // Try to create new context
+  try {
+    savedCtx = new AudioCtx();
+    if (savedCtx.state === 'suspended') savedCtx.resume();
+    return savedCtx;
+  } catch { return null; }
 }
 
-export function playWorkComplete(): void {
-  const ctx = getAudioContext();
+function playTone(freq: number, start: number, duration: number, volume: number, type: OscillatorType = 'sine'): void {
+  const ctx = getCtx();
+  if (!ctx) return;
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   osc.connect(gain);
   gain.connect(ctx.destination);
-  osc.frequency.setValueAtTime(880, ctx.currentTime);
-  osc.frequency.setValueAtTime(1047, ctx.currentTime + 0.15);
-  osc.frequency.setValueAtTime(1319, ctx.currentTime + 0.3);
-  gain.gain.setValueAtTime(0.3, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.6);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.6);
+  osc.type = type;
+  osc.frequency.setValueAtTime(freq, ctx.currentTime + start);
+  gain.gain.setValueAtTime(0, ctx.currentTime + start);
+  gain.gain.linearRampToValueAtTime(volume, ctx.currentTime + start + 0.02);
+  gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + start + duration);
+  osc.start(ctx.currentTime + start);
+  osc.stop(ctx.currentTime + start + duration);
 }
 
-export function playBreakComplete(): void {
-  const ctx = getAudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.frequency.setValueAtTime(523, ctx.currentTime);
-  osc.frequency.setValueAtTime(659, ctx.currentTime + 0.15);
-  gain.gain.setValueAtTime(0.3, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.4);
-}
-
-export function playTick(): void {
-  const ctx = getAudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.frequency.setValueAtTime(600, ctx.currentTime);
-  gain.gain.setValueAtTime(0.1, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.05);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.05);
-}
-
+// 进入专注 / 开始 / 继续
 export function playStart(): void {
-  const ctx = getAudioContext();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  osc.type = 'sine';
-  osc.frequency.setValueAtTime(440, ctx.currentTime);
-  osc.frequency.setValueAtTime(554, ctx.currentTime + 0.1);
-  gain.gain.setValueAtTime(0.2, ctx.currentTime);
-  gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-  osc.start(ctx.currentTime);
-  osc.stop(ctx.currentTime + 0.25);
+  playTone(523, 0, 0.15, 0.3);
+  playTone(659, 0.1, 0.15, 0.25);
 }
 
-// 进入休息 - 柔和双音和弦，缓慢下降
+// 进入休息 - 柔和双音
 export function playEnterBreak(): void {
-  const ctx = getAudioContext();
-  // Two soft tones forming a gentle interval
-  [392, 523].forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.1);
-    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.1);
-    gain.gain.linearRampToValueAtTime(0.12, ctx.currentTime + i * 0.1 + 0.1);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.1 + 0.8);
-    osc.start(ctx.currentTime + i * 0.1);
-    osc.stop(ctx.currentTime + i * 0.1 + 0.8);
-  });
+  playTone(392, 0, 0.6, 0.15);
+  playTone(523, 0.12, 0.5, 0.12);
 }
 
-// 进入专注 - 清脆双音上升
-export function playEnterWork(): void {
-  const ctx = getAudioContext();
-  const notes = [523, 659]; // C5, E5
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-    gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.12);
-    gain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + i * 0.12 + 0.05);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.12 + 0.5);
-    osc.start(ctx.currentTime + i * 0.12);
-    osc.stop(ctx.currentTime + i * 0.12 + 0.5);
-  });
-}
-
-// 完成轮次 - 庆祝音
+// 完成轮次 - 庆祝
 export function playCycleComplete(): void {
-  const ctx = getAudioContext();
-  const notes = [523, 659, 784, 1047];
-  notes.forEach((freq, i) => {
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.12);
-    gain.gain.setValueAtTime(0.2, ctx.currentTime + i * 0.12);
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + i * 0.12 + 0.3);
-    osc.start(ctx.currentTime + i * 0.12);
-    osc.stop(ctx.currentTime + i * 0.12 + 0.3);
-  });
+  playTone(523, 0, 0.2, 0.25);
+  playTone(659, 0.12, 0.2, 0.25);
+  playTone(784, 0.24, 0.2, 0.25);
+  playTone(1047, 0.36, 0.3, 0.2);
 }
+
+export function playWorkComplete(): void { playStart(); }
+export function playBreakComplete(): void { playEnterBreak(); }
+export function playTick(): void { playTone(600, 0, 0.05, 0.1); }
