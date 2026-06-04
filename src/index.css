@@ -582,6 +582,19 @@ body { background: var(--bg); margin: 0; }
 
 /* Todo items */
 .todo-list-items { display: flex; flex-direction: column; gap: 4px; }
+
+/* Archive groups */
+.archive-group { margin-top: 8px; }
+.archive-toggle {
+  display: flex; align-items: center; gap: 6px; width: 100%; padding: 8px 12px;
+  background: var(--bg-hover); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; font-size: 13px; color: var(--text-secondary); transition: background 0.15s;
+}
+.archive-toggle:hover { background: var(--border); }
+.archive-toggle span:first-of-type { font-weight: 600; color: var(--text); }
+.archive-count { margin-left: auto; font-size: 11px; color: var(--text-muted); }
+.archive-items { padding-left: 8px; margin-top: 4px; }
+
 .todo-empty {
   text-align: center; padding: 24px; color: var(--text-muted); font-size: 14px;
 }
