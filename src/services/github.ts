@@ -1,9 +1,26 @@
 import type { DayData, ConfigData } from '../types';
 
 const GITHUB_API = 'https://api.github.com';
-const PROXY_URL = 'https://todotime-api.onrender.com';
+const API_BASE = 'https://todotime-9qtpetqz0-zzz1682541026511-3087s-projects.vercel.app/api';
 
 interface GitHubFile { sha: string; content: string; }
+
+async function apiGet(path: string): Promise<{ content: unknown; sha: string } | null> {
+  const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}
+
+async function apiPut(path: string, content: unknown, sha?: string): Promise<string> {
+  const res = await fetch(`${API_BASE}/file`, {
+    method: 'PUT', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ path, content, sha }),
+  });
+  if (!res.ok) throw new Error(`API write error: ${res.status}`);
+  const d = await res.json() as { sha: string };
+  return d.sha;
+}
 
 async function githubFetch(token: string, url: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = { Accept: 'application/vnd.github.v3+json', 'Content-Type': 'application/json', ...options.headers as Record<string, string> };
@@ -11,28 +28,9 @@ async function githubFetch(token: string, url: string, options: RequestInit = {}
   return fetch(url, { ...options, headers });
 }
 
-// Read via proxy (no token needed)
-async function proxyGet(path: string): Promise<{ content: unknown; sha: string } | null> {
-  const res = await fetch(`${PROXY_URL}/api/file?path=${encodeURIComponent(path)}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
-  return res.json();
-}
-
-// Write via proxy (no token needed)
-async function proxyPut(path: string, content: unknown, sha?: string): Promise<string> {
-  const res = await fetch(`${PROXY_URL}/api/file`, {
-    method: 'PUT', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ path, content, sha }),
-  });
-  if (!res.ok) throw new Error(`Proxy write error: ${res.status}`);
-  const d = await res.json();
-  return d.sha;
-}
-
 export async function getFile(repo: string, token: string, path: string): Promise<GitHubFile | null> {
   if (!token) {
-    const d = await proxyGet(path);
+    const d = await apiGet(path);
     if (!d) return null;
     return { sha: d.sha, content: JSON.stringify(d.content) };
   }
@@ -45,7 +43,7 @@ export async function getFile(repo: string, token: string, path: string): Promis
 
 export async function putFile(repo: string, token: string, path: string, content: string, sha?: string, message?: string): Promise<void> {
   if (!token) {
-    await proxyPut(path, JSON.parse(content), sha);
+    await apiPut(path, JSON.parse(content), sha);
     return;
   }
   const body: Record<string, string> = { message: message || `Update ${path}`, content: btoa(unescape(encodeURIComponent(content))) };
