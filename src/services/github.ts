@@ -1,10 +1,5 @@
 import type { DayData, ConfigData } from '../types';
 
-// API URL - Vercel serverless function or direct GitHub
-const API_BASE = window.location.hostname === 'localhost'
-  ? 'http://localhost:3001'  // local dev proxy
-  : `${window.location.origin}/api`;  // Vercel serverless
-
 const GITHUB_API = 'https://api.github.com';
 
 interface GitHubFile {
@@ -12,61 +7,38 @@ interface GitHubFile {
   content: string;
 }
 
-// Use Vercel API when no token, direct GitHub API when token available
-async function apiFetch(repo: string, token: string, path: string, method = 'GET', body?: unknown): Promise<unknown> {
-  if (!token) {
-    // Use Vercel serverless API (token on server)
-    const url = `${API_BASE}/file?path=${encodeURIComponent(path)}`;
-    if (method === 'GET') {
-      const res = await fetch(url);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      return res.json();
-    } else {
-      const res = await fetch(url, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
-      if (!res.ok) throw new Error(`API error: ${res.status}`);
-      return res.json();
-    }
-  }
-  // Direct GitHub API
+async function githubFetch(token: string, url: string, options: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github.v3+json',
     'Content-Type': 'application/json',
-    Authorization: `Bearer ${token}`,
+    ...options.headers as Record<string, string>,
   };
-  const opts: RequestInit = { method, headers };
-  if (body) opts.body = JSON.stringify(body);
-  const res = await fetch(`${GITHUB_API}/repos/${repo}/contents/${path}`, opts);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-  return res.json();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return fetch(url, { ...options, headers });
 }
 
 export async function getFile(repo: string, token: string, path: string): Promise<GitHubFile | null> {
-  const data = await apiFetch(repo, token, path) as { content?: string; sha?: string } | null;
-  if (!data || !data.content) return null;
+  const res = await githubFetch(token, `${GITHUB_API}/repos/${repo}/contents/${path}`);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+  const data = await res.json();
   const content = decodeURIComponent(escape(atob(data.content)));
-  return { sha: data.sha || '', content };
+  return { sha: data.sha, content };
 }
 
 export async function putFile(
   repo: string, token: string, path: string, content: string, sha?: string, message?: string,
 ): Promise<void> {
-  if (!token) {
-    // Use Vercel API
-    await apiFetch(repo, token, path, 'PUT', { content: JSON.parse(content), sha });
-    return;
-  }
+  if (!token) throw new Error('Token required for writing');
   const body: Record<string, string> = {
     message: message || `Update ${path}`,
     content: btoa(unescape(encodeURIComponent(content))),
   };
   if (sha) body.sha = sha;
-  await apiFetch(repo, token, path, 'PUT', body);
+  const res = await githubFetch(token, `${GITHUB_API}/repos/${repo}/contents/${path}`, {
+    method: 'PUT', body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`GitHub commit failed: ${res.status}`);
 }
 
 export async function saveDayData(repo: string, token: string, data: DayData): Promise<void> {
