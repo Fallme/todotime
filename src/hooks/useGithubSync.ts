@@ -26,7 +26,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
 
   // --- Load all data from git on app open ---
   const loadAll = useCallback(async (): Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }> => {
-    if (!token || !repo) return { settings: null, todos: null };
+    if (!repo) return { settings: null, todos: null };
     setSyncing(true);
     setSyncError(null);
 
@@ -162,7 +162,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
 
   // --- Bidirectional sync with incremental merge ---
   const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<{ settings: Omit<AppSettings, 'githubToken'>; todos: Todo[] } | null> => {
-    if (!token || !repo) return null;
+    if (!repo) return null;
     setSyncing(true);
     setSyncError(null);
 
