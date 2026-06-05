@@ -1,5 +1,8 @@
 import type { DayData, ConfigData } from '../types';
 
+// Proxy URL for server-side GitHub access (token stored on server)
+const PROXY_URL = 'https://todotime-proxy.onrender.com';
+
 const GITHUB_API = 'https://api.github.com';
 
 interface GitHubFile {
@@ -7,49 +10,59 @@ interface GitHubFile {
   content: string;
 }
 
-async function githubFetch(token: string, url: string, options: RequestInit = {}): Promise<Response> {
+// Use proxy when no token, direct GitHub API when token available
+async function apiFetch(repo: string, token: string, path: string, method = 'GET', body?: unknown): Promise<unknown> {
+  if (!token) {
+    // Use proxy
+    if (method === 'GET') {
+      const res = await fetch(`${PROXY_URL}/api/file/${path}`);
+      if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+      return res.json();
+    } else {
+      const res = await fetch(`${PROXY_URL}/api/file/${path}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+      return res.json();
+    }
+  }
+  // Direct GitHub API
   const headers: Record<string, string> = {
     Accept: 'application/vnd.github.v3+json',
     'Content-Type': 'application/json',
-    ...options.headers as Record<string, string>,
+    Authorization: `Bearer ${token}`,
   };
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-  return fetch(url, { ...options, headers });
+  const opts: RequestInit = { method, headers };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(`${GITHUB_API}/repos/${repo}/contents/${path}`, opts);
+  if (res.status === 404) return null;
+  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
+  return res.json();
 }
 
 export async function getFile(repo: string, token: string, path: string): Promise<GitHubFile | null> {
-  const res = await githubFetch(token, `${GITHUB_API}/repos/${repo}/contents/${path}`);
-  if (res.status === 404) return null;
-  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
-  const data = await res.json();
+  const data = await apiFetch(repo, token, path) as { content?: string; sha?: string } | null;
+  if (!data || !data.content) return null;
   const content = decodeURIComponent(escape(atob(data.content)));
-  return { sha: data.sha, content };
+  return { sha: data.sha || '', content };
 }
 
 export async function putFile(
-  repo: string,
-  token: string,
-  path: string,
-  content: string,
-  sha?: string,
-  message?: string,
+  repo: string, token: string, path: string, content: string, sha?: string, message?: string,
 ): Promise<void> {
+  if (!token) {
+    // Use proxy
+    await apiFetch(repo, token, path, 'PUT', { content: JSON.parse(content), sha });
+    return;
+  }
   const body: Record<string, string> = {
     message: message || `Update ${path}`,
     content: btoa(unescape(encodeURIComponent(content))),
   };
   if (sha) body.sha = sha;
-
-  const res = await githubFetch(token, `${GITHUB_API}/repos/${repo}/contents/${path}`, {
-    method: 'PUT',
-    body: JSON.stringify(body),
-  });
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`GitHub commit failed: ${res.status} ${err}`);
-  }
+  await apiFetch(repo, token, path, 'PUT', body);
 }
 
 export async function saveDayData(repo: string, token: string, data: DayData): Promise<void> {
@@ -68,16 +81,12 @@ export async function loadDayData(repo: string, token: string, date: string): Pr
 
 export async function loadMultipleDays(repo: string, token: string, dates: string[]): Promise<Map<string, DayData>> {
   const map = new Map<string, DayData>();
-  await Promise.all(
-    dates.map(async (date) => {
-      try {
-        const data = await loadDayData(repo, token, date);
-        if (data) map.set(date, data);
-      } catch {
-        // file doesn't exist for this date
-      }
-    }),
-  );
+  await Promise.all(dates.map(async (date) => {
+    try {
+      const data = await loadDayData(repo, token, date);
+      if (data) map.set(date, data);
+    } catch { /* file doesn't exist */ }
+  }));
   return map;
 }
 
