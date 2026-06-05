@@ -1,7 +1,9 @@
 import type { DayData, ConfigData } from '../types';
 
-// Proxy URL for server-side GitHub access (token stored on server)
-const PROXY_URL = 'https://todotime-proxy.onrender.com';
+// API URL - Vercel serverless function or direct GitHub
+const API_BASE = window.location.hostname === 'localhost'
+  ? 'http://localhost:3001'  // local dev proxy
+  : `${window.location.origin}/api`;  // Vercel serverless
 
 const GITHUB_API = 'https://api.github.com';
 
@@ -10,21 +12,23 @@ interface GitHubFile {
   content: string;
 }
 
-// Use proxy when no token, direct GitHub API when token available
+// Use Vercel API when no token, direct GitHub API when token available
 async function apiFetch(repo: string, token: string, path: string, method = 'GET', body?: unknown): Promise<unknown> {
   if (!token) {
-    // Use proxy
+    // Use Vercel serverless API (token on server)
+    const url = `${API_BASE}/file?path=${encodeURIComponent(path)}`;
     if (method === 'GET') {
-      const res = await fetch(`${PROXY_URL}/api/file/${path}`);
-      if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+      const res = await fetch(url);
+      if (res.status === 404) return null;
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       return res.json();
     } else {
-      const res = await fetch(`${PROXY_URL}/api/file/${path}`, {
+      const res = await fetch(url, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      if (!res.ok) throw new Error(`Proxy error: ${res.status}`);
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
       return res.json();
     }
   }
@@ -53,7 +57,7 @@ export async function putFile(
   repo: string, token: string, path: string, content: string, sha?: string, message?: string,
 ): Promise<void> {
   if (!token) {
-    // Use proxy
+    // Use Vercel API
     await apiFetch(repo, token, path, 'PUT', { content: JSON.parse(content), sha });
     return;
   }
