@@ -62,13 +62,14 @@ export function initAudio(): void {
   if (ready) return;
   ready = true;
 
-  // 专注 - 清澈明亮的上行音 C5→E5→G5，带泛音
-  const focus1 = makeTone(523, 0.12, 0.25);
-  const focus2 = makeTone(659, 0.12, 0.22);
-  const focus3 = makeTone(784, 0.18, 0.18);
+  // Start: a short, bright two-note "ready, focus" cue.
+  const focus1 = makeTone(523, 0.14, 0.22);
+  const focus2 = makeTone(784, 0.24, 0.17);
 
-  // 休息 - 柔和下行和弦 G4+C5，温暖三角波
-  const break1 = makeChord([392, 523], 0.5, 0.15);
+  // Break: a slower descending phrase that clearly contrasts with the start cue.
+  const break1 = makeTone(659, 0.18, 0.14, 'triangle');
+  const break2 = makeTone(523, 0.20, 0.13, 'triangle');
+  const break3 = makeChord([392, 523], 0.38, 0.12);
 
   // 轮次完成 - C-E-G-C 上行琶音
   const cycle1 = makeTone(523, 0.1, 0.2);
@@ -76,17 +77,27 @@ export function initAudio(): void {
   const cycle3 = makeTone(784, 0.1, 0.2);
   const cycle4 = makeTone(1047, 0.2, 0.15);
 
-  const mk = (url: string) => { const a = new Audio(url); return () => { a.currentTime = 0; a.play().catch(() => {}); }; };
+  const mk = (url: string) => {
+    const audio = new Audio(url);
+    audio.preload = 'auto';
+    return () => {
+      audio.currentTime = 0;
+      audio.play().catch(() => {});
+    };
+  };
 
-  // players[0-2] = focus, [3] = break, [4-7] = cycle
-  players = [mk(focus1), mk(focus2), mk(focus3), mk(break1), mk(cycle1), mk(cycle2), mk(cycle3), mk(cycle4)];
+  players = [
+    mk(focus1), mk(focus2),
+    mk(break1), mk(break2), mk(break3),
+    mk(cycle1), mk(cycle2), mk(cycle3), mk(cycle4),
+  ];
 }
 
 function p(i: number): void { if (ready && players[i]) players[i](); }
 
-export function playStart(): void { p(0); setTimeout(() => p(1), 100); setTimeout(() => p(2), 200); }
-export function playEnterBreak(): void { p(3); }
-export function playCycleComplete(): void { p(4); setTimeout(() => p(5), 90); setTimeout(() => p(6), 180); setTimeout(() => p(7), 270); }
+export function playStart(): void { p(0); setTimeout(() => p(1), 130); }
+export function playEnterBreak(): void { p(2); setTimeout(() => p(3), 160); setTimeout(() => p(4), 330); }
+export function playCycleComplete(): void { p(5); setTimeout(() => p(6), 90); setTimeout(() => p(7), 180); setTimeout(() => p(8), 270); }
 export function playWorkComplete(): void { playStart(); }
 export function playBreakComplete(): void { playEnterBreak(); }
 export function playTick(): void {}

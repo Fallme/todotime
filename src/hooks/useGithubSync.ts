@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppSettings, ConfigData, DayData, PomodoroRecord, Todo } from '../types';
 import { loadConfig, loadMultipleDays, saveConfig, saveDayData } from '../services/github';
 import { formatDate } from '../utils/dateUtils';
+import { isPomodoroRecord } from '../utils/pomodoroRules';
 import { profileStorageKey } from '../utils/syncIdentity';
 
 type RemoteSettings = Omit<AppSettings, 'syncCode'>;
@@ -192,7 +193,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         pomodoros: merged,
         tasks: current?.tasks ?? [],
         totalFocusMinutes: merged.reduce((sum, record) => sum + record.duration, 0),
-        totalPomodoros: merged.length,
+        totalPomodoros: merged.filter(isPomodoroRecord).length,
         totalTasksCompleted: current?.totalTasksCompleted ?? 0,
         streak: current?.streak ?? 0,
       };

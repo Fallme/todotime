@@ -1,5 +1,6 @@
 import { useMemo } from 'react';
 import type { DayData, PomodoroRecord, Todo } from '../types';
+import { isPomodoroRecord } from '../utils/pomodoroRules';
 
 export interface UseStatsReturn {
   todayPomodoros: number;
@@ -21,7 +22,8 @@ export function useStats(
 ): UseStatsReturn {
   return useMemo(() => {
     const todayData = dayDataMap.get(todayDate);
-    const todayPomCount = todayData ? todayData.totalPomodoros + todayPomodoros.length : todayPomodoros.length;
+    const todayPomCount = (todayData?.pomodoros ?? []).filter(isPomodoroRecord).length
+      + todayPomodoros.filter(isPomodoroRecord).length;
     const todayCompletedMinutes = todayData
       ? todayData.totalFocusMinutes + todayPomodoros.reduce((s, p) => s + p.duration, 0)
       : todayPomodoros.reduce((s, p) => s + p.duration, 0);
@@ -87,7 +89,7 @@ export function useStats(
       totalPom += d.totalPomodoros;
       totalMins += d.totalFocusMinutes;
     });
-    totalPom += todayPomodoros.length;
+    totalPom += todayPomodoros.filter(isPomodoroRecord).length;
     totalMins += todayPomodoros.reduce((s, p) => s + p.duration, 0) + runningMinutes;
 
     return {

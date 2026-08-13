@@ -1,4 +1,5 @@
 import type { DayData, ConfigData } from '../types';
+import { isPomodoroRecord } from '../utils/pomodoroRules';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '')
   || '/api';
@@ -60,7 +61,7 @@ export async function saveDayData(repo: string, token: string, data: DayData): P
       ...data,
       pomodoros,
       totalFocusMinutes: pomodoros.reduce((sum, item) => sum + item.duration, 0),
-      totalPomodoros: pomodoros.length,
+      totalPomodoros: pomodoros.filter(isPomodoroRecord).length,
     };
     const days = { ...(history.days ?? {}), [data.date]: merged };
     const cutoff = new Date();

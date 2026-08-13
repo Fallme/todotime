@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Todo, Category } from '../../types';
 import type { PendingAssignment } from '../../hooks/useTimer';
+import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
 
 interface TaskAssignModalProps {
   assignments: PendingAssignment[];
@@ -19,6 +20,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll
     .map(subtask => ({ ...subtask, category: todo.category, parentTitle: todo.title })));
   const [selectedTodoId, setSelectedTodoId] = useState(currentTaskId ?? 'other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
+  const tomatoCount = assignments.filter(a => a.duration >= MIN_POMODORO_MINUTES).length;
 
   const getResult = (todoId: string | null) => {
     const todo = todoId ? activeTodos.find(t => t.id === todoId) : null;
@@ -52,7 +54,10 @@ export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll
     <div className="modal-overlay">
       <div className="modal-content">
         <h3 className="modal-title">一组完成!</h3>
-        <p className="modal-desc">{assignments.length} 个番茄 · 共 {totalMinutes} 分钟</p>
+        <p className="modal-desc">
+          {assignments.length} 条专注记录 · 共 {totalMinutes} 分钟
+          {tomatoCount > 0 ? ` · ${tomatoCount} 个番茄` : ''}
+        </p>
 
         <div className="modal-single-assign">
             <label className="modal-assign-label">分配给：</label>

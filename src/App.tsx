@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import type { AppSettings, Category, Todo } from './types';
+import type { AppSettings, Category, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS } from './types';
 import { formatDate } from './utils/dateUtils';
 import { initAudio } from './utils/sound';
@@ -16,6 +16,7 @@ import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
+import { isPomodoroRecord } from './utils/pomodoroRules';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
@@ -92,9 +93,9 @@ export default function App() {
   const lastDailyRefreshRef = useRef(0);
   const lastConfigCheckRef = useRef(0);
 
-  // Callback for when a pomodoro is recorded - update task's completedPomodoros
-  const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
-    if (record.taskId) {
+  // Focus duration is always saved after one minute; task tomato counts start at 15 minutes.
+  const handlePomodoroRecorded = useCallback((record: PomodoroRecord) => {
+    if (record.taskId && isPomodoroRecord(record)) {
       // Use functional updates to avoid stale closure issues
       updateTodoPomodoros(record.taskId);
       updateSubtaskPomodoros(record.taskId);
@@ -361,7 +362,7 @@ export default function App() {
               todayPomodoros={new Set([
                 ...(dayDataMap.get(today)?.pomodoros ?? []),
                 ...timer.todayPomodoros.filter(record => (record.date || today) === today),
-              ].filter(record => record.completed).map(record => record.id || `${record.start}-${record.end}`)).size}
+              ].filter(record => record.completed && isPomodoroRecord(record)).map(record => record.id || `${record.start}-${record.end}`)).size}
               categories={settings.categories}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}

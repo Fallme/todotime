@@ -59,6 +59,7 @@ export interface PomodoroRecord {
   start: string;
   end: string;
   duration: number;
+  countsAsPomodoro?: boolean;
   taskId: string | null;
   taskTitle: string;
   category: Category;

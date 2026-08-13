@@ -1,9 +1,10 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Doughnut } from 'react-chartjs-2';
+import { Bar, Doughnut, Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
+import { isPomodoroRecord } from '../../utils/pomodoroRules';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
@@ -67,27 +68,24 @@ function computePeriodData(
       poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === date && !existing.has(p.id || `${p.start}-${p.end}`))];
     }
     const mins = poms.reduce((s, p) => s + p.duration, 0);
-    totalPomodoros += poms.length;
+    const tomatoCount = poms.filter(isPomodoroRecord).length;
+    totalPomodoros += tomatoCount;
     totalMinutes += mins;
     totalTasks += totalTasksDay;
     totalTasksCompleted += tasksDone;
     poms.forEach(p => {
       categoryMinutes[p.category] = (categoryMinutes[p.category] || 0) + p.duration;
-      categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + 1;
+      if (isPomodoroRecord(p)) {
+        categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + 1;
+      }
     });
     doneToday.forEach(t => {
       categoryTasks[t.category] = (categoryTasks[t.category] || 0) + 1;
     });
-    return { date, minutes: mins, pomodoros: poms.length, tasksDone, totalTasks: totalTasksDay };
+    return { date, minutes: mins, pomodoros: tomatoCount, tasksDone, totalTasks: totalTasksDay };
   });
 
   return { daily, totalPomodoros, totalMinutes, totalTasks, totalTasksCompleted, categoryMinutes, categoryPomodoros, categoryTasks };
-}
-
-function getMetricValue(d: PeriodResult['daily'][0], metric: ChartMetric): number {
-  if (metric === 'minutes') return d.minutes;
-  if (metric === 'pomodoros') return d.pomodoros;
-  return d.tasksDone;
 }
 
 function getCategoryData(data: PeriodResult, metric: ChartMetric, categories: CategoryItem[]): { label: string; value: number; color: string }[] {
@@ -122,7 +120,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0);
     const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
-    return { pomodoros: poms.length, minutes: mins, tasksDone };
+    return { pomodoros: poms.filter(isPomodoroRecord).length, minutes: mins, tasksDone };
   }, [dayDataMap, todayPomodoros, today, todos]);
 
   // Current period data
@@ -177,45 +175,56 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
   }, []);
 
   const metricInfo = METRIC_LABELS[chartMetric];
-  const maxVal = Math.max(...activeData.daily.map(d => getMetricValue(d, chartMetric)), 1);
   const dateRange = `${activeData.daily[0]?.date.slice(5)} ~ ${activeData.daily[activeData.daily.length - 1]?.date.slice(5)}`;
-  const activeDays = activeData.daily.filter(d => d.pomodoros > 0).length;
+  const activeDays = activeData.daily.filter(d => d.minutes > 0 || d.tasksDone > 0).length;
 
-  // Bar chart
-  const barData = {
+  // One dual-axis trend chart keeps duration, tomato count and completed tasks comparable.
+  const trendData = {
     labels: activeData.daily.map(d => d.date.slice(5)),
-    datasets: [{
-      label: metricInfo.label,
-      data: activeData.daily.map(d => getMetricValue(d, chartMetric)),
-      backgroundColor: activeData.daily.map(d => d.date === today ? `${metricInfo.color}b3` : `${metricInfo.color}66`),
-      borderRadius: 6, maxBarThickness: 24,
-    }],
+    datasets: [
+      {
+        label: '专注时长（分钟）', data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
+        borderColor: '#6c5ce7', backgroundColor: '#6c5ce733', pointBackgroundColor: '#6c5ce7',
+        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2.5, tension: 0.32,
+      },
+      {
+        label: '番茄数', data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
+        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', pointBackgroundColor: '#FF6B6B',
+        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2, tension: 0.32,
+      },
+      {
+        label: '完成任务', data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
+        borderColor: '#27ae60', backgroundColor: '#27ae6033', pointBackgroundColor: '#27ae60',
+        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2, tension: 0.32,
+      },
+    ],
   };
-  const barOptions = {
+  const trendOptions = {
     responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
-    layout: { padding: { left: 2, right: 4, top: 20, bottom: 0 } },
+    interaction: { mode: 'index' as const, intersect: false },
+    layout: { padding: { left: 2, right: 2, top: 4, bottom: 0 } },
     plugins: {
-      legend: { display: false },
+      legend: {
+        display: true, position: 'top' as const,
+        labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } },
+      },
       tooltip: {
         callbacks: {
           title: (items: unknown) => activeData.daily[(items as Array<{ dataIndex: number }>)[0]?.dataIndex]?.date ?? '',
           label: (ctx: unknown) => {
-            const d = activeData.daily[(ctx as { dataIndex: number }).dataIndex];
-            return [
-              `番茄 ${d.pomodoros}个  ·  ${d.minutes}分钟`,
-              `完成任务 ${d.tasksDone}个`,
-            ];
+            const item = ctx as { dataset: { label?: string; yAxisID?: string }; parsed: { y: number } };
+            return ` ${item.dataset.label}: ${item.parsed.y}${item.dataset.yAxisID === 'minutes' ? '分钟' : '个'}`;
           },
         },
       },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: '#999', font: { size: isCompact ? 7 : 10 }, maxRotation: isCompact ? 60 : 0 } },
-      y: {
-        beginAtZero: true, suggestedMax: maxVal * 1.3, grid: { color: 'var(--border)' },
-        ticks: { color: '#999', precision: 0 },
-        afterDataLimits: (axis: { max: number }) => { if (axis.max < 10) axis.max = 10; },
+      x: {
+        grid: { display: false },
+        ticks: { color: '#999', font: { size: isCompact ? 8 : 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isCompact ? 8 : 7 },
       },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: '#6c5ce7', precision: 0 }, title: { display: true, text: '分钟', color: '#6c5ce7', font: { size: 10 } } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B', precision: 0 }, title: { display: true, text: '番茄 / 任务', color: '#FF6B6B', font: { size: 10 } } },
     },
   };
 
@@ -275,11 +284,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
           <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>近七天</button>
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>近一个月</button>
         </div>
-        <div className="stats-metric-toggle">
-          <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
-          <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
-          <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
-        </div>
         <div className="stats-report-btns">
           <button className="btn secondary small" onClick={() => setShowReport('week')}><BarChart3 size={13} /> 周报</button>
           <button className="btn secondary small" onClick={() => setShowReport('month')}><BarChart3 size={13} /> 月报</button>
@@ -294,18 +298,25 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         <div className="agg-item"><span className="agg-val">{activeDays}/{activeData.daily.length}</span><span className="agg-label"><Calendar size={11} /> 活跃天</span></div>
       </div>
 
-      {/* Bar chart */}
+      {/* Combined trend chart */}
       <div className="stats-card-full">
         <div className="chart-header">
-          <h4 className="chart-sub-title">{period === 'week' ? '近七天' : '近一个月'} · {metricInfo.label}</h4>
+          <h4 className="chart-sub-title">{period === 'week' ? '近七天' : '近一个月'} · 综合走势</h4>
           <span className="stats-period-range">{dateRange}</span>
         </div>
-        <div className="chart-wrapper-lg"><Bar data={barData} options={barOptions} /></div>
+        <div className="chart-wrapper-lg trend-chart"><Line data={trendData} options={trendOptions} /></div>
       </div>
 
       {/* Pie chart */}
       <div className="stats-card-full">
-        <h4 className="chart-sub-title">板块占比 · {metricInfo.label}</h4>
+        <div className="chart-header pie-chart-header">
+          <h4 className="chart-sub-title">板块占比 · {metricInfo.label}</h4>
+          <div className="stats-metric-toggle" aria-label="饼图分布指标">
+            <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
+            <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
+            <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
+          </div>
+        </div>
         {pieData ? (
           <div className="pie-layout">
             <div className="chart-wrapper-pie"><Doughnut data={pieData} options={pieOptions} /></div>

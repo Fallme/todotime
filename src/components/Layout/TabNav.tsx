@@ -15,12 +15,14 @@ const tabs: { id: TabId; label: string; icon: typeof Timer }[] = [
 
 export function TabNav({ active, onChange }: TabNavProps) {
   return (
-    <nav className="tab-nav">
+    <nav className="tab-nav" aria-label="主导航">
       {tabs.map(tab => (
         <button
           key={tab.id}
           className={`tab-btn ${active === tab.id ? 'active' : ''}`}
           onClick={() => onChange(tab.id)}
+          aria-current={active === tab.id ? 'page' : undefined}
+          aria-label={tab.label}
         >
           <tab.icon size={18} />
           <span>{tab.label}</span>
