@@ -5,6 +5,7 @@ import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord,
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
+import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
 
 ChartJS.register(CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
@@ -148,7 +149,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     try { await onRefresh(); } finally { setRefreshing(false); }
   }, [onRefresh, refreshing]);
 
-  const handleDownload = useCallback((rd: PeriodResult, reportType: string) => {
+  const handleDownload = useCallback((rd: PeriodResult, reportType: string, insights: ReportInsight[]) => {
     const lines: string[] = [];
     lines.push(`${reportType}`);
     lines.push(`日期: ${rd.daily[0]?.date} ~ ${rd.daily[rd.daily.length - 1]?.date}`);
@@ -157,6 +158,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     lines.push(`专注时长: ${rd.totalMinutes}分钟`);
     lines.push(`完成任务: ${rd.totalTasksCompleted}个`);
     lines.push(`活跃天数: ${rd.daily.filter(d => d.pomodoros > 0).length}天`);
+    lines.push('');
+    lines.push('--- 数据分析 ---');
+    insights.forEach(insight => lines.push(`${insight.title}: ${insight.text}`));
     lines.push('');
     lines.push('--- 每日明细 ---');
     rd.daily.forEach(d => {
@@ -194,7 +198,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         type: 'bar' as const,
         label: '专注时长（分钟）', data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
         borderColor: '#6c5ce799', backgroundColor: '#6c5ce755', borderWidth: 1,
-        borderRadius: 5, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
+        borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
         type: 'line' as const,
@@ -263,9 +267,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'minutes' },
-      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'counts' },
-      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
@@ -368,23 +372,17 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         const periodEnd = rd.daily[rd.daily.length - 1]?.date ?? '';
         const periodTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
 
-        // Summary encouragement text
-        const getSummaryText = () => {
-          const mins = rd.totalMinutes;
-          const poms = rd.totalPomodoros;
-          const prevMins = pd.totalMinutes;
-          const prevPoms = pd.totalPomodoros;
-          const minDiff = prevMins > 0 ? Math.round((mins - prevMins) / prevMins * 100) : 100;
-          const pomDiff = prevPoms > 0 ? Math.round((poms - prevPoms) / prevPoms * 100) : 100;
-
-          if (mins === 0 && poms === 0) return '还没有记录，开始你的第一个番茄吧！';
-          if (minDiff > 20 && pomDiff > 20) return '太棒了！专注时长和番茄数都大幅增长，保持这个节奏！';
-          if (minDiff > 0 && pomDiff > 0) return '稳步提升中，每一天的努力都在积累，继续加油！';
-          if (minDiff > 0 || pomDiff > 0) return '部分指标有所进步，找到适合自己的节奏最重要。';
-          if (minDiff === 0 && pomDiff === 0) return '与上周持平，稳定也是一种能力，尝试突破舒适区吧！';
-          if (minDiff > -20 && pomDiff > -20) return '略有波动，可能是节奏调整期，不必焦虑，明天重新开始。';
-          return '本周状态有所下滑，适当休息调整，下周重新出发！';
-        };
+        const insights = generateReportInsights({
+          period: showReport,
+          daily: rd.daily,
+          totalMinutes: rd.totalMinutes,
+          totalPomodoros: rd.totalPomodoros,
+          totalTasksCompleted: rd.totalTasksCompleted,
+          categoryMinutes: rd.categoryMinutes,
+          previousMinutes: pd.totalMinutes,
+          previousPomodoros: pd.totalPomodoros,
+          previousTasksCompleted: pd.totalTasksCompleted,
+        });
 
         return (
           <div className="modal-overlay" onClick={() => setShowReport(null)}>
@@ -425,8 +423,15 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                 </div>
               </div>
 
-              {/* Summary encouragement */}
-              <div className="report-summary-text">{getSummaryText()}</div>
+              {/* Data-aware analysis */}
+              <div className="report-insights" aria-label="报告分析">
+                {insights.map(insight => (
+                  <div key={`${insight.title}-${insight.text}`} className={`report-insight ${insight.kind}`}>
+                    <strong>{insight.title}</strong>
+                    <span>{insight.text}</span>
+                  </div>
+                ))}
+              </div>
 
               {/* Combined grouped bar chart */}
               <div className="report-section-apple">
@@ -475,7 +480,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                 <button className="report-share-btn" onClick={handleRefresh} disabled={refreshing}>
                   <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> {refreshing ? '同步中...' : '刷新'}
                 </button>
-                <button className="report-share-btn primary" onClick={() => handleDownload(rd, reportType)}>
+                <button className="report-share-btn primary" onClick={() => handleDownload(rd, reportType, insights)}>
                   <Download size={14} /> 下载
                 </button>
               </div>

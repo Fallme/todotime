@@ -1,6 +1,6 @@
 # TodoTime
 
-TodoTime 是一个本地优先的个人番茄钟与任务管理工具。没有识别码时可纯本地使用；启用个人同步识别码后，任务、设置和统计数据会同步到独立的 GitHub 私有数据仓库。
+TodoTime 是一个个人番茄钟与任务管理工具。首次使用需要创建或输入个人同步识别码，任务、设置和统计数据会同步到服务端配置的独立私有存储。
 
 ## 核心能力
 
@@ -20,7 +20,7 @@ TodoTime 是一个本地优先的个人番茄钟与任务管理工具。没有�
 ## 数据与安全
 
 - `Fallme/todotime`：程序代码，不保存个人任务数据。
-- `Fallme/todotime_data`：Private 数据仓库，保存用户配置和统计历史。
+- 独立 Private 数据仓库：保存用户配置和统计历史；具体位置只配置在部署服务端，不进入前端页面或前端代码。
 - 云端目录：`profiles/<识别码哈希>/config.json` 与 `profiles/<识别码哈希>/history.json`。
 - 服务端以 SHA-256 哈希后的目录区分用户，不把原始识别码写入仓库。
 - GitHub Token 只存在于 Vercel 服务端环境变量，前端无法读取。
@@ -43,8 +43,8 @@ TodoTime 是一个本地优先的个人番茄钟与任务管理工具。没有�
 在 Vercel 项目中配置：
 
 ```text
-GITHUB_TOKEN=<仅有 todotime_data Contents 读写权限的 fine-grained token>
-GITHUB_DATA_REPO=Fallme/todotime_data
+GITHUB_TOKEN=<仅有私有数据仓库 Contents 读写权限的 fine-grained token>
+GITHUB_DATA_REPO=owner/private-data-repository
 ```
 
 前端和 API 分属不同域名时，可额外配置：

@@ -149,14 +149,6 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
             加载已有识别码
           </button>
         </div>
-        <div className="settings-row">
-          <label>私有数据仓库</label>
-          <input
-            type="text"
-            readOnly
-            value={settings.githubRepo}
-          />
-        </div>
         <p className="settings-hint">
           每个识别码对应完全独立的任务、设置和统计文件。创建新码会从空白数据开始，不会复制当前用户数据；其他设备输入同一码后点击“加载已有识别码”。识别码等同于访问凭证，请勿分享，遗失后无法找回。
         </p>

@@ -31,6 +31,7 @@ function loadSettings(profileId: string, syncCode: string): AppSettings {
       // Migrate the previous client-side GitHub token field without retaining it.
       delete parsed.githubToken;
       delete parsed.syncSecret;
+      delete parsed.githubRepo;
       return normalizeSettings({
         ...DEFAULT_SETTINGS,
         ...parsed,
@@ -52,7 +53,6 @@ function clampInteger(value: unknown, min: number, max: number, fallback: number
 function normalizeSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
-    githubRepo: DEFAULT_SETTINGS.githubRepo,
     workMinutes: clampInteger(settings.workMinutes, 1, 90, DEFAULT_SETTINGS.workMinutes),
     shortBreakMinutes: clampInteger(settings.shortBreakMinutes, 1, 30, DEFAULT_SETTINGS.shortBreakMinutes),
     longBreakMinutes: clampInteger(settings.longBreakMinutes, 1, 60, DEFAULT_SETTINGS.longBreakMinutes),
@@ -79,7 +79,7 @@ export default function App() {
     return () => document.removeEventListener('click', unlock);
   }, []);
 
-  const { dayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush } = useGithubSync(settings.githubRepo, activeSyncCode, profileId);
+  const { dayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush } = useGithubSync(activeSyncCode, profileId);
   const todosHook = useTodos(profileId);
   const {
     todos, selectedTodoId, updateTodoPomodoros, updateSubtaskPomodoros,
@@ -155,7 +155,7 @@ export default function App() {
     mergeTodos(result.todos);
   }, [activeSyncCode, mergeTodos]);
   useEffect(() => {
-    if (!settings.githubRepo || !activeSyncCode) return;
+    if (!activeSyncCode) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         const now = Date.now();
@@ -170,11 +170,11 @@ export default function App() {
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [activeSyncCode, settings.githubRepo, loadAll, syncBidirectional, settings, todos, applyRemoteConfig]);
+  }, [activeSyncCode, loadAll, syncBidirectional, settings, todos, applyRemoteConfig]);
 
   // --- Periodic sync: recover/merge history and config once per minute ---
   useEffect(() => {
-    if (!settings.githubRepo || !activeSyncCode) return;
+    if (!activeSyncCode) return;
     const interval = setInterval(() => {
       if (syncTickRunningRef.current) return;
       syncTickRunningRef.current = true;
@@ -186,11 +186,11 @@ export default function App() {
         .finally(() => { syncTickRunningRef.current = false; });
     }, 60_000);
     return () => clearInterval(interval);
-  }, [activeSyncCode, settings.githubRepo, loadAll, syncBidirectional, applyRemoteConfig]);
+  }, [activeSyncCode, loadAll, syncBidirectional, applyRemoteConfig]);
 
   // Best-effort flush before a refresh, deployment reload or background suspension.
   useEffect(() => {
-    if (!settings.githubRepo || !activeSyncCode) return;
+    if (!activeSyncCode) return;
     const flushPending = () => { void flush(); };
     const handlePageHide = () => flushPending();
     const handleVisibility = () => {
@@ -202,7 +202,7 @@ export default function App() {
       window.removeEventListener('pagehide', handlePageHide);
       document.removeEventListener('visibilitychange', handleVisibility);
     };
-  }, [activeSyncCode, settings.githubRepo, flush]);
+  }, [activeSyncCode, flush]);
 
   // --- Sync pomodoro data: on every new pomodoro ---
   const todayPomodoros = timer.todayPomodoros;
@@ -237,7 +237,7 @@ export default function App() {
 
   const handleActivateSyncCode = async (code: string, mode: SyncCodeMode) => {
     await flush();
-    const remoteProfile = await loadConfig(settings.githubRepo, code);
+    const remoteProfile = await loadConfig(code);
     if (mode === 'existing' && !remoteProfile) {
       throw new Error('没有找到这个专属码的数据，请检查是否输错。新用户请创建新专属码。');
     }

@@ -32,22 +32,22 @@ async function apiPut(path: string, content: unknown, syncCode: string, sha?: st
   return d.sha;
 }
 
-export async function getFile(_repo: string, syncCode: string, path: string): Promise<GitHubFile | null> {
+export async function getFile(syncCode: string, path: string): Promise<GitHubFile | null> {
   if (!syncCode) throw new Error('请先创建或输入个人同步识别码');
   const data = await apiGet(path, syncCode);
   if (!data) return null;
   return { sha: data.sha, content: JSON.stringify(data.content) };
 }
 
-export async function putFile(_repo: string, syncCode: string, path: string, content: string, sha?: string): Promise<void> {
+export async function putFile(syncCode: string, path: string, content: string, sha?: string): Promise<void> {
   if (!syncCode) throw new Error('请先创建或输入个人同步识别码');
   await apiPut(path, JSON.parse(content), syncCode, sha);
 }
 
-export async function saveDayData(repo: string, token: string, data: DayData): Promise<void> {
+export async function saveDayData(token: string, data: DayData): Promise<void> {
   const path = 'history.json';
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const existing = await getFile(repo, token, path);
+    const existing = await getFile(token, path);
     const history = existing ? JSON.parse(existing.content) as { days?: Record<string, DayData>; updatedAt?: string } : {};
     const remote = history.days?.[data.date] ?? null;
     const records = new Map<string, DayData['pomodoros'][number]>();
@@ -69,7 +69,7 @@ export async function saveDayData(repo: string, token: string, data: DayData): P
     const cutoffDate = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
     for (const date of Object.keys(days)) if (date < cutoffDate) delete days[date];
     try {
-      await putFile(repo, token, path, JSON.stringify({ days, updatedAt: new Date().toISOString() }, null, 2), existing?.sha);
+      await putFile(token, path, JSON.stringify({ days, updatedAt: new Date().toISOString() }, null, 2), existing?.sha);
       return;
     } catch (error) {
       if (!(error instanceof SyncConflictError) || attempt === 2) throw error;
@@ -77,16 +77,16 @@ export async function saveDayData(repo: string, token: string, data: DayData): P
   }
 }
 
-export async function loadDayData(repo: string, token: string, date: string): Promise<DayData | null> {
+export async function loadDayData(token: string, date: string): Promise<DayData | null> {
   const path = `data/${date.slice(0, 4)}/${date.slice(5, 7)}/${date}.json`;
-  const file = await getFile(repo, token, path);
+  const file = await getFile(token, path);
   if (!file) return null;
   return JSON.parse(file.content) as DayData;
 }
 
-export async function loadMultipleDays(repo: string, token: string, dates: string[]): Promise<Map<string, DayData>> {
+export async function loadMultipleDays(token: string, dates: string[]): Promise<Map<string, DayData>> {
   const map = new Map<string, DayData>();
-  const historyFile = await getFile(repo, token, 'history.json');
+  const historyFile = await getFile(token, 'history.json');
   if (historyFile) {
     const history = JSON.parse(historyFile.content) as { days?: Record<string, DayData> };
     for (const date of dates) {
@@ -102,7 +102,7 @@ export async function loadMultipleDays(repo: string, token: string, dates: strin
     const batch = dates.slice(index, index + concurrency);
     await Promise.all(batch.map(async date => {
       try {
-        const data = await loadDayData(repo, token, date);
+        const data = await loadDayData(token, date);
         if (data) map.set(date, data);
       } catch (error) {
         console.warn(`Failed to load ${date}`, error);
@@ -114,9 +114,9 @@ export async function loadMultipleDays(repo: string, token: string, dates: strin
 
 const CONFIG_PATH = 'config.json';
 
-export async function saveConfig(repo: string, token: string, data: ConfigData): Promise<void> {
+export async function saveConfig(token: string, data: ConfigData): Promise<void> {
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const existing = await getFile(repo, token, CONFIG_PATH);
+    const existing = await getFile(token, CONFIG_PATH);
     const remote = existing ? JSON.parse(existing.content) as ConfigData : null;
     const todoMap = new Map((remote?.todos ?? []).map(todo => [todo.id, todo]));
     for (const todo of data.todos) {
@@ -131,7 +131,7 @@ export async function saveConfig(repo: string, token: string, data: ConfigData):
       updatedAt: new Date().toISOString(),
     };
     try {
-      await putFile(repo, token, CONFIG_PATH, JSON.stringify(merged, null, 2), existing?.sha);
+      await putFile(token, CONFIG_PATH, JSON.stringify(merged, null, 2), existing?.sha);
       return;
     } catch (error) {
       if (!(error instanceof SyncConflictError) || attempt === 2) throw error;
@@ -139,8 +139,8 @@ export async function saveConfig(repo: string, token: string, data: ConfigData):
   }
 }
 
-export async function loadConfig(repo: string, token: string): Promise<ConfigData | null> {
-  const file = await getFile(repo, token, CONFIG_PATH);
+export async function loadConfig(token: string): Promise<ConfigData | null> {
+  const file = await getFile(token, CONFIG_PATH);
   if (!file) return null;
   return JSON.parse(file.content) as ConfigData;
 }

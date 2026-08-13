@@ -24,7 +24,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         backgroundColor: data.map((_, i) =>
           i === data.length - 1 ? '#FF6B6B' : 'rgba(255, 107, 107, 0.4)'
         ),
-        borderRadius: 6,
+        borderRadius: 0,
         borderSkipped: false as const,
       },
     ],

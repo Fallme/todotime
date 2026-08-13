@@ -90,7 +90,6 @@ export interface AppSettings extends TimerSettings {
   soundEnabled: boolean;
   darkMode: boolean;
   syncCode: string;
-  githubRepo: string;
   countdownTitle: string;
   countdownDate: string;
   categories: CategoryItem[];
@@ -104,7 +103,6 @@ export const DEFAULT_SETTINGS: AppSettings = {
   soundEnabled: true,
   darkMode: false,
   syncCode: '',
-  githubRepo: 'Fallme/todotime_data',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',
   categories: [...DEFAULT_CATEGORIES],

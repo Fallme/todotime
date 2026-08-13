@@ -51,7 +51,6 @@ function settingsSubset(settings: AppSettings): RemoteSettings {
     longBreakInterval: settings.longBreakInterval,
     soundEnabled: settings.soundEnabled,
     darkMode: settings.darkMode,
-    githubRepo: settings.githubRepo,
     countdownTitle: settings.countdownTitle,
     countdownDate: settings.countdownDate,
     categories: settings.categories,
@@ -74,7 +73,6 @@ function mergeSettings(local: RemoteSettings, remote: RemoteSettings): RemoteSet
     ...local,
     ...remote,
     categories: remote.categories?.length ? remote.categories : local.categories,
-    githubRepo: local.githubRepo,
   };
 }
 
@@ -82,7 +80,7 @@ function comparableConfig(settings: RemoteSettings, todos: Todo[]): string {
   return JSON.stringify({ settings, todos });
 }
 
-export function useGithubSync(repo: string, syncCode: string, profileId: string): UseGithubSyncReturn {
+export function useGithubSync(syncCode: string, profileId: string): UseGithubSyncReturn {
   const syncTimeKey = profileStorageKey('todotime_last_sync', profileId);
   const [dayDataMap, setDayDataMap] = useState<Map<string, DayData>>(() => readHistoryCache(profileId));
   const [syncing, setSyncing] = useState(false);
@@ -131,9 +129,9 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
     configTimerRef.current = null;
     const payload = pendingConfigRef.current;
     pendingConfigRef.current = null;
-    if (!payload || !repo || !syncCode) return queueRef.current;
+    if (!payload || !syncCode) return queueRef.current;
     return runQueued(async () => {
-      const remote = await loadConfig(repo, syncCode);
+      const remote = await loadConfig(syncCode);
       const mergedTodos = mergeTodos(payload.todos, remote?.todos ?? []);
       const mergedSettings = remote && remote.updatedAt > getSyncTime()
         ? mergeSettings(payload.settings, remote.settings)
@@ -142,9 +140,9 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         markSynced(remote.updatedAt);
         return;
       }
-      await saveConfig(repo, syncCode, { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() });
+      await saveConfig(syncCode, { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() });
     });
-  }, [repo, syncCode, runQueued, getSyncTime, markSynced]);
+  }, [syncCode, runQueued, getSyncTime, markSynced]);
 
   const flushDay = useCallback((date: string) => {
     const timer = dayTimersRef.current.get(date);
@@ -152,9 +150,9 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
     dayTimersRef.current.delete(date);
     const payload = pendingDaysRef.current.get(date);
     pendingDaysRef.current.delete(date);
-    if (!payload || !repo || !syncCode) return queueRef.current;
-    return runQueued(() => saveDayData(repo, syncCode, payload));
-  }, [repo, syncCode, runQueued]);
+    if (!payload || !syncCode) return queueRef.current;
+    return runQueued(() => saveDayData(syncCode, payload));
+  }, [syncCode, runQueued]);
 
   const flush = useCallback(async () => {
     flushConfig();
@@ -173,7 +171,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
   }, [profileId]);
 
   const loadAll = useCallback(async () => {
-    if (!repo || !syncCode) return { settings: null, todos: null };
+    if (!syncCode) return { settings: null, todos: null };
     activeRequestsRef.current += 1;
     setSyncing(true);
     setSyncError(null);
@@ -186,8 +184,8 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         dates.push(formatDate(day));
       }
       const [configData, days] = await Promise.all([
-        loadConfig(repo, syncCode),
-        loadMultipleDays(repo, syncCode, dates),
+        loadConfig(syncCode),
+        loadMultipleDays(syncCode, dates),
       ]);
       const mergedDays = mergeDayDataMaps(dayDataRef.current, days);
       dayDataRef.current = mergedDays;
@@ -210,7 +208,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
       activeRequestsRef.current -= 1;
       if (activeRequestsRef.current === 0) setSyncing(false);
     }
-  }, [repo, syncCode]);
+  }, [syncCode]);
 
   const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
     setDayDataMap(previous => {
@@ -230,7 +228,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
       next.set(date, payload);
       dayDataRef.current = next;
       persistHistoryCache(profileId, next);
-      if (repo && syncCode) {
+      if (syncCode) {
         pendingDaysRef.current.set(date, payload);
         const existingTimer = dayTimersRef.current.get(date);
         if (existingTimer) clearTimeout(existingTimer);
@@ -238,10 +236,10 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
       }
       return next;
     });
-  }, [repo, syncCode, profileId, flushDay]);
+  }, [syncCode, profileId, flushDay]);
 
   const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
-    if (!repo || !syncCode) return;
+    if (!syncCode) return;
     const payload: ConfigData = { settings: settingsSubset(settings), todos, updatedAt: new Date().toISOString() };
     const hash = JSON.stringify({ settings: payload.settings, todos });
     if (hash === lastConfigHashRef.current) return;
@@ -249,19 +247,19 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
     pendingConfigRef.current = payload;
     if (configTimerRef.current) clearTimeout(configTimerRef.current);
     void flushConfig();
-  }, [repo, syncCode, flushConfig]);
+  }, [syncCode, flushConfig]);
 
   const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<SyncResult | null> => {
-    if (!repo || !syncCode) return null;
+    if (!syncCode) return null;
     await flush();
     activeRequestsRef.current += 1;
     setSyncing(true);
     setSyncError(null);
     try {
-      const remote = await loadConfig(repo, syncCode);
+      const remote = await loadConfig(syncCode);
       if (!remote) {
         const payload: ConfigData = { settings: settingsSubset(settings), todos, updatedAt: new Date().toISOString() };
-        await saveConfig(repo, syncCode, payload);
+        await saveConfig(syncCode, payload);
         markSynced(payload.updatedAt);
         return { settings: payload.settings, todos };
       }
@@ -275,7 +273,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         return { settings: mergedSettings, todos: mergedTodos };
       }
       const payload: ConfigData = { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() };
-      await saveConfig(repo, syncCode, payload);
+      await saveConfig(syncCode, payload);
       markSynced(payload.updatedAt);
       return { settings: mergedSettings, todos: mergedTodos };
     } catch (error) {
@@ -285,7 +283,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
       activeRequestsRef.current -= 1;
       if (activeRequestsRef.current === 0) setSyncing(false);
     }
-  }, [repo, syncCode, flush, getSyncTime, markSynced]);
+  }, [syncCode, flush, getSyncTime, markSynced]);
 
   return { dayDataMap, setDayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush };
 }

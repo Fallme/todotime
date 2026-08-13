@@ -375,11 +375,14 @@ body { background: var(--bg); margin: 0; min-width: 280px; }
 }
 .report-section-apple { padding: 16px 20px; }
 .report-section-apple h4 { font-size: 14px; font-weight: 600; color: var(--text); margin: 0 0 12px; }
-.report-summary-text {
-  padding: 12px 20px; margin: 0 20px; background: var(--bg-hover);
-  border-radius: 10px; font-size: 13px; color: var(--text-secondary);
-  line-height: 1.5; border-left: 3px solid var(--accent);
-}
+.report-insights { display: grid; gap: 8px; padding: 12px 20px 4px; }
+.report-insight { position: relative; padding: 11px 12px 11px 15px; border-radius: 10px; background: var(--bg-hover); color: var(--text-secondary); }
+.report-insight::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 3px; background: var(--text-muted); }
+.report-insight.positive::before { background: #27ae60; }
+.report-insight.attention::before { background: #f39c12; }
+.report-insight.neutral::before { background: #6c5ce7; }
+.report-insight strong { display: block; margin-bottom: 3px; color: var(--text); font-size: 12px; }
+.report-insight span { display: block; font-size: 12px; line-height: 1.55; }
 .report-pie-layout { display: flex; gap: 16px; align-items: center; }
 .report-pie-chart { width: 120px; height: 120px; flex-shrink: 0; }
 .report-pie-legend { flex: 1; min-width: 0; }
