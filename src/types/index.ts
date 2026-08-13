@@ -54,6 +54,8 @@ export interface Todo {
 }
 
 export interface PomodoroRecord {
+  id?: string;
+  date?: string;
   start: string;
   end: string;
   duration: number;
@@ -86,7 +88,7 @@ export interface TimerSettings {
 export interface AppSettings extends TimerSettings {
   soundEnabled: boolean;
   darkMode: boolean;
-  syncSecret: string;
+  syncCode: string;
   githubRepo: string;
   countdownTitle: string;
   countdownDate: string;
@@ -100,7 +102,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   longBreakInterval: 4,
   soundEnabled: true,
   darkMode: false,
-  syncSecret: '',
+  syncCode: '',
   githubRepo: 'Fallme/todotime_data',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',
@@ -108,7 +110,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
 };
 
 export interface ConfigData {
-  settings: Omit<AppSettings, 'syncSecret'>;
+  settings: Omit<AppSettings, 'syncCode'>;
   todos: Todo[];
   updatedAt: string;
 }

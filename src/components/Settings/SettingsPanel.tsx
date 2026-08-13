@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { AppSettings } from '../../types';
-import { Download, Upload, Trash2 } from 'lucide-react';
+import { Download, Upload, Trash2, Copy, RefreshCw } from 'lucide-react';
+import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -8,10 +9,15 @@ interface SettingsPanelProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onClear: () => void;
+  onActivateSyncCode: (code: string, keepCurrentData: boolean) => Promise<void>;
+  syncing: boolean;
+  lastSyncedAt: string;
 }
 
-export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }: SettingsPanelProps) {
+export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, onActivateSyncCode, syncing, lastSyncedAt }: SettingsPanelProps) {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [syncCodeDraft, setSyncCodeDraft] = useState(settings.syncCode);
+  const [codeMessage, setCodeMessage] = useState('');
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     onSave({ ...settings, [key]: value });
@@ -20,6 +26,24 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) onImport(file);
+  };
+
+  const activateCode = async (keepCurrentData: boolean) => {
+    const code = normalizeSyncCode(syncCodeDraft);
+    if (!isValidSyncCode(code)) {
+      setCodeMessage('识别码至少 12 位，只能包含字母、数字、下划线和短横线');
+      return;
+    }
+    setCodeMessage(keepCurrentData ? '正在创建并保存当前数据…' : '正在加载该用户的数据…');
+    await onActivateSyncCode(code, keepCurrentData);
+    setSyncCodeDraft(code);
+    setCodeMessage(keepCurrentData ? '识别码已创建，当前数据已归档到该用户' : '用户数据已加载');
+  };
+
+  const createCode = () => {
+    const code = createSyncCode();
+    setSyncCodeDraft(code);
+    setCodeMessage('新识别码已生成，请点击“创建并保存”');
   };
 
   return (
@@ -93,16 +117,28 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
       </section>
 
       <section className="settings-section">
-        <h3>GitHub JSON 同步</h3>
+        <h3>个人数据同步</h3>
         <div className="settings-row">
-          <label>个人同步密码</label>
+          <label>个人同步识别码</label>
           <input
-            type="password"
-            autoComplete="current-password"
-            placeholder="各设备填写相同密码"
-            value={settings.syncSecret}
-            onChange={e => update('syncSecret', e.target.value)}
+            type="text"
+            autoComplete="off"
+            spellCheck={false}
+            placeholder="输入已有识别码，或点击创建"
+            value={syncCodeDraft}
+            onChange={e => setSyncCodeDraft(normalizeSyncCode(e.target.value))}
           />
+        </div>
+        <div className="settings-actions" style={{ marginTop: 8 }}>
+          <button className="btn secondary" type="button" onClick={createCode}>创建识别码</button>
+          <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => navigator.clipboard.writeText(syncCodeDraft)}><Copy size={15} /> 复制</button>
+          <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft} onClick={() => void activateCode(true)}>
+            <RefreshCw size={15} className={syncing ? 'spin' : ''} />
+            创建并保存当前数据
+          </button>
+          <button className="btn secondary" type="button" disabled={syncing || !syncCodeDraft || syncCodeDraft === settings.syncCode} onClick={() => void activateCode(false)}>
+            加载已有识别码
+          </button>
         </div>
         <div className="settings-row">
           <label>私有数据仓库</label>
@@ -113,8 +149,10 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
           />
         </div>
         <p className="settings-hint">
-          GitHub Token 只保存在服务端。代码仓库与私人数据仓库完全分离，各设备只需填写相同同步密码。
+          每个识别码对应完全独立的任务、设置和统计文件。新用户点击“创建识别码”后保存；其他设备输入同一码即可加载。识别码无法找回，请自行妥善保存。
         </p>
+        {codeMessage && <p className="settings-hint">{codeMessage}</p>}
+        {lastSyncedAt && <p className="settings-hint">最近同步：{new Date(lastSyncedAt).toLocaleString()}</p>}
       </section>
 
       <div className="settings-actions">

@@ -15,26 +15,29 @@ import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
+import { getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
-function loadSettings(): AppSettings {
+function loadSettings(profileId: string, syncCode: string): AppSettings {
   try {
-    const stored = localStorage.getItem('todotime_settings');
+    const stored = readProfileStorage('todotime_settings', profileId);
     if (stored) {
       const parsed = JSON.parse(stored);
       // Migrate the previous client-side GitHub token field without retaining it.
       delete parsed.githubToken;
+      delete parsed.syncSecret;
       return normalizeSettings({
         ...DEFAULT_SETTINGS,
         ...parsed,
+        syncCode,
         categories: Array.isArray(parsed.categories) && parsed.categories.length > 0
           ? parsed.categories
           : [...DEFAULT_SETTINGS.categories],
       });
     }
-    return DEFAULT_SETTINGS;
-  } catch { return DEFAULT_SETTINGS; }
+    return { ...DEFAULT_SETTINGS, syncCode };
+  } catch { return { ...DEFAULT_SETTINGS, syncCode }; }
 }
 
 function clampInteger(value: unknown, min: number, max: number, fallback: number): number {
@@ -54,14 +57,16 @@ function normalizeSettings(settings: AppSettings): AppSettings {
 }
 
 export default function App() {
-  const [settings, setSettings] = useState<AppSettings>(loadSettings);
+  const [activeSyncCode, setActiveCode] = useState(getActiveSyncCode);
+  const profileId = getProfileId(activeSyncCode);
+  const [settings, setSettings] = useState<AppSettings>(() => loadSettings(profileId, activeSyncCode));
   const [tab, setTab] = useState<TabId>('timer');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
   const today = formatDate(new Date());
 
   useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
-  useEffect(() => { localStorage.setItem('todotime_settings', JSON.stringify(settings)); }, [settings]);
+  useEffect(() => { localStorage.setItem(profileStorageKey('todotime_settings', profileId), JSON.stringify(settings)); }, [settings, profileId]);
 
   // Unlock audio on first user interaction
   useEffect(() => {
@@ -70,8 +75,8 @@ export default function App() {
     return () => document.removeEventListener('click', unlock);
   }, []);
 
-  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional } = useGithubSync(settings.githubRepo, settings.syncSecret);
-  const todosHook = useTodos();
+  const { dayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush } = useGithubSync(settings.githubRepo, activeSyncCode, profileId);
+  const todosHook = useTodos(profileId);
   const {
     todos, selectedTodoId, updateTodoPomodoros, updateSubtaskPomodoros,
     mergeTodos, replaceTodos,
@@ -82,9 +87,9 @@ export default function App() {
   const currentTask = currentTodo ?? currentSubtask;
   const configLoadedRef = useRef(false);
   const initialLoadStartedRef = useRef(false);
-  const configWatchMountedRef = useRef(false);
   const initialSettingsRef = useRef(settings);
   const initialTodosRef = useRef(todos);
+  const lastDailyRefreshRef = useRef(0);
 
   // Callback for when a pomodoro is recorded - update task's completedPomodoros
   const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
@@ -95,7 +100,7 @@ export default function App() {
     }
   }, [updateTodoPomodoros, updateSubtaskPomodoros]);
 
-  const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled, handlePomodoroRecorded);
+  const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled, handlePomodoroRecorded, profileId);
   const setTimerTaskInfo = timer.setTaskInfo;
 
   useEffect(() => {
@@ -121,90 +126,80 @@ export default function App() {
     let cancelled = false;
     loadAll().then(() => {
       if (cancelled) return;
-      configLoadedRef.current = true;
       syncBidirectional(initialSettingsRef.current, initialTodosRef.current).then((syncResult) => {
-        if (syncResult) {
-          setSettings(prev => ({ ...syncResult.settings, syncSecret: prev.syncSecret }));
-          mergeTodos(syncResult.todos);
-        }
-      });
-    });
-    return () => { cancelled = true; };
-  }, [loadAll, syncBidirectional, mergeTodos]);
-
-  // --- Load data when GitHub config is set (new device setup) ---
-  useEffect(() => {
-    if (!configWatchMountedRef.current) {
-      configWatchMountedRef.current = true;
-      return;
-    }
-    if (!settings.githubRepo || !settings.syncSecret) return;
-    let cancelled = false;
-    loadAll().then(() => {
-      if (cancelled) return;
-      syncBidirectional(settings, todos).then((syncResult) => {
         if (cancelled) return;
         if (syncResult) {
-          setSettings(prev => ({ ...syncResult.settings, syncSecret: prev.syncSecret }));
+          setSettings({ ...syncResult.settings, syncCode: activeSyncCode });
           mergeTodos(syncResult.todos);
         }
+        configLoadedRef.current = true;
       });
     });
     return () => { cancelled = true; };
-  // Repo/token changes intentionally trigger loading; todo edits are handled by syncConfig.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings.syncSecret, settings.githubRepo, loadAll, syncBidirectional, mergeTodos]);
+  }, [loadAll, syncBidirectional, mergeTodos, activeSyncCode]);
+
+  const applyRemoteConfig = useCallback((result: Awaited<ReturnType<typeof syncBidirectional>>) => {
+    if (!result) return;
+    setSettings({ ...result.settings, syncCode: activeSyncCode });
+    mergeTodos(result.todos);
+  }, [activeSyncCode, mergeTodos]);
   useEffect(() => {
-    if (!settings.githubRepo || !settings.syncSecret) return;
+    if (!settings.githubRepo || !activeSyncCode) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        loadAll();
-        syncBidirectional(settings, todos).then((result) => {
-          if (result) {
-            setSettings(prev => ({ ...result.settings, syncSecret: prev.syncSecret }));
-            mergeTodos(result.todos);
-          }
-        });
+        const now = Date.now();
+        if (now - lastDailyRefreshRef.current > 10 * 60_000) {
+          lastDailyRefreshRef.current = now;
+          void loadAll();
+        }
+        void syncBidirectional(settings, todos).then(applyRemoteConfig);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [settings.syncSecret, settings.githubRepo, loadAll, syncBidirectional, settings, todos, mergeTodos]);
+  }, [activeSyncCode, settings.githubRepo, loadAll, syncBidirectional, settings, todos, applyRemoteConfig]);
 
   // --- Periodic sync: bidirectional every 30s for cross-device consistency ---
   useEffect(() => {
-    if (!settings.githubRepo || !settings.syncSecret) return;
+    if (!settings.githubRepo || !activeSyncCode) return;
     const interval = setInterval(() => {
-      if (syncing) return; // skip if mid-sync to avoid race
+      if (syncing || document.visibilityState !== 'visible') return;
       syncBidirectional(settings, todos).then((result) => {
         if (result) {
           // Git was newer → apply merged settings + todos
-          setSettings(prev => ({
+          setSettings({
             ...result.settings,
-            syncSecret: prev.syncSecret,
-          }));
+            syncCode: activeSyncCode,
+          });
           mergeTodos(result.todos);
         }
       });
-    }, 30000);
+    }, 120_000);
     return () => clearInterval(interval);
-  }, [settings.syncSecret, settings.githubRepo, settings, todos, syncBidirectional, syncing, mergeTodos]);
+  }, [activeSyncCode, settings.githubRepo, settings, todos, syncBidirectional, syncing, mergeTodos]);
 
   // --- Periodic refresh: reload daily pomodoro data every 3 minutes for charts ---
   useEffect(() => {
-    if (!settings.githubRepo || !settings.syncSecret) return;
+    if (!settings.githubRepo || !activeSyncCode) return;
     const interval = setInterval(() => {
-      loadAll(); // refresh dayDataMap from git
-    }, 180000);
+      if (document.visibilityState === 'visible') {
+        lastDailyRefreshRef.current = Date.now();
+        void loadAll();
+      }
+    }, 10 * 60_000);
     return () => clearInterval(interval);
-  }, [settings.syncSecret, settings.githubRepo, loadAll]);
+  }, [activeSyncCode, settings.githubRepo, loadAll]);
 
   // --- Sync pomodoro data: on every new pomodoro ---
+  const todayPomodoros = timer.todayPomodoros;
   useEffect(() => {
-    if (timer.todayPomodoros.length > 0) {
-      syncDayData(today, timer.todayPomodoros);
+    const grouped = new Map<string, typeof todayPomodoros>();
+    for (const record of todayPomodoros) {
+      const date = record.date || today;
+      grouped.set(date, [...(grouped.get(date) ?? []), record]);
     }
-  }, [timer.todayPomodoros, today, syncDayData]);
+    grouped.forEach((records, date) => syncDayData(date, records));
+  }, [todayPomodoros, today, syncDayData]);
 
   // --- Sync config: when settings or todos change (after initial load) ---
   useEffect(() => {
@@ -213,6 +208,20 @@ export default function App() {
   }, [settings, todos, syncConfig]);
 
   const handleSaveSettings = (s: AppSettings) => setSettings(normalizeSettings(s));
+
+  const handleActivateSyncCode = async (code: string, keepCurrentData: boolean) => {
+    const normalized = setActiveSyncCode(code);
+    const nextProfileId = getProfileId(normalized);
+    if (keepCurrentData) {
+      localStorage.setItem(profileStorageKey('todotime_settings', nextProfileId), JSON.stringify({ ...settings, syncCode: normalized }));
+      localStorage.setItem(profileStorageKey('todotime_todos', nextProfileId), JSON.stringify(todos));
+      localStorage.setItem(profileStorageKey('todotime_today_date', nextProfileId), today);
+      localStorage.setItem(profileStorageKey('todotime_today_pomodoros', nextProfileId), JSON.stringify(timer.todayPomodoros));
+    }
+    await flush();
+    setActiveCode(normalized);
+    window.location.reload();
+  };
 
   const handleSelectTodo = (id: string | null) => {
     todosHook.selectTodo(id);
@@ -254,7 +263,7 @@ export default function App() {
 
   const handleExport = () => {
     const safeSettings = { ...settings } as Partial<AppSettings>;
-    delete safeSettings.syncSecret;
+    delete safeSettings.syncCode;
     const data = { settings: safeSettings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
@@ -278,7 +287,7 @@ export default function App() {
           setSettings(prev => normalizeSettings({
             ...DEFAULT_SETTINGS,
             ...importedSettings,
-            syncSecret: importedSettings.syncSecret ?? prev.syncSecret,
+            syncCode: prev.syncCode,
             categories: Array.isArray(importedSettings.categories) && importedSettings.categories.length > 0
               ? importedSettings.categories
               : prev.categories,
@@ -348,7 +357,7 @@ export default function App() {
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
-              todayPomodoros={timer.cycleCount}
+              todayPomodoros={timer.todayPomodoros.length}
               categories={settings.categories}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
@@ -371,22 +380,14 @@ export default function App() {
                 await loadAll();
                 // Then bidirectional sync for config (settings + todos)
                 const result = await syncBidirectional(settings, todos);
-                if (result) {
-                  setSettings(prev => ({ ...result.settings, syncSecret: prev.syncSecret }));
-                  mergeTodos(result.todos);
-                }
+                applyRemoteConfig(result);
               }}
-              onAddTestData={(testMap) => {
-                setDayDataMap(prev => {
-                  const merged = new Map(prev);
-                  testMap.forEach((v, k) => merged.set(k, v));
-                  return merged;
-                });
-              }} />
+            />
           </div>
         )}
         {tab === 'settings' && (
-          <SettingsPanel settings={settings} onSave={handleSaveSettings} onExport={handleExport} onImport={handleImport} onClear={handleClear} />
+          <SettingsPanel settings={settings} onSave={handleSaveSettings} onExport={handleExport} onImport={handleImport} onClear={handleClear}
+            onActivateSyncCode={handleActivateSyncCode} syncing={syncing} lastSyncedAt={lastSyncedAt} />
         )}
       </main>
       <TabNav active={tab} onChange={setTab} />
@@ -398,9 +399,9 @@ export default function App() {
       {timer.groupPhase === 'settle' && timer.pendingAssignments.length > 0 && (
         <TaskAssignModal
           assignments={timer.pendingAssignments} todos={todos}
-          currentTaskName={currentTask?.title ?? null}
+          currentTaskId={currentTaskId}
           onAssignAll={handleAssignAll} onStartNextGroup={timer.startNextGroup}
-          onStop={timer.stop} onResetCycle={timer.resetCycle}
+          onStop={timer.stop}
           onSelectTask={(id, title, cat) => { setCurrentTaskId(id); timer.setTaskInfo(id, title, cat); }}
         />
       )}

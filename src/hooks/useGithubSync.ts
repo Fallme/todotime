@@ -1,262 +1,258 @@
-import { useState, useCallback, useRef } from 'react';
-import type { DayData, PomodoroRecord, AppSettings, Todo, ConfigData } from '../types';
-import { saveDayData, loadMultipleDays, saveConfig, loadConfig as fetchConfig } from '../services/github';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import type { AppSettings, ConfigData, DayData, PomodoroRecord, Todo } from '../types';
+import { loadConfig, loadMultipleDays, saveConfig, saveDayData } from '../services/github';
 import { formatDate } from '../utils/dateUtils';
+import { profileStorageKey } from '../utils/syncIdentity';
+
+type RemoteSettings = Omit<AppSettings, 'syncCode'>;
+
+interface SyncResult {
+  settings: RemoteSettings;
+  todos: Todo[];
+}
 
 interface UseGithubSyncReturn {
   dayDataMap: Map<string, DayData>;
   setDayDataMap: React.Dispatch<React.SetStateAction<Map<string, DayData>>>;
   syncing: boolean;
   syncError: string | null;
+  lastSyncedAt: string;
   syncDayData: (date: string, pomodoros: PomodoroRecord[]) => void;
   syncConfig: (settings: AppSettings, todos: Todo[]) => void;
-  loadAll: () => Promise<{ settings: Omit<AppSettings, 'syncSecret'> | null; todos: Todo[] | null }>;
-  syncBidirectional: (settings: AppSettings, todos: Todo[]) => Promise<{ settings: Omit<AppSettings, 'syncSecret'>; todos: Todo[] } | null>;
+  loadAll: () => Promise<{ settings: RemoteSettings | null; todos: Todo[] | null }>;
+  syncBidirectional: (settings: AppSettings, todos: Todo[]) => Promise<SyncResult | null>;
+  flush: () => Promise<void>;
 }
 
-export function useGithubSync(repo: string, token: string): UseGithubSyncReturn {
+const CONFIG_DEBOUNCE_MS = 2500;
+const DAY_DEBOUNCE_MS = 1500;
+
+function settingsSubset(settings: AppSettings): RemoteSettings {
+  return {
+    workMinutes: settings.workMinutes,
+    shortBreakMinutes: settings.shortBreakMinutes,
+    longBreakMinutes: settings.longBreakMinutes,
+    longBreakInterval: settings.longBreakInterval,
+    soundEnabled: settings.soundEnabled,
+    darkMode: settings.darkMode,
+    githubRepo: settings.githubRepo,
+    countdownTitle: settings.countdownTitle,
+    countdownDate: settings.countdownDate,
+    categories: settings.categories,
+  };
+}
+
+function mergeTodos(localTodos: Todo[], remoteTodos: Todo[]): Todo[] {
+  const merged = new Map(localTodos.map(todo => [todo.id, todo]));
+  for (const remoteTodo of remoteTodos) {
+    const localTodo = merged.get(remoteTodo.id);
+    const localTime = localTodo?.updatedAt || localTodo?.createdAt || '';
+    const remoteTime = remoteTodo.updatedAt || remoteTodo.createdAt || '';
+    if (!localTodo || remoteTime > localTime) merged.set(remoteTodo.id, remoteTodo);
+  }
+  return [...merged.values()];
+}
+
+function mergeSettings(local: RemoteSettings, remote: RemoteSettings): RemoteSettings {
+  return {
+    ...local,
+    ...remote,
+    categories: remote.categories?.length ? remote.categories : local.categories,
+    githubRepo: local.githubRepo,
+  };
+}
+
+function comparableConfig(settings: RemoteSettings, todos: Todo[]): string {
+  return JSON.stringify({ settings, todos });
+}
+
+export function useGithubSync(repo: string, syncCode: string, profileId: string): UseGithubSyncReturn {
+  const syncTimeKey = profileStorageKey('todotime_last_sync', profileId);
   const [dayDataMap, setDayDataMap] = useState<Map<string, DayData>>(new Map());
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
+  const [lastSyncedAt, setLastSyncedAt] = useState(() => localStorage.getItem(syncTimeKey) || '');
   const queueRef = useRef<Promise<void>>(Promise.resolve());
+  const configTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const dayTimersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>());
+  const pendingConfigRef = useRef<ConfigData | null>(null);
+  const pendingDaysRef = useRef(new Map<string, DayData>());
   const lastConfigHashRef = useRef('');
-  // Persist sync timestamp to localStorage for reliability across refreshes
-  const getSyncTime = () => localStorage.getItem('todotime_last_sync') || '';
-  const setSyncTime = (t: string) => localStorage.setItem('todotime_last_sync', t);
+  const activeRequestsRef = useRef(0);
 
-  const mergePomodoros = (remote: PomodoroRecord[], local: PomodoroRecord[]) => {
-    const byKey = new Map<string, PomodoroRecord>();
-    for (const record of [...remote, ...local]) {
-      const key = [record.start, record.end, record.taskId ?? '', record.duration, record.createdAt].join('|');
-      byKey.set(key, record);
-    }
-    return [...byKey.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-  };
+  const getSyncTime = useCallback(() => localStorage.getItem(syncTimeKey) || '', [syncTimeKey]);
+  const markSynced = useCallback((value = new Date().toISOString()) => {
+    localStorage.setItem(syncTimeKey, value);
+    setLastSyncedAt(value);
+  }, [syncTimeKey]);
 
-  const mergeTodoLists = (localTodos: Todo[], remoteTodos: Todo[]): Todo[] => {
-    const merged = new Map(localTodos.map(todo => [todo.id, todo]));
-    for (const remoteTodo of remoteTodos) {
-      const localTodo = merged.get(remoteTodo.id);
-      const localTime = localTodo?.updatedAt || localTodo?.createdAt || '';
-      const remoteTime = remoteTodo.updatedAt || remoteTodo.createdAt || '';
-      if (!localTodo || remoteTime > localTime) merged.set(remoteTodo.id, remoteTodo);
-    }
-    return [...merged.values()];
-  };
-
-  // --- Load all data from git on app open ---
-  const loadAll = useCallback(async (): Promise<{ settings: Omit<AppSettings, 'syncSecret'> | null; todos: Todo[] | null }> => {
-    if (!repo || !token) return { settings: null, todos: null };
-    setSyncing(true);
-    setSyncError(null);
-
-    try {
-      const dates: string[] = [];
-      const now = new Date();
-      for (let i = 30; i >= 0; i--) {
-        const d = new Date(now);
-        d.setDate(d.getDate() - i);
-        dates.push(formatDate(d));
-      }
-
-      const [configData, dayData] = await Promise.all([
-        fetchConfig(repo, token).catch(() => null),
-        loadMultipleDays(repo, token, dates).catch(() => new Map<string, DayData>()),
-      ]);
-
-      setDayDataMap(prev => {
-        const merged = new Map(prev);
-        dayData.forEach((v, k) => merged.set(k, v));
-        return merged;
-      });
-
-      return {
-        settings: configData?.settings ?? null,
-        todos: configData?.todos ?? null,
-      };
-    } catch (e) {
-      setSyncError((e as Error).message);
-      return { settings: null, todos: null };
-    } finally {
-      setSyncing(false);
-    }
-  }, [repo, token]);
-
-  // --- Sync pomodoro data for a day ---
-  const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
-    if (!repo || !token) return;
-
-    setDayDataMap(prev => {
-      const existing = prev.get(date);
-      const allPomodoros = mergePomodoros(existing?.pomodoros ?? [], pomodoros);
-      const totalFocusMinutes = allPomodoros.reduce((s, p) => s + p.duration, 0);
-
-      const dayData: DayData = {
-        date,
-        pomodoros: allPomodoros,
-        tasks: existing?.tasks ?? [],
-        totalFocusMinutes,
-        totalPomodoros: allPomodoros.length,
-        totalTasksCompleted: existing?.totalTasksCompleted ?? 0,
-        streak: existing?.streak ?? 0,
-      };
-
-      const next = new Map(prev);
-      next.set(date, dayData);
-
-      queueRef.current = queueRef.current.then(async () => {
-        setSyncing(true);
-        setSyncError(null);
-        try {
-          await saveDayData(repo, token, dayData);
-        } catch (e) {
-          setSyncError((e as Error).message);
-        } finally {
-          setSyncing(false);
-        }
-      });
-
-      return next;
-    });
-  }, [token, repo]);
-
-  // --- Sync config (settings + todos) immediately on change ---
-  const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
-    if (!repo || !token) return;
-
-    const settingsSubset = {
-      workMinutes: settings.workMinutes,
-      shortBreakMinutes: settings.shortBreakMinutes,
-      longBreakMinutes: settings.longBreakMinutes,
-      longBreakInterval: settings.longBreakInterval,
-      soundEnabled: settings.soundEnabled,
-      darkMode: settings.darkMode,
-      githubRepo: settings.githubRepo,
-      countdownTitle: settings.countdownTitle,
-      countdownDate: settings.countdownDate,
-      categories: settings.categories,
-    };
-    const hash = JSON.stringify({ settings: settingsSubset, todos });
-    if (hash === lastConfigHashRef.current) return;
-    lastConfigHashRef.current = hash;
-
-    const configPayload: ConfigData = {
-      settings: settingsSubset,
-      todos,
-      updatedAt: new Date().toISOString(),
-    };
-
-    queueRef.current = queueRef.current.then(async () => {
+  const runQueued = useCallback((operation: () => Promise<void>) => {
+    queueRef.current = queueRef.current.catch(() => undefined).then(async () => {
+      activeRequestsRef.current += 1;
       setSyncing(true);
       setSyncError(null);
       try {
-        await saveConfig(repo, token, configPayload);
-        setSyncTime(new Date().toISOString());
-      } catch (e) {
-        setSyncError((e as Error).message);
+        await operation();
+        markSynced();
+      } catch (error) {
+        setSyncError(error instanceof Error ? error.message : '同步失败');
       } finally {
-        setSyncing(false);
+        activeRequestsRef.current -= 1;
+        if (activeRequestsRef.current === 0) setSyncing(false);
       }
     });
-  }, [token, repo]);
+    return queueRef.current;
+  }, [markSynced]);
 
-  // --- Incremental merge: only merge changed settings fields ---
-  const mergeSettings = (local: Omit<AppSettings, 'syncSecret'>, git: Omit<AppSettings, 'syncSecret'>): Omit<AppSettings, 'syncSecret'> => {
-    return {
-      workMinutes: git.workMinutes ?? local.workMinutes,
-      shortBreakMinutes: git.shortBreakMinutes ?? local.shortBreakMinutes,
-      longBreakMinutes: git.longBreakMinutes ?? local.longBreakMinutes,
-      longBreakInterval: git.longBreakInterval ?? local.longBreakInterval,
-      soundEnabled: git.soundEnabled ?? local.soundEnabled,
-      darkMode: git.darkMode ?? local.darkMode,
-      githubRepo: git.githubRepo ?? local.githubRepo,
-      countdownTitle: git.countdownTitle ?? local.countdownTitle,
-      countdownDate: git.countdownDate ?? local.countdownDate,
-      categories: git.categories?.length > 0 ? git.categories : local.categories,
+  const flushConfig = useCallback(() => {
+    if (configTimerRef.current) clearTimeout(configTimerRef.current);
+    configTimerRef.current = null;
+    const payload = pendingConfigRef.current;
+    pendingConfigRef.current = null;
+    if (!payload || !repo || !syncCode) return queueRef.current;
+    return runQueued(async () => {
+      const remote = await loadConfig(repo, syncCode);
+      const mergedTodos = mergeTodos(payload.todos, remote?.todos ?? []);
+      const mergedSettings = remote && remote.updatedAt > getSyncTime()
+        ? mergeSettings(payload.settings, remote.settings)
+        : payload.settings;
+      if (remote && comparableConfig(mergedSettings, mergedTodos) === comparableConfig(remote.settings, remote.todos || [])) {
+        markSynced(remote.updatedAt);
+        return;
+      }
+      await saveConfig(repo, syncCode, { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() });
+    });
+  }, [repo, syncCode, runQueued, getSyncTime, markSynced]);
+
+  const flushDay = useCallback((date: string) => {
+    const timer = dayTimersRef.current.get(date);
+    if (timer) clearTimeout(timer);
+    dayTimersRef.current.delete(date);
+    const payload = pendingDaysRef.current.get(date);
+    pendingDaysRef.current.delete(date);
+    if (!payload || !repo || !syncCode) return queueRef.current;
+    return runQueued(() => saveDayData(repo, syncCode, payload));
+  }, [repo, syncCode, runQueued]);
+
+  const flush = useCallback(async () => {
+    flushConfig();
+    for (const date of [...pendingDaysRef.current.keys()]) flushDay(date);
+    await queueRef.current;
+  }, [flushConfig, flushDay]);
+
+  useEffect(() => {
+    lastConfigHashRef.current = '';
+    const dayTimers = dayTimersRef.current;
+    return () => {
+      if (configTimerRef.current) clearTimeout(configTimerRef.current);
+      dayTimers.forEach(timer => clearTimeout(timer));
+      dayTimers.clear();
     };
-  };
+  }, [profileId]);
 
-  // --- Bidirectional sync with incremental merge ---
-  const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<{ settings: Omit<AppSettings, 'syncSecret'>; todos: Todo[] } | null> => {
-    if (!repo || !token) return null;
+  const loadAll = useCallback(async () => {
+    if (!repo || !syncCode) return { settings: null, todos: null };
+    activeRequestsRef.current += 1;
     setSyncing(true);
     setSyncError(null);
-
     try {
-      const gitConfig = await fetchConfig(repo, token).catch(() => null);
-      if (!gitConfig) {
-        // No git config → push local
-        const settingsSubset = {
-          workMinutes: settings.workMinutes,
-          shortBreakMinutes: settings.shortBreakMinutes,
-          longBreakMinutes: settings.longBreakMinutes,
-          longBreakInterval: settings.longBreakInterval,
-          soundEnabled: settings.soundEnabled,
-          darkMode: settings.darkMode,
-          githubRepo: settings.githubRepo,
-          countdownTitle: settings.countdownTitle,
-          countdownDate: settings.countdownDate,
-          categories: settings.categories,
-        };
-        const payload: ConfigData = { settings: settingsSubset, todos, updatedAt: new Date().toISOString() };
-        await saveConfig(repo, token, payload);
-        setSyncTime(payload.updatedAt);
-        return null;
+      const dates: string[] = [];
+      const now = new Date();
+      for (let i = 59; i >= 0; i -= 1) {
+        const day = new Date(now);
+        day.setDate(day.getDate() - i);
+        dates.push(formatDate(day));
+      }
+      const [configData, days] = await Promise.all([
+        loadConfig(repo, syncCode),
+        loadMultipleDays(repo, syncCode, dates),
+      ]);
+      setDayDataMap(days);
+      if (configData?.updatedAt) markSynced(configData.updatedAt);
+      return { settings: configData?.settings ?? null, todos: configData?.todos ?? null };
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : '同步读取失败');
+      return { settings: null, todos: null };
+    } finally {
+      activeRequestsRef.current -= 1;
+      if (activeRequestsRef.current === 0) setSyncing(false);
+    }
+  }, [repo, syncCode, markSynced]);
+
+  const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
+    if (!repo || !syncCode) return;
+    setDayDataMap(previous => {
+      const current = previous.get(date);
+      const records = new Map<string, PomodoroRecord>();
+      for (const record of [...(current?.pomodoros ?? []), ...pomodoros.filter(item => (item.date || date) === date)]) {
+        records.set(record.id || [record.start, record.end, record.taskId ?? '', record.createdAt].join('|'), record);
+      }
+      const merged = [...records.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+      const payload: DayData = {
+        date,
+        pomodoros: merged,
+        tasks: current?.tasks ?? [],
+        totalFocusMinutes: merged.reduce((sum, record) => sum + record.duration, 0),
+        totalPomodoros: merged.length,
+        totalTasksCompleted: current?.totalTasksCompleted ?? 0,
+        streak: current?.streak ?? 0,
+      };
+      pendingDaysRef.current.set(date, payload);
+      const existingTimer = dayTimersRef.current.get(date);
+      if (existingTimer) clearTimeout(existingTimer);
+      dayTimersRef.current.set(date, setTimeout(() => { void flushDay(date); }, DAY_DEBOUNCE_MS));
+      const next = new Map(previous);
+      next.set(date, payload);
+      return next;
+    });
+  }, [repo, syncCode, flushDay]);
+
+  const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
+    if (!repo || !syncCode) return;
+    const payload: ConfigData = { settings: settingsSubset(settings), todos, updatedAt: new Date().toISOString() };
+    const hash = JSON.stringify({ settings: payload.settings, todos });
+    if (hash === lastConfigHashRef.current) return;
+    lastConfigHashRef.current = hash;
+    pendingConfigRef.current = payload;
+    if (configTimerRef.current) clearTimeout(configTimerRef.current);
+    configTimerRef.current = setTimeout(() => { void flushConfig(); }, CONFIG_DEBOUNCE_MS);
+  }, [repo, syncCode, flushConfig]);
+
+  const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<SyncResult | null> => {
+    if (!repo || !syncCode) return null;
+    await flush();
+    activeRequestsRef.current += 1;
+    setSyncing(true);
+    setSyncError(null);
+    try {
+      const remote = await loadConfig(repo, syncCode);
+      if (!remote) {
+        const payload: ConfigData = { settings: settingsSubset(settings), todos, updatedAt: new Date().toISOString() };
+        await saveConfig(repo, syncCode, payload);
+        markSynced(payload.updatedAt);
+        return { settings: payload.settings, todos };
       }
 
-      const gitTime = gitConfig.updatedAt || '';
-      const localTime = getSyncTime();
-
-      if (gitTime > localTime) {
-        // Git is newer → incremental merge settings + per-todo merge
-        const localSettings = {
-          workMinutes: settings.workMinutes,
-          shortBreakMinutes: settings.shortBreakMinutes,
-          longBreakMinutes: settings.longBreakMinutes,
-          longBreakInterval: settings.longBreakInterval,
-          soundEnabled: settings.soundEnabled,
-          darkMode: settings.darkMode,
-          githubRepo: settings.githubRepo,
-          countdownTitle: settings.countdownTitle,
-          countdownDate: settings.countdownDate,
-          categories: settings.categories,
-        };
-        const mergedSettings = mergeSettings(localSettings, gitConfig.settings);
-
-        const mergedTodos = mergeTodoLists(todos, gitConfig.todos || []);
-
-        // Push merged result back to git to keep it complete
-        const pushPayload: ConfigData = { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() };
-        await saveConfig(repo, token, pushPayload);
-        setSyncTime(pushPayload.updatedAt);
+      const mergedSettings = remote.updatedAt > getSyncTime()
+        ? mergeSettings(settingsSubset(settings), remote.settings)
+        : settingsSubset(settings);
+      const mergedTodos = mergeTodos(todos, remote.todos || []);
+      if (comparableConfig(mergedSettings, mergedTodos) === comparableConfig(remote.settings, remote.todos || [])) {
+        markSynced(remote.updatedAt);
         return { settings: mergedSettings, todos: mergedTodos };
-      } else if (localTime && localTime > gitTime) {
-        // Local is newer, but merge remote-only items before pushing so another device's data is not lost.
-        const settingsSubset = {
-          workMinutes: settings.workMinutes,
-          shortBreakMinutes: settings.shortBreakMinutes,
-          longBreakMinutes: settings.longBreakMinutes,
-          longBreakInterval: settings.longBreakInterval,
-          soundEnabled: settings.soundEnabled,
-          darkMode: settings.darkMode,
-          githubRepo: settings.githubRepo,
-          countdownTitle: settings.countdownTitle,
-          countdownDate: settings.countdownDate,
-          categories: settings.categories,
-        };
-        const payload: ConfigData = { settings: settingsSubset, todos: mergeTodoLists(todos, gitConfig.todos || []), updatedAt: new Date().toISOString() };
-        await saveConfig(repo, token, payload);
-        setSyncTime(payload.updatedAt);
       }
-      // else equal → no action
-      return null;
-    } catch (e) {
-      setSyncError((e as Error).message);
+      const payload: ConfigData = { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() };
+      await saveConfig(repo, syncCode, payload);
+      markSynced(payload.updatedAt);
+      return { settings: mergedSettings, todos: mergedTodos };
+    } catch (error) {
+      setSyncError(error instanceof Error ? error.message : '同步失败');
       return null;
     } finally {
-      setSyncing(false);
+      activeRequestsRef.current -= 1;
+      if (activeRequestsRef.current === 0) setSyncing(false);
     }
-  }, [token, repo]);
+  }, [repo, syncCode, flush, getSyncTime, markSynced]);
 
-  return { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional };
+  return { dayDataMap, setDayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush };
 }

@@ -7,22 +7,22 @@ interface GitHubFile { sha: string; content: string; }
 
 class SyncConflictError extends Error {}
 
-function syncHeaders(syncSecret: string): Record<string, string> {
-  return { 'Content-Type': 'application/json', 'X-Sync-Secret': syncSecret };
+function syncHeaders(syncCode: string): Record<string, string> {
+  return { 'Content-Type': 'application/json', 'X-Sync-Code': syncCode };
 }
 
-async function apiGet(path: string, syncSecret: string): Promise<{ content: unknown; sha: string } | null> {
+async function apiGet(path: string, syncCode: string): Promise<{ content: unknown; sha: string } | null> {
   const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
-    headers: syncHeaders(syncSecret),
+    headers: syncHeaders(syncCode),
   });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`同步读取失败：${res.status}`);
   return res.json();
 }
 
-async function apiPut(path: string, content: unknown, syncSecret: string, sha?: string): Promise<string> {
+async function apiPut(path: string, content: unknown, syncCode: string, sha?: string): Promise<string> {
   const res = await fetch(`${API_BASE}/file`, {
-    method: 'PUT', headers: syncHeaders(syncSecret),
+    method: 'PUT', headers: syncHeaders(syncCode),
     body: JSON.stringify({ path, content, sha }),
   });
   if (res.status === 409) throw new SyncConflictError('数据已被另一台设备更新');
@@ -31,26 +31,27 @@ async function apiPut(path: string, content: unknown, syncSecret: string, sha?: 
   return d.sha;
 }
 
-export async function getFile(_repo: string, syncSecret: string, path: string): Promise<GitHubFile | null> {
-  if (!syncSecret) throw new Error('请先在设置中填写同步密码');
-  const data = await apiGet(path, syncSecret);
+export async function getFile(_repo: string, syncCode: string, path: string): Promise<GitHubFile | null> {
+  if (!syncCode) throw new Error('请先创建或输入个人同步识别码');
+  const data = await apiGet(path, syncCode);
   if (!data) return null;
   return { sha: data.sha, content: JSON.stringify(data.content) };
 }
 
-export async function putFile(_repo: string, syncSecret: string, path: string, content: string, sha?: string): Promise<void> {
-  if (!syncSecret) throw new Error('请先在设置中填写同步密码');
-  await apiPut(path, JSON.parse(content), syncSecret, sha);
+export async function putFile(_repo: string, syncCode: string, path: string, content: string, sha?: string): Promise<void> {
+  if (!syncCode) throw new Error('请先创建或输入个人同步识别码');
+  await apiPut(path, JSON.parse(content), syncCode, sha);
 }
 
 export async function saveDayData(repo: string, token: string, data: DayData): Promise<void> {
-  const path = `data/${data.date.slice(0, 4)}/${data.date.slice(5, 7)}/${data.date}.json`;
+  const path = 'history.json';
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const existing = await getFile(repo, token, path);
-    const remote = existing ? JSON.parse(existing.content) as DayData : null;
+    const history = existing ? JSON.parse(existing.content) as { days?: Record<string, DayData>; updatedAt?: string } : {};
+    const remote = history.days?.[data.date] ?? null;
     const records = new Map<string, DayData['pomodoros'][number]>();
     for (const record of [...(remote?.pomodoros ?? []), ...data.pomodoros]) {
-      const key = [record.start, record.end, record.taskId ?? '', record.createdAt].join('|');
+      const key = record.id || [record.start, record.end, record.taskId ?? '', record.createdAt].join('|');
       records.set(key, record);
     }
     const pomodoros = [...records.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
@@ -61,8 +62,13 @@ export async function saveDayData(repo: string, token: string, data: DayData): P
       totalFocusMinutes: pomodoros.reduce((sum, item) => sum + item.duration, 0),
       totalPomodoros: pomodoros.length,
     };
+    const days = { ...(history.days ?? {}), [data.date]: merged };
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 400);
+    const cutoffDate = `${cutoff.getFullYear()}-${String(cutoff.getMonth() + 1).padStart(2, '0')}-${String(cutoff.getDate()).padStart(2, '0')}`;
+    for (const date of Object.keys(days)) if (date < cutoffDate) delete days[date];
     try {
-      await putFile(repo, token, path, JSON.stringify(merged, null, 2), existing?.sha);
+      await putFile(repo, token, path, JSON.stringify({ days, updatedAt: new Date().toISOString() }, null, 2), existing?.sha);
       return;
     } catch (error) {
       if (!(error instanceof SyncConflictError) || attempt === 2) throw error;
@@ -79,14 +85,29 @@ export async function loadDayData(repo: string, token: string, date: string): Pr
 
 export async function loadMultipleDays(repo: string, token: string, dates: string[]): Promise<Map<string, DayData>> {
   const map = new Map<string, DayData>();
-  await Promise.all(dates.map(async (date) => {
-    try {
-      const data = await loadDayData(repo, token, date);
-      if (data) map.set(date, data);
-    } catch (error) {
-      console.warn(`Failed to load ${date}`, error);
+  const historyFile = await getFile(repo, token, 'history.json');
+  if (historyFile) {
+    const history = JSON.parse(historyFile.content) as { days?: Record<string, DayData> };
+    for (const date of dates) {
+      const day = history.days?.[date];
+      if (day) map.set(date, day);
     }
-  }));
+    return map;
+  }
+
+  // Compatibility fallback for data written by versions before history.json.
+  const concurrency = 6;
+  for (let index = 0; index < dates.length; index += concurrency) {
+    const batch = dates.slice(index, index + concurrency);
+    await Promise.all(batch.map(async date => {
+      try {
+        const data = await loadDayData(repo, token, date);
+        if (data) map.set(date, data);
+      } catch (error) {
+        console.warn(`Failed to load ${date}`, error);
+      }
+    }));
+  }
   return map;
 }
 

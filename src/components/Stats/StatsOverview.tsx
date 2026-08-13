@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
-import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
+import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 
@@ -21,41 +21,8 @@ interface StatsOverviewProps {
   todayPomodoros: PomodoroRecord[];
   categories: CategoryItem[];
   todos: Todo[];
-  onAddTestData?: (data: Map<string, DayData>) => void;
   /** Trigger a full sync refresh from git */
   onRefresh?: () => Promise<void>;
-}
-
-function genTestData(): Map<string, DayData> {
-  const cats: Category[] = ['数学', '英语', '专业课', '政治', '运动'];
-  const tasks: Record<string, string[]> = {
-    '数学': ['刷高数真题', '线性代数'], '英语': ['背单词', '阅读理解'],
-    '专业课': ['数据结构', '操作系统'], '政治': ['马原复习', '肖四'],
-    '运动': ['跑步', '健身'],
-  };
-  const map = new Map<string, DayData>();
-  const now = new Date();
-  for (let i = 29; i >= 0; i--) {
-    const d = new Date(now); d.setDate(d.getDate() - i);
-    const date = d.toISOString().slice(0, 10);
-    if (Math.random() < 0.2) continue;
-    const pomodoroCount = Math.floor(Math.random() * 6) + 1;
-    const taskCount = Math.floor(Math.random() * 4) + 1;
-    const pomodoros: PomodoroRecord[] = [];
-    for (let j = 0; j < pomodoroCount; j++) {
-      const cat = cats[Math.floor(Math.random() * cats.length)];
-      const task = tasks[cat][Math.floor(Math.random() * tasks[cat].length)];
-      pomodoros.push({ start: '', end: '', duration: 25, taskId: null, taskTitle: task, category: cat, completed: true, createdAt: '' });
-    }
-    const doneTasks: Todo[] = [];
-    for (let j = 0; j < taskCount; j++) {
-      const cat = cats[Math.floor(Math.random() * cats.length)];
-      const task = tasks[cat][Math.floor(Math.random() * tasks[cat].length)];
-      doneTasks.push({ id: `test-${date}-${j}`, title: task, priority: 'medium', category: cat, estimatedPomodoros: 2, completedPomodoros: Math.floor(Math.random() * 3), done: true, abandoned: false, createdAt: '', updatedAt: '', completedAt: '', abandonedAt: '', subtasks: [] });
-    }
-    map.set(date, { date, pomodoros, tasks: doneTasks, totalFocusMinutes: pomodoros.length * 25, totalPomodoros: pomodoros.length, totalTasksCompleted: taskCount, streak: 0 });
-  }
-  return map;
 }
 
 interface PeriodResult {
@@ -81,7 +48,7 @@ function computePeriodData(
   const days: string[] = [];
   for (let i = count - 1 + offsetDays; i >= offsetDays; i--) {
     const d = new Date(now); d.setDate(d.getDate() - i);
-    days.push(d.toISOString().slice(0, 10));
+    days.push(formatDate(d));
   }
   let totalPomodoros = 0, totalMinutes = 0, totalTasks = 0, totalTasksCompleted = 0;
   const categoryMinutes: Record<string, number> = {};
@@ -96,8 +63,8 @@ function computePeriodData(
     const tasksDone = doneToday.length;
     const totalTasksDay = todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length || tasksDone;
     if (date === today) {
-      const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
-      poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
+      const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
+      poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(p.id || `${p.start}-${p.end}`))];
     }
     const mins = poms.reduce((s, p) => s + p.duration, 0);
     totalPomodoros += poms.length;
@@ -141,7 +108,7 @@ function diffText(current: number, previous: number): { text: string; cls: strin
   return { text: '持平', cls: 'same', icon: <Minus size={12} /> };
 }
 
-export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, onAddTestData, onRefresh }: StatsOverviewProps) {
+export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, onRefresh }: StatsOverviewProps) {
   const [period, setPeriod] = useState<Period>('week');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
@@ -151,8 +118,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
   const todayData = useMemo(() => {
     const dayData = dayDataMap.get(today);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
-    const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
-    poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
+    const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
+    poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(p.id || `${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0);
     const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
     return { pomodoros: poms.length, minutes: mins, tasksDone };
@@ -168,8 +135,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
 
   const activeData = period === 'week' ? weekData : monthData;
   const isCompact = period === 'month';
-
-  const handleTest = useCallback(() => { onAddTestData?.(genTestData()); }, [onAddTestData]);
 
   const handleRefresh = useCallback(async () => {
     if (!onRefresh || refreshing) return;
@@ -243,22 +208,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
           },
         },
       },
-      afterDatasetsDraw: (chart: unknown) => {
-        const c = chart as { ctx: CanvasRenderingContext2D; data: typeof barData; scales: { x: { getPixelForValue: (v: number) => number }; y: { getPixelForValue: (v: number) => number } } };
-        if (!c?.scales?.x || !c?.scales?.y) return;
-        c.data.datasets[0].data.forEach((val: number, i: number) => {
-          if (val === 0) return;
-          const x = c.scales.x.getPixelForValue(i);
-          const y = c.scales.y.getPixelForValue(val);
-          const d = activeData.daily[i];
-          c.ctx.save();
-          c.ctx.font = `bold ${isCompact ? '8' : '11'}px system-ui`;
-          c.ctx.fillStyle = d?.date === today ? metricInfo.color : `${metricInfo.color}cc`;
-          c.ctx.textAlign = 'center';
-          c.ctx.fillText(`${val}${metricInfo.unit}`, x, y - 5);
-          c.ctx.restore();
-        });
-      },
     },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: isCompact ? 7 : 10 }, maxRotation: isCompact ? 60 : 0 } },
@@ -294,9 +243,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 3, maxBarThickness: 14 },
-      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 3, maxBarThickness: 14 },
-      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 3, maxBarThickness: 14 },
+      { label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 3, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
@@ -304,7 +253,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      y: { beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#999' } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#6c5ce7', precision: 0 } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B', precision: 0 } },
     },
   };
 
@@ -371,10 +321,6 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
           </div>
         ) : <div className="chart-empty">暂无数据</div>}
       </div>
-
-      {activeData.totalPomodoros === 0 && (
-        <button className="btn secondary" style={{ width: '100%', justifyContent: 'center' }} onClick={handleTest}>🧪 注入测试数据</button>
-      )}
 
       {/* Report Modal */}
       {showReport && (() => {

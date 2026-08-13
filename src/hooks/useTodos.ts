@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import type { Todo, Priority, Category } from '../types';
 import { generateId } from '../utils/dateUtils';
+import { readProfileStorage, profileStorageKey } from '../utils/syncIdentity';
 
 interface UseTodosReturn {
   todos: Todo[];
@@ -26,10 +27,10 @@ interface UseTodosReturn {
 
 const now = () => new Date().toISOString();
 
-export function useTodos(): UseTodosReturn {
+export function useTodos(profileId: string): UseTodosReturn {
   const [todos, setTodos] = useState<Todo[]>(() => {
     try {
-      const stored = localStorage.getItem('todotime_todos');
+      const stored = readProfileStorage('todotime_todos', profileId);
       if (stored) {
         const parsed = JSON.parse(stored);
         return parsed.map((t: Record<string, unknown>) => ({
@@ -55,7 +56,7 @@ export function useTodos(): UseTodosReturn {
 
   const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
 
-  useEffect(() => { localStorage.setItem('todotime_todos', JSON.stringify(todos)); }, [todos]);
+  useEffect(() => { localStorage.setItem(profileStorageKey('todotime_todos', profileId), JSON.stringify(todos)); }, [todos, profileId]);
 
   const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
     const ts = now();
@@ -100,10 +101,10 @@ export function useTodos(): UseTodosReturn {
 
   const updateSubtaskPomodoros = useCallback((subId: string) => {
     const ts = now();
-    setTodos(prev => prev.map(t => ({
+    setTodos(prev => prev.map(t => t.subtasks.some(s => s.id === subId) ? ({
       ...t, updatedAt: ts,
       subtasks: t.subtasks.map(s => s.id === subId ? { ...s, completedPomodoros: s.completedPomodoros + 1, updatedAt: ts } : s),
-    })));
+    }) : t));
   }, []);
 
   const addSubtask = useCallback((todoId: string, title: string) => {

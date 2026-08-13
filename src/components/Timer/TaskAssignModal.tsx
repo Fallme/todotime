@@ -5,17 +5,16 @@ import type { PendingAssignment } from '../../hooks/useTimer';
 interface TaskAssignModalProps {
   assignments: PendingAssignment[];
   todos: Todo[];
-  currentTaskName: string | null;
+  currentTaskId: string | null;
   onAssignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
   onStartNextGroup: () => void;
   onStop: () => void;
-  onResetCycle: () => void;
   onSelectTask: (id: string | null, title: string, category: Category) => void;
 }
 
-export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop, onSelectTask }: TaskAssignModalProps) {
+export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll, onStartNextGroup, onStop, onSelectTask }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.deletedAt && !t.done && !t.abandoned);
-  const [selectedTodoId, setSelectedTodoId] = useState('other');
+  const [selectedTodoId, setSelectedTodoId] = useState(currentTaskId ?? 'other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
   const getResult = (todoId: string | null) => {
@@ -27,14 +26,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
     };
   };
 
-  const getSelectedTodoId = () => {
-    if (selectedTodoId === 'other') return null;
-    if (currentTaskName) {
-      const todo = activeTodos.find(t => t.title === currentTaskName);
-      return todo?.id ?? null;
-    }
-    return selectedTodoId || null;
-  };
+  const getSelectedTodoId = () => selectedTodoId === 'other' ? null : selectedTodoId || null;
 
   // 分配：分配并关闭，番茄恢复初始
   const handleAssign = () => {
@@ -58,13 +50,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
         <h3 className="modal-title">一组完成!</h3>
         <p className="modal-desc">{assignments.length} 个番茄 · 共 {totalMinutes} 分钟</p>
 
-        {currentTaskName ? (
-          <div className="modal-single-assign">
-            <span className="modal-assign-label">任务：</span>
-            <span className="modal-auto-label">{currentTaskName}</span>
-          </div>
-        ) : (
-          <div className="modal-single-assign">
+        <div className="modal-single-assign">
             <label className="modal-assign-label">分配给：</label>
             <select className="modal-assign-select" value={selectedTodoId} onChange={e => setSelectedTodoId(e.target.value)}>
               <option value="other">其他 (不分配任务)</option>
@@ -72,8 +58,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignA
                 <option key={t.id} value={t.id}>{t.title} ({t.category})</option>
               ))}
             </select>
-          </div>
-        )}
+        </div>
 
         <div className="modal-actions">
           <button className="modal-btn secondary" onClick={handleAssign}>分配</button>

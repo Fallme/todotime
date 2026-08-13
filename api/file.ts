@@ -1,4 +1,4 @@
-import { timingSafeEqual } from 'node:crypto';
+import { createHash } from 'node:crypto';
 
 interface ApiRequest {
   method?: string;
@@ -17,13 +17,13 @@ interface ApiResponse {
 interface GitHubContentResponse { content: string; sha: string }
 interface GitHubWriteResponse { content?: { sha?: string } }
 
-const ALLOWED_PATH = /^(config\.json|data\/\d{4}\/\d{2}\/\d{4}-\d{2}-\d{2}\.json)$/;
+const ALLOWED_PATH = /^(config\.json|history\.json|data\/\d{4}\/\d{2}\/\d{4}-\d{2}-\d{2}\.json)$/;
+const CODE_PATTERN = /^[A-Z0-9_-]{12,64}$/;
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 
-function secretsMatch(actual: string, expected: string): boolean {
-  const actualBuffer = Buffer.from(actual);
-  const expectedBuffer = Buffer.from(expected);
-  return actualBuffer.length === expectedBuffer.length && timingSafeEqual(actualBuffer, expectedBuffer);
+function getProfilePath(syncCode: string, filePath: string): string {
+  const profileId = createHash('sha256').update(syncCode).digest('hex').slice(0, 24);
+  return `profiles/${profileId}/${filePath}`;
 }
 
 export default async function handler(req: ApiRequest, res: ApiResponse) {
@@ -34,31 +34,30 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     res.setHeader('Vary', 'Origin');
   }
   res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Sync-Secret');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Sync-Code, X-Sync-Secret');
   if (req.method === 'OPTIONS') return res.status(200).end();
 
   const TOKEN = process.env.GITHUB_TOKEN;
   const REPO = process.env.GITHUB_DATA_REPO;
-  const SYNC_SECRET = process.env.SYNC_SECRET;
   const API = 'https://api.github.com';
-  const suppliedSecret = req.headers['x-sync-secret'];
-  const secret = Array.isArray(suppliedSecret) ? suppliedSecret[0] : suppliedSecret;
-  if (!SYNC_SECRET) return res.status(503).json({ error: 'Sync password is not configured' });
+  const suppliedCode = req.headers['x-sync-code'] ?? req.headers['x-sync-secret'];
+  const syncCode = (Array.isArray(suppliedCode) ? suppliedCode[0] : suppliedCode)?.trim().toUpperCase();
   if (!REPO || REPO === 'Fallme/todotime') {
     return res.status(503).json({ error: 'A separate private data repository is required' });
   }
-  if (!secret || !secretsMatch(secret, SYNC_SECRET)) {
-    return res.status(401).json({ error: 'Invalid sync password' });
+  if (!syncCode || !CODE_PATTERN.test(syncCode)) {
+    return res.status(401).json({ error: 'Invalid sync code' });
   }
   const filePath = req.method === 'PUT' ? req.body?.path : req.query.path;
   if (typeof filePath !== 'string' || !ALLOWED_PATH.test(filePath)) {
     return res.status(400).json({ error: 'invalid path' });
   }
   if (!TOKEN) return res.status(503).json({ error: 'GitHub sync is not configured' });
+  const profilePath = getProfilePath(syncCode, filePath);
 
   try {
     if (req.method === 'GET') {
-      const r = await fetch(`${API}/repos/${REPO}/contents/${filePath}`, {
+      const r = await fetch(`${API}/repos/${REPO}/contents/${profilePath}`, {
         headers: { Accept: 'application/vnd.github.v3+json', Authorization: `Bearer ${TOKEN}` },
       });
       if (r.status === 404) return res.status(404).json(null);
@@ -76,9 +75,9 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         return res.status(413).json({ error: 'content too large' });
       }
       const encoded = Buffer.from(serialized).toString('base64');
-      const body: { message: string; content: string; sha?: string } = { message: `Update ${filePath}`, content: encoded };
+      const body: { message: string; content: string; sha?: string } = { message: `Update ${profilePath}`, content: encoded };
       if (sha) body.sha = sha;
-      const r = await fetch(`${API}/repos/${REPO}/contents/${filePath}`, {
+      const r = await fetch(`${API}/repos/${REPO}/contents/${profilePath}`, {
         method: 'PUT',
         headers: { Accept: 'application/vnd.github.v3+json', Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
