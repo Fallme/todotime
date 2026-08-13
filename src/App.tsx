@@ -45,6 +45,7 @@ function clampInteger(value: unknown, min: number, max: number, fallback: number
 function normalizeSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
+    githubRepo: DEFAULT_SETTINGS.githubRepo,
     workMinutes: clampInteger(settings.workMinutes, 1, 90, DEFAULT_SETTINGS.workMinutes),
     shortBreakMinutes: clampInteger(settings.shortBreakMinutes, 1, 30, DEFAULT_SETTINGS.shortBreakMinutes),
     longBreakMinutes: clampInteger(settings.longBreakMinutes, 1, 60, DEFAULT_SETTINGS.longBreakMinutes),
