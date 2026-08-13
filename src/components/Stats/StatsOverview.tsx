@@ -1,12 +1,12 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Doughnut, Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
+import { Bar, Chart, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
 type Period = 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
@@ -22,6 +22,8 @@ interface StatsOverviewProps {
   todayPomodoros: PomodoroRecord[];
   categories: CategoryItem[];
   todos: Todo[];
+  runningMinutes?: number;
+  runningCategory?: string;
   /** Trigger a full sync refresh from git */
   onRefresh?: () => Promise<void>;
 }
@@ -44,6 +46,8 @@ function computePeriodData(
   today: string,
   offsetDays: number = 0,
   todos: Todo[] = [],
+  runningMinutes: number = 0,
+  runningCategory: string = '其他',
 ): PeriodResult {
   const now = new Date();
   const days: string[] = [];
@@ -67,7 +71,8 @@ function computePeriodData(
       const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
       poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === date && !existing.has(p.id || `${p.start}-${p.end}`))];
     }
-    const mins = poms.reduce((s, p) => s + p.duration, 0);
+    const liveMinutes = date === today ? runningMinutes : 0;
+    const mins = poms.reduce((s, p) => s + p.duration, 0) + liveMinutes;
     const tomatoCount = poms.filter(isPomodoroRecord).length;
     totalPomodoros += tomatoCount;
     totalMinutes += mins;
@@ -79,6 +84,9 @@ function computePeriodData(
         categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + 1;
       }
     });
+    if (liveMinutes > 0) {
+      categoryMinutes[runningCategory] = (categoryMinutes[runningCategory] || 0) + liveMinutes;
+    }
     doneToday.forEach(t => {
       categoryTasks[t.category] = (categoryTasks[t.category] || 0) + 1;
     });
@@ -106,7 +114,7 @@ function diffText(current: number, previous: number): { text: string; cls: strin
   return { text: '持平', cls: 'same', icon: <Minus size={12} /> };
 }
 
-export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, onRefresh }: StatsOverviewProps) {
+export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
   const [period, setPeriod] = useState<Period>('week');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
@@ -118,14 +126,14 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
     poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
-    const mins = poms.reduce((s, p) => s + p.duration, 0);
+    const mins = poms.reduce((s, p) => s + p.duration, 0) + runningMinutes;
     const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
     return { pomodoros: poms.filter(isPomodoroRecord).length, minutes: mins, tasksDone };
-  }, [dayDataMap, todayPomodoros, today, todos]);
+  }, [dayDataMap, todayPomodoros, today, todos, runningMinutes]);
 
   // Current period data
-  const weekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 0, todos), [dayDataMap, todayPomodoros, today, todos]);
-  const monthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 0, todos), [dayDataMap, todayPomodoros, today, todos]);
+  const weekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
+  const monthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
 
   // Previous period data (for comparison)
   const prevWeekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 7, todos), [dayDataMap, todayPomodoros, today, todos]);
@@ -178,24 +186,27 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
   const dateRange = `${activeData.daily[0]?.date.slice(5)} ~ ${activeData.daily[activeData.daily.length - 1]?.date.slice(5)}`;
   const activeDays = activeData.daily.filter(d => d.minutes > 0 || d.tasksDone > 0).length;
 
-  // One dual-axis trend chart keeps duration, tomato count and completed tasks comparable.
+  // Duration is the background bar; tomato and task counts remain readable as two lines.
   const trendData = {
     labels: activeData.daily.map(d => d.date.slice(5)),
     datasets: [
       {
+        type: 'bar' as const,
         label: '专注时长（分钟）', data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
-        borderColor: '#6c5ce7', backgroundColor: '#6c5ce733', pointBackgroundColor: '#6c5ce7',
-        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2.5, tension: 0.32,
+        borderColor: '#6c5ce799', backgroundColor: '#6c5ce755', borderWidth: 1,
+        borderRadius: 5, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
+        type: 'line' as const,
         label: '番茄数', data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
         borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', pointBackgroundColor: '#FF6B6B',
-        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2, tension: 0.32,
+        pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, tension: 0.3, order: 1,
       },
       {
+        type: 'line' as const,
         label: '完成任务', data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
         borderColor: '#27ae60', backgroundColor: '#27ae6033', pointBackgroundColor: '#27ae60',
-        pointRadius: isCompact ? 1.5 : 3, pointHoverRadius: 5, borderWidth: 2, tension: 0.32,
+        pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, borderDash: [5, 4], tension: 0.3, order: 2,
       },
     ],
   };
@@ -206,7 +217,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     plugins: {
       legend: {
         display: true, position: 'top' as const,
-        labels: { boxWidth: 10, boxHeight: 10, usePointStyle: true, pointStyle: 'circle', padding: 12, font: { size: 11 } },
+        labels: { boxWidth: 13, boxHeight: 8, padding: 12, font: { size: 11 } },
       },
       tooltip: {
         callbacks: {
@@ -304,7 +315,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
           <h4 className="chart-sub-title">{period === 'week' ? '近七天' : '近一个月'} · 综合走势</h4>
           <span className="stats-period-range">{dateRange}</span>
         </div>
-        <div className="chart-wrapper-lg trend-chart"><Line data={trendData} options={trendOptions} /></div>
+        <div className="chart-wrapper-lg trend-chart"><Chart type="bar" data={trendData} options={trendOptions} /></div>
       </div>
 
       {/* Pie chart */}

@@ -39,4 +39,9 @@ test('local and remote focus records are merged without either side losing data'
   const merged = mergeDayDataMaps(new Map([['2026-08-13', day([local])]]), new Map([['2026-08-13', day([remote])]]));
   assert.equal(merged.get('2026-08-13')?.totalFocusMinutes, 30);
   assert.equal(merged.get('2026-08-13')?.totalPomodoros, 1);
+
+  const updatedCheckpoint = { ...local, duration: 2, end: 'updated' };
+  const checkpointMerge = mergePomodoroRecords([updatedCheckpoint], [local]);
+  assert.equal(checkpointMerge.length, 1);
+  assert.equal(checkpointMerge[0]?.duration, 2);
 });

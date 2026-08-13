@@ -6,6 +6,7 @@ import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINU
 import { initAudio, playStart, playEnterBreak, playCycleComplete } from '../utils/sound';
 
 export interface PendingAssignment {
+  id: string;
   start: string;
   end: string;
   date: string;
@@ -55,7 +56,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const today = formatDate(new Date());
       if (storedDate === today) {
         const stored = readProfileStorage('todotime_today_pomodoros', profileId);
-        if (stored) return JSON.parse(stored) as PomodoroRecord[];
+        if (stored) {
+          return (JSON.parse(stored) as PomodoroRecord[]).map(record => record.completed ? record : ({
+            ...record,
+            completed: true,
+            countsAsPomodoro: countsAsPomodoro(record.duration),
+          }));
+        }
       }
     } catch { /* ignore */ }
     return [];
@@ -84,6 +91,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const soundEnabledRef = useRef(soundEnabled);
   const isLongBreakRef = useRef(false);
   const profileIdRef = useRef(profileId);
+  const lastCheckpointMinuteRef = useRef(0);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
 
@@ -112,7 +120,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   // Record a pomodoro
   const recordPomodoro = useCallback((record: PomodoroRecord) => {
     const normalized = { ...record, id: record.id || generateId(), date: record.date || formatDate(new Date()) };
-    setTodayPomodoros(prev => [...prev, normalized]);
+    setTodayPomodoros(prev => {
+      const index = prev.findIndex(item => item.id === normalized.id);
+      if (index < 0) return [...prev, normalized];
+      const next = [...prev];
+      next[index] = normalized;
+      return next;
+    });
     // Use direct callback if available, fallback to ref
     if (onRecorded) {
       onRecorded(normalized);
@@ -219,7 +233,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const elapsed = completedMinutes(elapsedSeconds);
     const startTime = startTimeRef.current || new Date().toISOString();
     const endTime = new Date().toISOString();
+    const recordId = `focus-${startTime}`;
     startTimeRef.current = '';
+    lastCheckpointMinuteRef.current = 0;
 
     if (!shouldRecordFocus(elapsedSeconds)) {
       setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
@@ -227,15 +243,20 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       return;
     }
 
-    const assignment = { start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: Math.max(1, elapsed) };
+    const assignment = { id: recordId, start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: Math.max(1, elapsed) };
     const task = currentTaskRef.current;
     if (task?.id) {
       recordPomodoro({
-        ...assignment,
+        ...assignment, id: recordId,
         taskId: task.id, taskTitle: task.title, category: task.category,
         countsAsPomodoro: countsAsPomodoro(assignment.duration), completed: true, createdAt: endTime,
       });
     } else {
+      recordPomodoro({
+        ...assignment,
+        taskId: null, taskTitle: '未分配', category: '其他',
+        countsAsPomodoro: countsAsPomodoro(assignment.duration), completed: true, createdAt: endTime,
+      });
       setPendingAssignments(prev => [...prev, assignment]);
     }
 
@@ -262,12 +283,32 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const remaining = Math.max(0, Math.ceil(((deadlineRef.current ?? Date.now()) - Date.now()) / 1000));
       timeLeftRef.current = remaining;
       workSecondsRef.current = totalTimeRef.current - remaining;
-      setRunningMinutes(Math.floor(workSecondsRef.current / 60));
+      const completedMinute = Math.floor(workSecondsRef.current / 60);
+      setRunningMinutes(completedMinute);
+      if (completedMinute >= 1 && completedMinute > lastCheckpointMinuteRef.current) {
+        lastCheckpointMinuteRef.current = completedMinute;
+        const checkpointStart = startTimeRef.current || new Date().toISOString();
+        startTimeRef.current = checkpointStart;
+        const task = currentTaskRef.current;
+        recordPomodoro({
+          id: `focus-${checkpointStart}`,
+          start: checkpointStart,
+          end: new Date().toISOString(),
+          date: formatDate(new Date(checkpointStart)),
+          duration: completedMinute,
+          taskId: task?.id ?? null,
+          taskTitle: task?.title || '未分配',
+          category: task?.category || '其他',
+          countsAsPomodoro: false,
+          completed: false,
+          createdAt: checkpointStart,
+        });
+      }
       setTimeLeft(remaining);
       if (remaining === 0) completeOne();
     }, 250);
     return clearTimer;
-  }, [isRunning, mode, clearTimer, completeOne]);
+  }, [isRunning, mode, clearTimer, completeOne, recordPomodoro]);
 
   useEffect(() => {
     if (mode !== 'work') {
@@ -291,7 +332,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     pending.forEach((pa, i) => {
       const a = results[i] || results[results.length - 1];
       recordPomodoro({
-        start: pa.start, end: pa.end, date: pa.date, duration: pa.duration,
+        id: pa.id, start: pa.start, end: pa.end, date: pa.date, duration: pa.duration,
         taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他',
         countsAsPomodoro: countsAsPomodoro(pa.duration), completed: true, createdAt: pa.end,
       });
@@ -319,6 +360,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     isLongBreakRef.current = false;
     setPendingAssignments([]);
     setRunningMinutes(0);
+    lastCheckpointMinuteRef.current = 0;
   }, [clearTimer]);
 
   // End now: settle completed pomodoros, update cycle
@@ -328,7 +370,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const elapsed = completedMinutes(elapsedSeconds);
     const startTime = startTimeRef.current || new Date().toISOString();
     const endTime = new Date().toISOString();
+    const recordId = `focus-${startTime}`;
     startTimeRef.current = '';
+    lastCheckpointMinuteRef.current = 0;
 
     setIsRunning(false);
     setRunningMinutes(0);
@@ -347,7 +391,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         const task = currentTaskRef.current;
         if (task?.id) {
           recordPomodoro({
-            start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: elapsed,
+            id: recordId, start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: elapsed,
             taskId: task.id, taskTitle: task.title, category: task.category,
             countsAsPomodoro: isPomodoro, completed: true, createdAt: endTime,
           });
@@ -357,8 +401,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           if (prev.length > 0) setGroupPhase('settle');
           return prev;
         } else {
+          recordPomodoro({
+            id: recordId, start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: elapsed,
+            taskId: null, taskTitle: '未分配', category: '其他',
+            countsAsPomodoro: isPomodoro, completed: true, createdAt: endTime,
+          });
           setGroupPhase('settle');
-          return [...prev, { start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: elapsed }];
+          return [...prev, { id: recordId, start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: elapsed }];
         }
       } else {
         setCycleCount(0);
@@ -393,6 +442,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setTotalTimeState(workMinutesRef.current * 60);
     startTimeRef.current = '';
     setRunningMinutes(0);
+    lastCheckpointMinuteRef.current = 0;
     setIsRunning(true);
     playSound(playStart);
   }, [clearTimer, playSound]);
@@ -418,6 +468,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       } else {
         startTimeRef.current = '';
         setRunningMinutes(0);
+        lastCheckpointMinuteRef.current = 0;
         showToast(`已跳过本次，未满 ${MIN_FOCUS_RECORD_MINUTES} 分钟不记录时长`);
         startBreak(advanceCycle());
       }

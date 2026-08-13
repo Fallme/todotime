@@ -26,8 +26,6 @@ interface UseGithubSyncReturn {
   flush: () => Promise<void>;
 }
 
-const CONFIG_DEBOUNCE_MS = 2500;
-const DAY_DEBOUNCE_MS = 1500;
 const HISTORY_CACHE_KEY = 'todotime_history_cache';
 
 function readHistoryCache(profileId: string): Map<string, DayData> {
@@ -236,7 +234,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         pendingDaysRef.current.set(date, payload);
         const existingTimer = dayTimersRef.current.get(date);
         if (existingTimer) clearTimeout(existingTimer);
-        dayTimersRef.current.set(date, setTimeout(() => { void flushDay(date); }, DAY_DEBOUNCE_MS));
+        void flushDay(date);
       }
       return next;
     });
@@ -250,7 +248,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
     lastConfigHashRef.current = hash;
     pendingConfigRef.current = payload;
     if (configTimerRef.current) clearTimeout(configTimerRef.current);
-    configTimerRef.current = setTimeout(() => { void flushConfig(); }, CONFIG_DEBOUNCE_MS);
+    void flushConfig();
   }, [repo, syncCode, flushConfig]);
 
   const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<SyncResult | null> => {

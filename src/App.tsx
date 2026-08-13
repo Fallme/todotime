@@ -92,10 +92,16 @@ export default function App() {
   const initialTodosRef = useRef(todos);
   const lastDailyRefreshRef = useRef(0);
   const lastConfigCheckRef = useRef(0);
+  const latestSettingsRef = useRef(settings);
+  const latestTodosRef = useRef(todos);
+  const syncTickRunningRef = useRef(false);
+
+  useEffect(() => { latestSettingsRef.current = settings; }, [settings]);
+  useEffect(() => { latestTodosRef.current = todos; }, [todos]);
 
   // Focus duration is always saved after one minute; task tomato counts start at 15 minutes.
   const handlePomodoroRecorded = useCallback((record: PomodoroRecord) => {
-    if (record.taskId && isPomodoroRecord(record)) {
+    if (record.completed && record.taskId && isPomodoroRecord(record)) {
       // Use functional updates to avoid stale closure issues
       updateTodoPomodoros(record.taskId);
       updateSubtaskPomodoros(record.taskId);
@@ -167,15 +173,17 @@ export default function App() {
   useEffect(() => {
     if (!settings.githubRepo || !activeSyncCode) return;
     const interval = setInterval(() => {
-      if (syncing) return;
+      if (syncTickRunningRef.current) return;
+      syncTickRunningRef.current = true;
       lastConfigCheckRef.current = Date.now();
       lastDailyRefreshRef.current = Date.now();
       void loadAll()
-        .then(() => syncBidirectional(settings, todos))
-        .then(applyRemoteConfig);
+        .then(() => syncBidirectional(latestSettingsRef.current, latestTodosRef.current))
+        .then(applyRemoteConfig)
+        .finally(() => { syncTickRunningRef.current = false; });
     }, 60_000);
     return () => clearInterval(interval);
-  }, [activeSyncCode, settings.githubRepo, settings, todos, loadAll, syncBidirectional, syncing, applyRemoteConfig]);
+  }, [activeSyncCode, settings.githubRepo, loadAll, syncBidirectional, applyRemoteConfig]);
 
   // Best-effort flush before a refresh, deployment reload or background suspension.
   useEffect(() => {
@@ -209,6 +217,12 @@ export default function App() {
     if (!configLoadedRef.current) return;
     syncConfig(settings, todos);
   }, [settings, todos, syncConfig]);
+
+  // Every completed running minute immediately refreshes charts and flushes queued writes.
+  useEffect(() => {
+    if (timer.mode !== 'work' || !timer.isRunning || timer.runningMinutes < 1) return;
+    void flush();
+  }, [timer.mode, timer.isRunning, timer.runningMinutes, flush]);
 
   const handleSaveSettings = (s: AppSettings) => {
     const normalized = normalizeSettings(s);
@@ -386,6 +400,8 @@ export default function App() {
         {tab === 'stats' && (
           <div className="stats-page">
             <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories} todos={todos}
+              runningMinutes={timer.mode === 'work' ? timer.runningMinutes : 0}
+              runningCategory={currentTask?.category ?? '其他'}
               onRefresh={async () => {
                 // First refresh dayDataMap from git (daily pomodoro data)
                 await loadAll();
