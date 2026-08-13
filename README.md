@@ -1,4 +1,36 @@
-# React + TypeScript + Vite
+# TodoTime
+
+个人番茄钟与 Todo 管理工具，采用本地优先的数据模型：浏览器本地存储负责离线使用，独立的 GitHub 私有仓库负责多端 JSON 同步和版本备份。
+
+## 仓库分工
+
+- `Fallme/todotime`：程序代码，不存放个人任务数据。
+- `Fallme/todotime_data`：必须设为 Private，仅存放 `config.json` 和 `data/YYYY/MM/YYYY-MM-DD.json`。
+
+前端只保存个人同步密码。GitHub Token 仅由 Vercel 服务端函数读取，不能使用 `VITE_` 前缀。
+
+## 部署变量
+
+在 Vercel 项目中配置：
+
+```text
+GITHUB_TOKEN=<仅有 todotime_data Contents 读写权限的 fine-grained token>
+GITHUB_DATA_REPO=Fallme/todotime_data
+SYNC_SECRET=<各设备输入的同一个长密码>
+```
+
+可选的 `SYNC_ALLOWED_ORIGIN` 只在前端和 API 分属不同域名时使用。同域部署不需要配置。
+
+## 本地开发
+
+```bash
+npm install
+npm run dev
+```
+
+未配置同步密码时，应用保持纯本地模式，不会请求 GitHub。
+
+## 原始 Vite 说明
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 

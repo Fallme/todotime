@@ -14,10 +14,12 @@ interface UseTodosReturn {
   addSubtask: (todoId: string, title: string) => void;
   toggleSubtask: (todoId: string, subId: string) => void;
   abandonSubtask: (todoId: string, subId: string) => void;
+  restoreSubtask: (todoId: string, subId: string) => void;
   deleteSubtask: (todoId: string, subId: string) => void;
   changeCategory: (id: string, category: Category) => void;
   renameTodosCategory: (oldName: string, newName: string) => void;
   mergeTodos: (gitTodos: Todo[]) => void;
+  replaceTodos: (todos: Todo[]) => void;
   selectedTodoId: string | null;
   selectTodo: (id: string | null) => void;
 }
@@ -44,6 +46,7 @@ export function useTodos(): UseTodosReturn {
           completedAt: (t.completedAt as string) || '',
           abandonedAt: (t.abandonedAt as string) || '',
           subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+          deletedAt: (t.deletedAt as string) || '',
         }));
       }
       return [];
@@ -60,7 +63,7 @@ export function useTodos(): UseTodosReturn {
       id: generateId(), title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
       done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
-      subtasks: [],
+      subtasks: [], deletedAt: '',
     }, ...prev]);
   }, []);
 
@@ -85,7 +88,8 @@ export function useTodos(): UseTodosReturn {
   }, []);
 
   const deleteTodo = useCallback((id: string) => {
-    setTodos(prev => prev.filter(t => t.id !== id));
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id ? { ...t, deletedAt: ts, updatedAt: ts } : t));
     setSelectedTodoId(prev => prev === id ? null : prev);
   }, []);
 
@@ -126,11 +130,19 @@ export function useTodos(): UseTodosReturn {
     } : t));
   }, []);
 
+  const restoreSubtask = useCallback((todoId: string, subId: string) => {
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === todoId ? {
+      ...t, updatedAt: ts,
+      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, done: false, abandoned: false, updatedAt: ts } : s),
+    } : t));
+  }, []);
+
   const deleteSubtask = useCallback((todoId: string, subId: string) => {
     const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
       ...t, updatedAt: ts,
-      subtasks: t.subtasks.filter(s => s.id !== subId),
+      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, deletedAt: ts, updatedAt: ts } : s),
     } : t));
   }, []);
 
@@ -190,9 +202,14 @@ export function useTodos(): UseTodosReturn {
     });
   }, []);
 
+  const replaceTodos = useCallback((nextTodos: Todo[]) => {
+    setTodos(nextTodos);
+    setSelectedTodoId(null);
+  }, []);
+
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, updateSubtaskPomodoros, addSubtask, toggleSubtask, abandonSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
-    selectedTodoId, selectTodo,
+    updateTodoPomodoros, updateSubtaskPomodoros, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
+    selectedTodoId, selectTodo, replaceTodos,
   };
 }

@@ -3,7 +3,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type Category, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
-import { formatDuration } from '../../utils/dateUtils';
+import { formatDate, formatDuration } from '../../utils/dateUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
@@ -92,9 +92,9 @@ function computePeriodData(
     const dayData = dayDataMap.get(date);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     // Count completed tasks from local todos by completedAt date (ISO format: 2026-06-03T...)
-    const doneToday = todos.filter(t => t.done && t.completedAt.startsWith(date));
+    const doneToday = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(date));
     const tasksDone = doneToday.length;
-    const totalTasksDay = todos.filter(t => t.createdAt.startsWith(date)).length || tasksDone;
+    const totalTasksDay = todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length || tasksDone;
     if (date === today) {
       const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
       poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
@@ -146,7 +146,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
   const [refreshing, setRefreshing] = useState(false);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = formatDate(new Date());
 
   const todayData = useMemo(() => {
     const dayData = dayDataMap.get(today);
@@ -154,7 +154,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     const existing = new Set(poms.map(p => `${p.start}-${p.end}`));
     poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(`${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0);
-    const tasksDone = todos.filter(t => t.done && t.completedAt.startsWith(today)).length;
+    const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
     return { pomodoros: poms.length, minutes: mins, tasksDone };
   }, [dayDataMap, todayPomodoros, today, todos]);
 
@@ -398,7 +398,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
         // Completed tasks in period
         const periodStart = rd.daily[0]?.date ?? '';
         const periodEnd = rd.daily[rd.daily.length - 1]?.date ?? '';
-        const periodTasks = todos.filter(t => t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
+        const periodTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
 
         // Summary encouragement text
         const getSummaryText = () => {

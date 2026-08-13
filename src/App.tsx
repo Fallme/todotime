@@ -23,10 +23,33 @@ function loadSettings(): AppSettings {
     const stored = localStorage.getItem('todotime_settings');
     if (stored) {
       const parsed = JSON.parse(stored);
-      return { ...DEFAULT_SETTINGS, ...parsed, categories: [...DEFAULT_SETTINGS.categories] };
+      // Migrate the previous client-side GitHub token field without retaining it.
+      delete parsed.githubToken;
+      return normalizeSettings({
+        ...DEFAULT_SETTINGS,
+        ...parsed,
+        categories: Array.isArray(parsed.categories) && parsed.categories.length > 0
+          ? parsed.categories
+          : [...DEFAULT_SETTINGS.categories],
+      });
     }
     return DEFAULT_SETTINGS;
   } catch { return DEFAULT_SETTINGS; }
+}
+
+function clampInteger(value: unknown, min: number, max: number, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? Math.min(max, Math.max(min, Math.round(parsed))) : fallback;
+}
+
+function normalizeSettings(settings: AppSettings): AppSettings {
+  return {
+    ...settings,
+    workMinutes: clampInteger(settings.workMinutes, 1, 90, DEFAULT_SETTINGS.workMinutes),
+    shortBreakMinutes: clampInteger(settings.shortBreakMinutes, 1, 30, DEFAULT_SETTINGS.shortBreakMinutes),
+    longBreakMinutes: clampInteger(settings.longBreakMinutes, 1, 60, DEFAULT_SETTINGS.longBreakMinutes),
+    longBreakInterval: clampInteger(settings.longBreakInterval, 2, 10, DEFAULT_SETTINGS.longBreakInterval),
+  };
 }
 
 export default function App() {
@@ -46,94 +69,110 @@ export default function App() {
     return () => document.removeEventListener('click', unlock);
   }, []);
 
-  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional } = useGithubSync(settings.githubRepo, settings.githubToken);
+  const { dayDataMap, setDayDataMap, syncing, syncError, syncDayData, syncConfig, loadAll, syncBidirectional } = useGithubSync(settings.githubRepo, settings.syncSecret);
   const todosHook = useTodos();
-  const { todos, selectedTodoId } = todosHook;
-  const currentTask = todos.find(t => t.id === currentTaskId);
+  const {
+    todos, selectedTodoId, updateTodoPomodoros, updateSubtaskPomodoros,
+    mergeTodos, replaceTodos,
+  } = todosHook;
+  const currentTodo = todos.find(t => !t.deletedAt && t.id === currentTaskId);
+  const currentSubtask = todos.filter(todo => !todo.deletedAt).flatMap(todo => todo.subtasks.filter(subtask => !subtask.deletedAt).map(subtask => ({ ...subtask, category: todo.category })))
+    .find(subtask => subtask.id === currentTaskId);
+  const currentTask = currentTodo ?? currentSubtask;
   const configLoadedRef = useRef(false);
+  const initialLoadStartedRef = useRef(false);
+  const configWatchMountedRef = useRef(false);
+  const initialSettingsRef = useRef(settings);
+  const initialTodosRef = useRef(todos);
 
   // Callback for when a pomodoro is recorded - update task's completedPomodoros
   const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
     if (record.taskId) {
       // Use functional updates to avoid stale closure issues
-      todosHook.updateTodoPomodoros(record.taskId);
-      todosHook.updateSubtaskPomodoros(record.taskId);
+      updateTodoPomodoros(record.taskId);
+      updateSubtaskPomodoros(record.taskId);
     }
-  }, [todosHook]);
+  }, [updateTodoPomodoros, updateSubtaskPomodoros]);
 
   const timer = useTimer({ workMinutes: settings.workMinutes, shortBreakMinutes: settings.shortBreakMinutes, longBreakMinutes: settings.longBreakMinutes, longBreakInterval: settings.longBreakInterval }, settings.soundEnabled, handlePomodoroRecorded);
+  const setTimerTaskInfo = timer.setTaskInfo;
+
+  useEffect(() => {
+    if (currentTaskId && !currentTask) {
+      const id = setTimeout(() => {
+        setCurrentTaskId(null);
+        setTimerTaskInfo(null, '', '其他');
+      }, 0);
+      return () => clearTimeout(id);
+    }
+  }, [currentTaskId, currentTask, setTimerTaskInfo]);
 
   // Backup: also set via ref in case direct callback misses
+  const setTimerOnComplete = timer.setOnComplete;
   useEffect(() => {
-    timer.setOnComplete(handlePomodoroRecorded);
-  }, [timer.setOnComplete, handlePomodoroRecorded]);
+    setTimerOnComplete(handlePomodoroRecorded);
+  }, [setTimerOnComplete, handlePomodoroRecorded]);
 
-  // --- Merge git data into local state ---
-  const mergeGitData = useCallback(({ settings: gitSettings, todos: gitTodos }: { settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }) => {
-    if (gitSettings) {
-      setSettings(prev => ({
-        ...gitSettings,
-        githubToken: prev.githubToken,
-        categories: gitSettings.categories.length > 0 ? gitSettings.categories : prev.categories,
-      }));
-    }
-    if (gitTodos && gitTodos.length > 0) {
-      todosHook.mergeTodos(gitTodos);
-    }
-  }, [todosHook]);
-
-  // --- App open: load all data from git and merge ---
+  // --- App open: load chart data, then resolve config by sync timestamp ---
   useEffect(() => {
+    if (initialLoadStartedRef.current) return;
+    initialLoadStartedRef.current = true;
     let cancelled = false;
-    loadAll().then((result) => {
+    loadAll().then(() => {
       if (cancelled) return;
-      mergeGitData(result);
       configLoadedRef.current = true;
-      // Also bidirectional sync on open to pull latest config
-      syncBidirectional(settings, todos).then((syncResult) => {
+      syncBidirectional(initialSettingsRef.current, initialTodosRef.current).then((syncResult) => {
         if (syncResult) {
-          setSettings(prev => ({ ...syncResult.settings, githubToken: prev.githubToken }));
-          todosHook.mergeTodos(syncResult.todos);
+          setSettings(prev => ({ ...syncResult.settings, syncSecret: prev.syncSecret }));
+          mergeTodos(syncResult.todos);
         }
       });
     });
     return () => { cancelled = true; };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [loadAll, syncBidirectional, mergeTodos]);
 
   // --- Load data when GitHub config is set (new device setup) ---
   useEffect(() => {
-    if (!settings.githubToken || !settings.githubRepo) return;
-    loadAll().then((result) => {
-      mergeGitData(result);
+    if (!configWatchMountedRef.current) {
+      configWatchMountedRef.current = true;
+      return;
+    }
+    if (!settings.githubRepo || !settings.syncSecret) return;
+    let cancelled = false;
+    loadAll().then(() => {
+      if (cancelled) return;
       syncBidirectional(settings, todos).then((syncResult) => {
+        if (cancelled) return;
         if (syncResult) {
-          setSettings(prev => ({ ...syncResult.settings, githubToken: prev.githubToken }));
-          todosHook.mergeTodos(syncResult.todos);
+          setSettings(prev => ({ ...syncResult.settings, syncSecret: prev.syncSecret }));
+          mergeTodos(syncResult.todos);
         }
       });
     });
-  }, [settings.githubToken, settings.githubRepo]);
+    return () => { cancelled = true; };
+  // Repo/token changes intentionally trigger loading; todo edits are handled by syncConfig.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings.syncSecret, settings.githubRepo, loadAll, syncBidirectional, mergeTodos]);
   useEffect(() => {
-    if (!settings.githubToken || !settings.githubRepo) return;
+    if (!settings.githubRepo || !settings.syncSecret) return;
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         loadAll();
         syncBidirectional(settings, todos).then((result) => {
           if (result) {
-            setSettings(prev => ({ ...result.settings, githubToken: prev.githubToken }));
-            todosHook.mergeTodos(result.todos);
+            setSettings(prev => ({ ...result.settings, syncSecret: prev.syncSecret }));
+            mergeTodos(result.todos);
           }
         });
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
     return () => document.removeEventListener('visibilitychange', handleVisibility);
-  }, [settings.githubToken, settings.githubRepo, loadAll, syncBidirectional, settings, todos, todosHook]);
+  }, [settings.syncSecret, settings.githubRepo, loadAll, syncBidirectional, settings, todos, mergeTodos]);
 
   // --- Periodic sync: bidirectional every 30s for cross-device consistency ---
   useEffect(() => {
-    if (!settings.githubToken || !settings.githubRepo) return;
+    if (!settings.githubRepo || !settings.syncSecret) return;
     const interval = setInterval(() => {
       if (syncing) return; // skip if mid-sync to avoid race
       syncBidirectional(settings, todos).then((result) => {
@@ -141,23 +180,23 @@ export default function App() {
           // Git was newer → apply merged settings + todos
           setSettings(prev => ({
             ...result.settings,
-            githubToken: prev.githubToken,
+            syncSecret: prev.syncSecret,
           }));
-          todosHook.mergeTodos(result.todos);
+          mergeTodos(result.todos);
         }
       });
     }, 30000);
     return () => clearInterval(interval);
-  }, [settings.githubToken, settings.githubRepo, settings, todos, syncBidirectional, syncing, todosHook]);
+  }, [settings.syncSecret, settings.githubRepo, settings, todos, syncBidirectional, syncing, mergeTodos]);
 
   // --- Periodic refresh: reload daily pomodoro data every 3 minutes for charts ---
   useEffect(() => {
-    if (!settings.githubToken || !settings.githubRepo) return;
+    if (!settings.githubRepo || !settings.syncSecret) return;
     const interval = setInterval(() => {
       loadAll(); // refresh dayDataMap from git
     }, 180000);
     return () => clearInterval(interval);
-  }, [settings.githubToken, settings.githubRepo, loadAll]);
+  }, [settings.syncSecret, settings.githubRepo, loadAll]);
 
   // --- Sync pomodoro data: on every new pomodoro ---
   useEffect(() => {
@@ -172,7 +211,7 @@ export default function App() {
     syncConfig(settings, todos);
   }, [settings, todos, syncConfig]);
 
-  const handleSaveSettings = (s: AppSettings) => setSettings(s);
+  const handleSaveSettings = (s: AppSettings) => setSettings(normalizeSettings(s));
 
   const handleSelectTodo = (id: string | null) => {
     todosHook.selectTodo(id);
@@ -200,7 +239,7 @@ export default function App() {
   };
 
   const handleQuickStartSubtask = (subtask: { id: string; title: string; category: Category }) => {
-    setCurrentTaskId(null);
+    setCurrentTaskId(subtask.id);
     timer.setTaskInfo(subtask.id, subtask.title, subtask.category);
     if (!timer.isRunning) {
       timer.setTotalTime(settings.workMinutes * 60);
@@ -213,7 +252,9 @@ export default function App() {
   };
 
   const handleExport = () => {
-    const data = { settings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
+    const safeSettings = { ...settings } as Partial<AppSettings>;
+    delete safeSettings.syncSecret;
+    const data = { settings: safeSettings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -228,7 +269,25 @@ export default function App() {
 
   const handleImport = (file: File) => {
     const reader = new FileReader();
-    reader.onload = (e) => { try { const d = JSON.parse(e.target?.result as string); if (d.settings) setSettings({ ...DEFAULT_SETTINGS, ...d.settings }); } catch { alert('导入失败'); } };
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string) as { settings?: Partial<AppSettings>; todos?: Todo[] };
+        if (data.settings) {
+          const importedSettings = data.settings;
+          setSettings(prev => normalizeSettings({
+            ...DEFAULT_SETTINGS,
+            ...importedSettings,
+            syncSecret: importedSettings.syncSecret ?? prev.syncSecret,
+            categories: Array.isArray(importedSettings.categories) && importedSettings.categories.length > 0
+              ? importedSettings.categories
+              : prev.categories,
+          }));
+        }
+        if (Array.isArray(data.todos)) replaceTodos(data.todos);
+      } catch {
+        alert('导入失败：文件格式无效');
+      }
+    };
     reader.readAsText(file);
   };
 
@@ -242,7 +301,10 @@ export default function App() {
     }
   };
   const handleDeleteCategory = (name: string) => {
+    const replacement = settings.categories.find(category => category.name !== name);
+    if (!replacement) return;
     setSettings(s => ({ ...s, categories: s.categories.filter(c => c.name !== name) }));
+    todosHook.renameTodosCategory(name, replacement.name);
   };
   const handleRenameCategory = (oldName: string, newName: string, newColor: string) => {
     if (oldName !== newName && settings.categories.some(c => c.name === newName)) return;
@@ -293,7 +355,7 @@ export default function App() {
               onSelect={handleSelectTodo} onQuickStart={handleQuickStart}
               onQuickStartSubtask={handleQuickStartSubtask}
               onAddSubtask={todosHook.addSubtask} onToggleSubtask={todosHook.toggleSubtask}
-              onAbandonSubtask={todosHook.abandonSubtask} onDeleteSubtask={todosHook.deleteSubtask}
+              onAbandonSubtask={todosHook.abandonSubtask} onRestoreSubtask={todosHook.restoreSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
@@ -309,8 +371,8 @@ export default function App() {
                 // Then bidirectional sync for config (settings + todos)
                 const result = await syncBidirectional(settings, todos);
                 if (result) {
-                  setSettings(prev => ({ ...result.settings, githubToken: prev.githubToken }));
-                  todosHook.mergeTodos(result.todos);
+                  setSettings(prev => ({ ...result.settings, syncSecret: prev.syncSecret }));
+                  mergeTodos(result.todos);
                 }
               }}
               onAddTestData={(testMap) => {
@@ -352,7 +414,7 @@ export default function App() {
                 onClick={() => { setCurrentTaskId(null); timer.setTaskInfo(null, '', '其他'); setShowTaskPicker(false); }}>
                 无任务（其他）
               </button>
-              {todos.filter(t => !t.done && !t.abandoned).map(t => (
+              {todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => (
                 <button key={t.id} className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
                   onClick={() => { setCurrentTaskId(t.id); timer.setTaskInfo(t.id, t.title, t.category); setShowTaskPicker(false); }}>
                   {t.title}（{t.category}）

@@ -29,11 +29,12 @@ interface TodoItemProps {
   onAddSubtask: (title: string) => void;
   onToggleSubtask: (subId: string) => void;
   onAbandonSubtask: (subId: string) => void;
+  onRestoreSubtask: (subId: string) => void;
   onDeleteSubtask: (subId: string) => void;
   onChangeCategory: (category: Category) => void;
 }
 
-export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -119,14 +120,14 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       )}
 
       {/* Subtasks inline */}
-      {todo.subtasks.length > 0 && (
+      {todo.subtasks.some(sub => !sub.deletedAt) && (
         <div className="todo-card-subs">
-          {todo.subtasks.map(sub => (
+          {todo.subtasks.filter(sub => !sub.deletedAt).map(sub => (
             <div key={sub.id} className={`sub-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
               {sub.done ? (
                 <button className="sub-dot done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><Check size={10} /></button>
               ) : sub.abandoned ? (
-                <button className="sub-dot restore" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><RotateCcw size={9} /></button>
+                <button className="sub-dot restore" onClick={e => { e.stopPropagation(); onRestoreSubtask(sub.id); }} title="恢复子任务"><RotateCcw size={9} /></button>
               ) : (
                 <>
                   <button className="sub-dot check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>✓</button>

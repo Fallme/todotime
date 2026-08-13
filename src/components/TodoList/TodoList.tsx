@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Todo, Priority, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
+import { formatDate } from '../../utils/dateUtils';
 import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
 import { ListTodo, ChevronDown, ChevronRight, Archive } from 'lucide-react';
@@ -23,6 +24,7 @@ interface TodoListProps {
   onAddSubtask: (todoId: string, title: string) => void;
   onToggleSubtask: (todoId: string, subId: string) => void;
   onAbandonSubtask: (todoId: string, subId: string) => void;
+  onRestoreSubtask: (todoId: string, subId: string) => void;
   onDeleteSubtask: (todoId: string, subId: string) => void;
   onChangeCategory: (todoId: string, category: Category) => void;
   onAddCategory: (name: string, color: string) => void;
@@ -35,7 +37,7 @@ const STATUS_TABS: { id: StatusTab; label: string }[] = [
   { id: 'done', label: '已完成' }, { id: 'abandoned', label: '已放弃' },
 ];
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
   const [expandedArchives, setExpandedArchives] = useState<Set<string>>(new Set());
@@ -50,34 +52,34 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
 
   // Separate active tasks from old completed/abandoned tasks
 
-  let activeTasks: Todo[] = [];
+  let activeTasks: Todo[];
   let archivedTasks: Todo[] = [];
 
   if (statusTab === 'active') {
-    activeTasks = todos.filter(t => !t.done && !t.abandoned);
+    activeTasks = todos.filter(t => !t.deletedAt && !t.done && !t.abandoned);
   } else if (statusTab === 'done') {
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const done3dCutoff = threeDaysAgo.toISOString().slice(0, 10);
-    activeTasks = todos.filter(t => t.done && !t.abandoned && t.completedAt && t.completedAt >= done3dCutoff);
-    archivedTasks = todos.filter(t => t.done && !t.abandoned && t.completedAt && t.completedAt < done3dCutoff);
+    const done3dCutoff = formatDate(threeDaysAgo);
+    activeTasks = todos.filter(t => !t.deletedAt && t.done && !t.abandoned && t.completedAt && t.completedAt >= done3dCutoff);
+    archivedTasks = todos.filter(t => !t.deletedAt && t.done && !t.abandoned && t.completedAt && t.completedAt < done3dCutoff);
   } else if (statusTab === 'abandoned') {
-    activeTasks = todos.filter(t => t.abandoned);
+    activeTasks = todos.filter(t => !t.deletedAt && t.abandoned);
   } else {
     // 'all' tab
     const threeDaysAgo = new Date();
     threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const done3dCutoff = threeDaysAgo.toISOString().slice(0, 10);
-    activeTasks = todos.filter(t => {
+    const done3dCutoff = formatDate(threeDaysAgo);
+    activeTasks = todos.filter(t => !t.deletedAt && (() => {
       if (t.done && t.completedAt && t.completedAt < done3dCutoff) return false;
       return true;
-    });
-    archivedTasks = todos.filter(t => {
+    })());
+    archivedTasks = todos.filter(t => !t.deletedAt && (() => {
       if (!t.done && !t.abandoned) return false;
       if (t.done && t.completedAt && t.completedAt < done3dCutoff) return true;
       if (t.abandoned && t.abandonedAt && t.abandonedAt < done3dCutoff) return true;
       return false;
-    });
+    })());
   }
 
   if (filterCategory !== 'all') {
@@ -99,14 +101,14 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
     return order(a) - order(b);
   });
 
-  const usedCategories = [...new Set(todos.filter(t => !t.done && !t.abandoned).map(t => t.category))];
+  const usedCategories = [...new Set(todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => t.category))];
 
   return (
     <div className="todo-list-container">
       <div className="todo-list-header">
         <ListTodo size={20} /><span>任务清单</span>
         <div className="todo-header-stats">
-          <span className="todo-stat-done">{todos.filter(t => t.done).length}/{todos.filter(t => !t.abandoned).length}</span>
+          <span className="todo-stat-done">{todos.filter(t => !t.deletedAt && t.done).length}/{todos.filter(t => !t.deletedAt && !t.abandoned).length}</span>
           <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
         </div>
       </div>
@@ -142,7 +144,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                 onRestore={() => onRestore(todo.id)} onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
                 onQuickStart={() => onQuickStart(todo)} onQuickStartSubtask={onQuickStartSubtask}
                 onAddSubtask={(t) => onAddSubtask(todo.id, t)}
-                onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)}
+                onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)} onRestoreSubtask={(s) => onRestoreSubtask(todo.id, s)}
                 onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
               />
             ))}
@@ -167,7 +169,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                           onRestore={() => onRestore(todo.id)} onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
                           onQuickStart={() => onQuickStart(todo)} onQuickStartSubtask={onQuickStartSubtask}
                           onAddSubtask={(t) => onAddSubtask(todo.id, t)}
-                          onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)}
+                          onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)} onRestoreSubtask={(s) => onRestoreSubtask(todo.id, s)}
                           onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
                         />
                       ))}

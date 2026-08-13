@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import { Timer, Sun, Moon } from 'lucide-react';
 
 const QUOTES = [
@@ -27,7 +26,7 @@ interface HeaderProps {
 }
 
 export function Header({ darkMode, onToggleTheme, syncing, syncError }: HeaderProps) {
-  const quote = useMemo(() => QUOTES[Math.floor(Math.random() * QUOTES.length)], []);
+  const quote = QUOTES[0];
 
   return (
     <header className="header-wrapper">

@@ -63,20 +63,32 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const intervalRef = useRef<number | null>(null);
   const startTimeRef = useRef<string>('');
   const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const totalTimeRef = useRef(totalTime); totalTimeRef.current = totalTime;
-  const timeLeftRef = useRef(timeLeft); timeLeftRef.current = timeLeft;
-  const modeRef = useRef(mode); modeRef.current = mode;
+  const totalTimeRef = useRef(totalTime);
+  const timeLeftRef = useRef(timeLeft);
+  const modeRef = useRef(mode);
   const currentTaskRef = useRef<{ id: string | null; title: string; category: Category } | null>(null);
-  const cycleCountRef = useRef(cycleCount); cycleCountRef.current = cycleCount;
-  const groupPhaseRef = useRef(groupPhase); groupPhaseRef.current = groupPhase;
-  const pendingAssignRef = useRef(pendingAssignments); pendingAssignRef.current = pendingAssignments;
+  const cycleCountRef = useRef(cycleCount);
+  const groupPhaseRef = useRef(groupPhase);
+  const pendingAssignRef = useRef(pendingAssignments);
   const onCompleteRef = useRef<((r: PomodoroRecord) => void) | null>(null);
-  const workMinutesRef = useRef(timerSettings.workMinutes); workMinutesRef.current = timerSettings.workMinutes;
-  const shortBreakMinutesRef = useRef(timerSettings.shortBreakMinutes); shortBreakMinutesRef.current = timerSettings.shortBreakMinutes;
-  const longBreakMinutesRef = useRef(timerSettings.longBreakMinutes); longBreakMinutesRef.current = timerSettings.longBreakMinutes;
-  const cycleIntervalRef = useRef(timerSettings.longBreakInterval); cycleIntervalRef.current = timerSettings.longBreakInterval;
-  const soundEnabledRef = useRef(soundEnabled); soundEnabledRef.current = soundEnabled;
+  const workMinutesRef = useRef(timerSettings.workMinutes);
+  const shortBreakMinutesRef = useRef(timerSettings.shortBreakMinutes);
+  const longBreakMinutesRef = useRef(timerSettings.longBreakMinutes);
+  const cycleIntervalRef = useRef(timerSettings.longBreakInterval);
+  const soundEnabledRef = useRef(soundEnabled);
   const isLongBreakRef = useRef(false);
+
+  useEffect(() => { totalTimeRef.current = totalTime; }, [totalTime]);
+  useEffect(() => { timeLeftRef.current = timeLeft; }, [timeLeft]);
+  useEffect(() => { modeRef.current = mode; }, [mode]);
+  useEffect(() => { cycleCountRef.current = cycleCount; }, [cycleCount]);
+  useEffect(() => { groupPhaseRef.current = groupPhase; }, [groupPhase]);
+  useEffect(() => { pendingAssignRef.current = pendingAssignments; }, [pendingAssignments]);
+  useEffect(() => { workMinutesRef.current = timerSettings.workMinutes; }, [timerSettings.workMinutes]);
+  useEffect(() => { shortBreakMinutesRef.current = timerSettings.shortBreakMinutes; }, [timerSettings.shortBreakMinutes]);
+  useEffect(() => { longBreakMinutesRef.current = timerSettings.longBreakMinutes; }, [timerSettings.longBreakMinutes]);
+  useEffect(() => { cycleIntervalRef.current = timerSettings.longBreakInterval; }, [timerSettings.longBreakInterval]);
+  useEffect(() => { soundEnabledRef.current = soundEnabled; }, [soundEnabled]);
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
   const setTotalTime = useCallback((s: number) => { setTotalTimeState(s); setTimeLeft(s); }, []);
@@ -231,7 +243,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const workSecondsRef = useRef(0);
   useEffect(() => {
     if (!isRunning || mode !== 'work') {
-      if (mode !== 'work') setRunningMinutes(0);
       workSecondsRef.current = 0;
       return;
     }
@@ -247,6 +258,13 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }, 1000);
     return clearTimer;
   }, [isRunning, mode, clearTimer, completeOne]);
+
+  useEffect(() => {
+    if (mode !== 'work') {
+      const id = setTimeout(() => setRunningMinutes(0), 0);
+      return () => clearTimeout(id);
+    }
+  }, [mode]);
 
   // Title
   useEffect(() => {
@@ -367,30 +385,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const skip = useCallback(() => {
     clearTimer();
     if (modeRef.current === 'work') {
-      // Skip work → always count as pomodoro, go to break
-      const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
-      const elapsed = Math.round(elapsedSeconds / 60);
-      const startTime = startTimeRef.current || formatTime(new Date());
+      // Skipping work must not create focus time or advance the completed cycle.
       startTimeRef.current = '';
-
-      setTotalPomodoros(p => p + 1);
-
-      // Only record time if >= 1 minute
-      if (elapsedSeconds >= 60) {
-        setPendingAssignments(prev => [...prev, { start: startTime, duration: elapsed }]);
-      }
-
-      const nextDot = cycleCountRef.current + 1;
-      setCycleCount(nextDot);
-
-      if (nextDot >= cycleIntervalRef.current) {
-        setCycleCount(0);
-        isLongBreakRef.current = true;
-        startBreak(true);
-      } else {
-        isLongBreakRef.current = false;
-        startBreak(false);
-      }
+      setRunningMinutes(0);
+      isLongBreakRef.current = false;
+      startBreak(false);
     } else {
       // Skip break
       if (isLongBreakRef.current) {
@@ -435,7 +434,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         setIsRunning(true);
       }
     }
-  }, [clearTimer, startBreak, playSound]);
+  }, [clearTimer, startBreak, playSound, recordPomodoro, showToast]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,

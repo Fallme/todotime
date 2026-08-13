@@ -14,7 +14,7 @@ interface TaskAssignModalProps {
 }
 
 export function TaskAssignModal({ assignments, todos, currentTaskName, onAssignAll, onStartNextGroup, onStop, onSelectTask }: TaskAssignModalProps) {
-  const activeTodos = todos.filter(t => !t.done && !t.abandoned);
+  const activeTodos = todos.filter(t => !t.deletedAt && !t.done && !t.abandoned);
   const [selectedTodoId, setSelectedTodoId] = useState('other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 

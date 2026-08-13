@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { Priority, Category, CategoryItem } from '../../types';
 
@@ -30,14 +30,15 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const [showCatAdd, setShowCatAdd] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState(getRandomHSL());
-  const randomPreviewRef = useRef(getRandomHSL());
+  const [randomPreview, setRandomPreview] = useState(getRandomHSL);
 
-  const currentCat = categories.find(c => c.name === category);
+  const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || '其他';
+  const currentCat = categories.find(c => c.name === selectedCategory);
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onAdd(title.trim(), 'medium', category);
+    onAdd(title.trim(), 'medium', selectedCategory);
     setTitle('');
   };
 
@@ -105,8 +106,8 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                     style={{ background: c }} onClick={() => setEditColor(c)} />
                 ))}
                 <button type="button" className="cat-color-swatch random"
-                  style={{ background: randomPreviewRef.current }}
-                  onClick={() => { const c = getRandomHSL(); randomPreviewRef.current = c; setEditColor(c); }}>?</button>
+                  style={{ background: randomPreview }}
+                  onClick={() => { const c = getRandomHSL(); setRandomPreview(c); setEditColor(c); }}>?</button>
               </div>
               <div className="cat-edit-actions">
                 <button type="button" className="cat-edit-save" onClick={saveEdit} disabled={!editName.trim()}>保存</button>
@@ -120,13 +121,14 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                 {categories.map(cat => (
                   <div key={cat.name} className="category-chip-wrap">
                     <button type="button"
-                      className={`category-chip ${cat.name === category ? 'active' : ''}`}
+                      className={`category-chip ${cat.name === selectedCategory ? 'active' : ''}`}
                       style={{ color: 'var(--text)', borderColor: cat.color }}
                       onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}
                       onDoubleClick={(e) => { e.stopPropagation(); startEdit(cat); }}>
                       {cat.name}
                     </button>
-                    <button type="button" className="category-chip-del" onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (category === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '数学'); }} title="删除板块">×</button>
+                    <button type="button" className="category-chip-del" disabled={categories.length <= 1}
+                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '其他'); }} title={categories.length <= 1 ? '至少保留一个板块' : '删除板块'}>×</button>
                   </div>
                 ))}
                 <button type="button" className="category-chip add" onClick={() => { setShowCatAdd(!showCatAdd); }}>+</button>

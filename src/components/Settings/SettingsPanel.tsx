@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import type { AppSettings } from '../../types';
 import { Download, Upload, Trash2 } from 'lucide-react';
 
@@ -11,18 +11,11 @@ interface SettingsPanelProps {
 }
 
 export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }: SettingsPanelProps) {
-  const [form, setForm] = useState(settings);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
-  // Auto-save: when form changes, immediately save
-  useEffect(() => {
-    onSave(form);
-  }, [form, onSave]);
-
-  // Sync form when settings change externally (e.g. git sync)
-  useEffect(() => {
-    setForm(settings);
-  }, [settings]);
+  const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
+    onSave({ ...settings, [key]: value });
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -41,8 +34,8 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
             type="number"
             min={1}
             max={90}
-            value={form.workMinutes}
-            onChange={e => setForm(f => ({ ...f, workMinutes: Number(e.target.value) }))}
+            value={settings.workMinutes}
+            onChange={e => update('workMinutes', Number(e.target.value))}
           />
         </div>
         <div className="settings-row">
@@ -51,8 +44,8 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
             type="number"
             min={1}
             max={30}
-            value={form.shortBreakMinutes}
-            onChange={e => setForm(f => ({ ...f, shortBreakMinutes: Number(e.target.value) }))}
+            value={settings.shortBreakMinutes}
+            onChange={e => update('shortBreakMinutes', Number(e.target.value))}
           />
         </div>
         <div className="settings-row">
@@ -61,8 +54,8 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
             type="number"
             min={1}
             max={60}
-            value={form.longBreakMinutes}
-            onChange={e => setForm(f => ({ ...f, longBreakMinutes: Number(e.target.value) }))}
+            value={settings.longBreakMinutes}
+            onChange={e => update('longBreakMinutes', Number(e.target.value))}
           />
         </div>
         <div className="settings-row">
@@ -71,8 +64,8 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
             type="number"
             min={2}
             max={10}
-            value={form.longBreakInterval}
-            onChange={e => setForm(f => ({ ...f, longBreakInterval: Number(e.target.value) }))}
+            value={settings.longBreakInterval}
+            onChange={e => update('longBreakInterval', Number(e.target.value))}
           />
         </div>
       </section>
@@ -82,45 +75,45 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear }:
         <div className="settings-row toggle">
           <label>提示音</label>
           <button
-            className={`toggle-btn ${form.soundEnabled ? 'on' : ''}`}
-            onClick={() => setForm(f => ({ ...f, soundEnabled: !f.soundEnabled }))}
+            className={`toggle-btn ${settings.soundEnabled ? 'on' : ''}`}
+            onClick={() => update('soundEnabled', !settings.soundEnabled)}
           >
-            {form.soundEnabled ? '开' : '关'}
+            {settings.soundEnabled ? '开' : '关'}
           </button>
         </div>
         <div className="settings-row toggle">
           <label>深色模式</label>
           <button
-            className={`toggle-btn ${form.darkMode ? 'on' : ''}`}
-            onClick={() => setForm(f => ({ ...f, darkMode: !f.darkMode }))}
+            className={`toggle-btn ${settings.darkMode ? 'on' : ''}`}
+            onClick={() => update('darkMode', !settings.darkMode)}
           >
-            {form.darkMode ? '开' : '关'}
+            {settings.darkMode ? '开' : '关'}
           </button>
         </div>
       </section>
 
       <section className="settings-section">
-        <h3>GitHub 同步</h3>
+        <h3>GitHub JSON 同步</h3>
         <div className="settings-row">
-          <label>Personal Access Token</label>
+          <label>个人同步密码</label>
           <input
             type="password"
-            placeholder="ghp_xxxxx"
-            value={form.githubToken}
-            onChange={e => setForm(f => ({ ...f, githubToken: e.target.value }))}
+            autoComplete="current-password"
+            placeholder="各设备填写相同密码"
+            value={settings.syncSecret}
+            onChange={e => update('syncSecret', e.target.value)}
           />
         </div>
         <div className="settings-row">
-          <label>仓库 (owner/repo)</label>
+          <label>私有数据仓库</label>
           <input
             type="text"
-            placeholder="Fallme/todotime"
-            value={form.githubRepo}
-            onChange={e => setForm(f => ({ ...f, githubRepo: e.target.value }))}
+            readOnly
+            value={settings.githubRepo}
           />
         </div>
         <p className="settings-hint">
-          需要 repo 权限的 PAT，数据将以 JSON 文件自动提交到仓库的 data/ 目录
+          GitHub Token 只保存在服务端。代码仓库与私人数据仓库完全分离，各设备只需填写相同同步密码。
         </p>
       </section>
 

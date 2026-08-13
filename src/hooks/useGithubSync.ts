@@ -10,8 +10,8 @@ interface UseGithubSyncReturn {
   syncError: string | null;
   syncDayData: (date: string, pomodoros: PomodoroRecord[]) => void;
   syncConfig: (settings: AppSettings, todos: Todo[]) => void;
-  loadAll: () => Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }>;
-  syncBidirectional: (settings: AppSettings, todos: Todo[]) => Promise<{ settings: Omit<AppSettings, 'githubToken'>; todos: Todo[] } | null>;
+  loadAll: () => Promise<{ settings: Omit<AppSettings, 'syncSecret'> | null; todos: Todo[] | null }>;
+  syncBidirectional: (settings: AppSettings, todos: Todo[]) => Promise<{ settings: Omit<AppSettings, 'syncSecret'>; todos: Todo[] } | null>;
 }
 
 export function useGithubSync(repo: string, token: string): UseGithubSyncReturn {
@@ -24,9 +24,29 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
   const getSyncTime = () => localStorage.getItem('todotime_last_sync') || '';
   const setSyncTime = (t: string) => localStorage.setItem('todotime_last_sync', t);
 
+  const mergePomodoros = (remote: PomodoroRecord[], local: PomodoroRecord[]) => {
+    const byKey = new Map<string, PomodoroRecord>();
+    for (const record of [...remote, ...local]) {
+      const key = [record.start, record.end, record.taskId ?? '', record.duration, record.createdAt].join('|');
+      byKey.set(key, record);
+    }
+    return [...byKey.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  };
+
+  const mergeTodoLists = (localTodos: Todo[], remoteTodos: Todo[]): Todo[] => {
+    const merged = new Map(localTodos.map(todo => [todo.id, todo]));
+    for (const remoteTodo of remoteTodos) {
+      const localTodo = merged.get(remoteTodo.id);
+      const localTime = localTodo?.updatedAt || localTodo?.createdAt || '';
+      const remoteTime = remoteTodo.updatedAt || remoteTodo.createdAt || '';
+      if (!localTodo || remoteTime > localTime) merged.set(remoteTodo.id, remoteTodo);
+    }
+    return [...merged.values()];
+  };
+
   // --- Load all data from git on app open ---
-  const loadAll = useCallback(async (): Promise<{ settings: Omit<AppSettings, 'githubToken'> | null; todos: Todo[] | null }> => {
-    if (!repo) return { settings: null, todos: null };
+  const loadAll = useCallback(async (): Promise<{ settings: Omit<AppSettings, 'syncSecret'> | null; todos: Todo[] | null }> => {
+    if (!repo || !token) return { settings: null, todos: null };
     setSyncing(true);
     setSyncError(null);
 
@@ -50,8 +70,6 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
         return merged;
       });
 
-      setSyncTime(new Date().toISOString());
-
       return {
         settings: configData?.settings ?? null,
         todos: configData?.todos ?? null,
@@ -66,13 +84,11 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
 
   // --- Sync pomodoro data for a day ---
   const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
-    if (!token || !repo) return;
+    if (!repo || !token) return;
 
     setDayDataMap(prev => {
       const existing = prev.get(date);
-      const allPomodoros = existing
-        ? [...existing.pomodoros, ...pomodoros.slice(existing.pomodoros.length)]
-        : pomodoros;
+      const allPomodoros = mergePomodoros(existing?.pomodoros ?? [], pomodoros);
       const totalFocusMinutes = allPomodoros.reduce((s, p) => s + p.duration, 0);
 
       const dayData: DayData = {
@@ -106,7 +122,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
 
   // --- Sync config (settings + todos) immediately on change ---
   const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
-    if (!token || !repo) return;
+    if (!repo || !token) return;
 
     const settingsSubset = {
       workMinutes: settings.workMinutes,
@@ -145,7 +161,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
   }, [token, repo]);
 
   // --- Incremental merge: only merge changed settings fields ---
-  const mergeSettings = (local: Omit<AppSettings, 'githubToken'>, git: Omit<AppSettings, 'githubToken'>): Omit<AppSettings, 'githubToken'> => {
+  const mergeSettings = (local: Omit<AppSettings, 'syncSecret'>, git: Omit<AppSettings, 'syncSecret'>): Omit<AppSettings, 'syncSecret'> => {
     return {
       workMinutes: git.workMinutes ?? local.workMinutes,
       shortBreakMinutes: git.shortBreakMinutes ?? local.shortBreakMinutes,
@@ -161,8 +177,8 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
   };
 
   // --- Bidirectional sync with incremental merge ---
-  const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<{ settings: Omit<AppSettings, 'githubToken'>; todos: Todo[] } | null> => {
-    if (!repo) return null;
+  const syncBidirectional = useCallback(async (settings: AppSettings, todos: Todo[]): Promise<{ settings: Omit<AppSettings, 'syncSecret'>; todos: Todo[] } | null> => {
+    if (!repo || !token) return null;
     setSyncing(true);
     setSyncError(null);
 
@@ -207,25 +223,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
         };
         const mergedSettings = mergeSettings(localSettings, gitConfig.settings);
 
-        // Per-todo incremental merge
-        const localMap = new Map(todos.map(t => [t.id, t]));
-        const gitMap = new Map((gitConfig.todos || []).map(t => [t.id, t]));
-        const mergedTodos: Todo[] = [];
-        const allIds = new Set([...localMap.keys(), ...gitMap.keys()]);
-
-        for (const id of allIds) {
-          const local = localMap.get(id);
-          const git = gitMap.get(id);
-          if (local && !git) {
-            mergedTodos.push(local);
-          } else if (!local && git) {
-            mergedTodos.push(git);
-          } else if (local && git) {
-            const lt = local.updatedAt || local.createdAt || '';
-            const gt = git.updatedAt || git.createdAt || '';
-            mergedTodos.push(gt > lt ? git : local);
-          }
-        }
+        const mergedTodos = mergeTodoLists(todos, gitConfig.todos || []);
 
         // Push merged result back to git to keep it complete
         const pushPayload: ConfigData = { settings: mergedSettings, todos: mergedTodos, updatedAt: new Date().toISOString() };
@@ -233,7 +231,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
         setSyncTime(pushPayload.updatedAt);
         return { settings: mergedSettings, todos: mergedTodos };
       } else if (localTime && localTime > gitTime) {
-        // Local is newer → push to git
+        // Local is newer, but merge remote-only items before pushing so another device's data is not lost.
         const settingsSubset = {
           workMinutes: settings.workMinutes,
           shortBreakMinutes: settings.shortBreakMinutes,
@@ -246,7 +244,7 @@ export function useGithubSync(repo: string, token: string): UseGithubSyncReturn 
           countdownDate: settings.countdownDate,
           categories: settings.categories,
         };
-        const payload: ConfigData = { settings: settingsSubset, todos, updatedAt: new Date().toISOString() };
+        const payload: ConfigData = { settings: settingsSubset, todos: mergeTodoLists(todos, gitConfig.todos || []), updatedAt: new Date().toISOString() };
         await saveConfig(repo, token, payload);
         setSyncTime(payload.updatedAt);
       }

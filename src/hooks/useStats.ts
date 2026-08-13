@@ -28,7 +28,7 @@ export function useStats(
     const todayMinutes = todayCompletedMinutes + runningMinutes;
     // Count tasks completed today from local todos (completedAt format: "MM-DD HH:mm")
     const todayMd = todayDate.slice(5); // "06-03"
-    const todayTasks = todos.filter(t => t.done && t.completedAt.startsWith(todayMd)).length;
+    const todayTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(todayMd)).length;
 
     // Weekly data
     const weekly: { date: string; minutes: number }[] = [];

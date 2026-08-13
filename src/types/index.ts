@@ -33,6 +33,7 @@ export interface SubTask {
   completedPomodoros: number;
   createdAt: string;
   updatedAt: string;
+  deletedAt?: string;
 }
 
 export interface Todo {
@@ -49,6 +50,7 @@ export interface Todo {
   completedAt: string;
   abandonedAt: string;
   subtasks: SubTask[];
+  deletedAt?: string;
 }
 
 export interface PomodoroRecord {
@@ -84,7 +86,7 @@ export interface TimerSettings {
 export interface AppSettings extends TimerSettings {
   soundEnabled: boolean;
   darkMode: boolean;
-  githubToken: string;
+  syncSecret: string;
   githubRepo: string;
   countdownTitle: string;
   countdownDate: string;
@@ -98,15 +100,15 @@ export const DEFAULT_SETTINGS: AppSettings = {
   longBreakInterval: 4,
   soundEnabled: true,
   darkMode: false,
-  githubToken: '',
-  githubRepo: 'Fallme/todotime',
+  syncSecret: '',
+  githubRepo: 'Fallme/todotime_data',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',
   categories: [...DEFAULT_CATEGORIES],
 };
 
 export interface ConfigData {
-  settings: Omit<AppSettings, 'githubToken'>;
+  settings: Omit<AppSettings, 'syncSecret'>;
   todos: Todo[];
   updatedAt: string;
 }

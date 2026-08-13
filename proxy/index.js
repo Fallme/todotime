@@ -5,8 +5,19 @@ app.use(cors());
 app.use(express.json({ limit: '5mb' }));
 
 const TOKEN = process.env.GITHUB_TOKEN;
-const REPO = 'Fallme/todotime';
+const REPO = process.env.GITHUB_DATA_REPO;
+const SYNC_SECRET = process.env.SYNC_SECRET;
 const API = 'https://api.github.com';
+
+app.use('/api', (req, res, next) => {
+  if (!TOKEN || !REPO || REPO === 'Fallme/todotime' || !SYNC_SECRET) {
+    return res.status(503).json({ error: 'Private data sync is not configured' });
+  }
+  if (req.get('X-Sync-Secret') !== SYNC_SECRET) {
+    return res.status(401).json({ error: 'Invalid sync password' });
+  }
+  next();
+});
 
 app.get('/api/file', async (req, res) => {
   try {
