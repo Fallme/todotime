@@ -11,7 +11,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "test": "npm run lint && npm run build && npm run typecheck:api",
-    "typecheck:api": "tsc --ignoreConfig --noEmit --target ES2023 --module NodeNext --moduleResolution NodeNext --types node api/file.ts",
+    "typecheck:api": "tsc -p api/tsconfig.json",
     "preview": "vite preview",
     "electron:dev": "npm run build && electron .",
     "electron:build": "npm run build && electron-builder --win"
