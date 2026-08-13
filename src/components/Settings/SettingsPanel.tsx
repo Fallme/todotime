@@ -19,6 +19,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const [syncCodeDraft, setSyncCodeDraft] = useState(settings.syncCode);
   const [codeMessage, setCodeMessage] = useState('');
   const [isNewCode, setIsNewCode] = useState(false);
+  const [codeVisible, setCodeVisible] = useState(false);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     onSave({ ...settings, [key]: value });
@@ -38,14 +39,16 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
     setCodeMessage(keepCurrentData ? '正在创建并保存当前数据…' : '正在加载该用户的数据…');
     await onActivateSyncCode(code, keepCurrentData);
     setSyncCodeDraft(code);
-    setIsNewCode(true);
+    setIsNewCode(false);
     setCodeMessage(keepCurrentData ? '识别码已创建，当前数据已归档到该用户' : '用户数据已加载');
   };
 
   const createCode = () => {
     const code = createSyncCode();
     setSyncCodeDraft(code);
-    setCodeMessage('新识别码已生成，请点击“创建并保存”');
+    setIsNewCode(true);
+    setCodeVisible(true);
+    setCodeMessage('新识别码已生成，请复制保存后点击“启用新识别码”');
   };
 
   return (
@@ -123,7 +126,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
         <div className="settings-row">
           <label>个人同步识别码</label>
           <input
-            type="text"
+            type={codeVisible ? 'text' : 'password'}
             autoComplete="off"
             spellCheck={false}
             placeholder="输入已有识别码，或点击创建"
@@ -132,11 +135,12 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           />
         </div>
         <div className="settings-actions" style={{ marginTop: 8 }}>
-          <button className="btn secondary" type="button" onClick={createCode}>创建识别码</button>
-          <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => navigator.clipboard.writeText(syncCodeDraft)}><Copy size={15} /> 复制</button>
+          <button className="btn secondary" type="button" onClick={createCode}>生成新识别码</button>
+          <button className="btn secondary" type="button" onClick={() => setCodeVisible(value => !value)}>{codeVisible ? '隐藏' : '显示'}</button>
+          <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => { void navigator.clipboard.writeText(syncCodeDraft); setCodeMessage('识别码已复制，请妥善保存'); }}><Copy size={15} /> 复制</button>
           <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft || !isNewCode} onClick={() => void activateCode(true)}>
             <RefreshCw size={15} className={syncing ? 'spin' : ''} />
-            创建并保存当前数据
+            启用新识别码
           </button>
           <button className="btn secondary" type="button" disabled={syncing || !syncCodeDraft || syncCodeDraft === settings.syncCode} onClick={() => void activateCode(false)}>
             加载已有识别码
@@ -151,7 +155,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           />
         </div>
         <p className="settings-hint">
-          每个识别码对应完全独立的任务、设置和统计文件。新用户点击“创建识别码”后保存；其他设备输入同一码即可加载。识别码无法找回，请自行妥善保存。
+          每个识别码对应完全独立的任务、设置和统计文件。首次使用先生成并启用新识别码；其他设备输入同一码后点击“加载已有识别码”。识别码等同于访问凭证，请勿分享，遗失后无法找回。
         </p>
         {codeMessage && <p className="settings-hint">{codeMessage}</p>}
         {lastSyncedAt && <p className="settings-hint">最近同步：{new Date(lastSyncedAt).toLocaleString()}</p>}
@@ -171,7 +175,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           </button>
         ) : (
           <div className="clear-confirm">
-            <span>确认清除所有本地数据？</span>
+            <span>确认清除当前识别码在本机的数据并退出？云端数据及其他识别码不会删除。</span>
             <button className="btn danger small" onClick={() => { onClear(); setShowClearConfirm(false); }}>确认</button>
             <button className="btn secondary small" onClick={() => setShowClearConfirm(false)}>取消</button>
           </div>

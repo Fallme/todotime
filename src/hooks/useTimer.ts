@@ -26,6 +26,7 @@ interface UseTimerReturn {
   toast: string | null;
   runningMinutes: number;
   start: () => void;
+  startWork: () => void;
   pause: () => void;
   reset: () => void;
   skip: () => void;
@@ -375,6 +376,18 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     playSound(playStart);
   }, [playSound]);
 
+  const startWork = useCallback(() => {
+    clearTimer();
+    setGroupPhase('working');
+    setMode('work');
+    setTimeLeft(workMinutesRef.current * 60);
+    setTotalTimeState(workMinutesRef.current * 60);
+    startTimeRef.current = '';
+    setRunningMinutes(0);
+    setIsRunning(true);
+    playSound(playStart);
+  }, [clearTimer, playSound]);
+
   const pause = useCallback(() => {
     // Immediately update runningMinutes to reflect current elapsed
     if (modeRef.current === 'work') {
@@ -405,21 +418,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         setPendingAssignments(prev => {
           const totalMinutes = prev.reduce((sum, p) => sum + p.duration, 0);
           if (totalMinutes > 0) {
-            const task = currentTaskRef.current;
-            if (task) {
-              prev.forEach(pa => {
-                recordPomodoro({
-                  start: pa.start, end: pa.end, date: pa.date, duration: pa.duration,
-                  taskId: task.id, taskTitle: task.title, category: task.category,
-                  completed: true, createdAt: pa.end,
-                });
-              });
-              setTimeout(() => showToast(`一轮完成！${totalMinutes}分钟 →「${task.title}」`), 0);
-              return [];
-            } else {
-              setGroupPhase('settle');
-              return [{ start: prev[0]?.start || new Date().toISOString(), end: prev[prev.length - 1]?.end || new Date().toISOString(), date: prev[0]?.date || formatDate(new Date()), duration: totalMinutes }];
-            }
+            setGroupPhase('settle');
+            return prev;
           } else {
             setTimeout(() => showToast('一轮完成！无记录'), 0);
             return [];
@@ -438,12 +438,12 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         setIsRunning(true);
       }
     }
-  }, [clearTimer, startBreak, playSound, recordPomodoro, showToast]);
+  }, [clearTimer, startBreak, playSound, showToast]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
-    start, pause, reset, skip, setTotalTime, setTaskInfo,
+    start, startWork, pause, reset, skip, setTotalTime, setTaskInfo,
     assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, setOnComplete,
   };
 }

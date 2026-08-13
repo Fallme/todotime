@@ -15,7 +15,7 @@ import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
-import { getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
+import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
@@ -81,8 +81,8 @@ export default function App() {
     todos, selectedTodoId, updateTodoPomodoros, updateSubtaskPomodoros,
     mergeTodos, replaceTodos,
   } = todosHook;
-  const currentTodo = todos.find(t => !t.deletedAt && t.id === currentTaskId);
-  const currentSubtask = todos.filter(todo => !todo.deletedAt).flatMap(todo => todo.subtasks.filter(subtask => !subtask.deletedAt).map(subtask => ({ ...subtask, category: todo.category })))
+  const currentTodo = todos.find(t => !t.deletedAt && !t.done && !t.abandoned && t.id === currentTaskId);
+  const currentSubtask = todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned).flatMap(todo => todo.subtasks.filter(subtask => !subtask.deletedAt && !subtask.done && !subtask.abandoned).map(subtask => ({ ...subtask, category: todo.category })))
     .find(subtask => subtask.id === currentTaskId);
   const currentTask = currentTodo ?? currentSubtask;
   const configLoadedRef = useRef(false);
@@ -90,6 +90,7 @@ export default function App() {
   const initialSettingsRef = useRef(settings);
   const initialTodosRef = useRef(todos);
   const lastDailyRefreshRef = useRef(0);
+  const lastConfigCheckRef = useRef(0);
 
   // Callback for when a pomodoro is recorded - update task's completedPomodoros
   const handlePomodoroRecorded = useCallback((record: { taskId: string | null }) => {
@@ -152,7 +153,10 @@ export default function App() {
           lastDailyRefreshRef.current = now;
           void loadAll();
         }
-        void syncBidirectional(settings, todos).then(applyRemoteConfig);
+        if (now - lastConfigCheckRef.current > 60_000) {
+          lastConfigCheckRef.current = now;
+          void syncBidirectional(settings, todos).then(applyRemoteConfig);
+        }
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -164,19 +168,11 @@ export default function App() {
     if (!settings.githubRepo || !activeSyncCode) return;
     const interval = setInterval(() => {
       if (syncing || document.visibilityState !== 'visible') return;
-      syncBidirectional(settings, todos).then((result) => {
-        if (result) {
-          // Git was newer → apply merged settings + todos
-          setSettings({
-            ...result.settings,
-            syncCode: activeSyncCode,
-          });
-          mergeTodos(result.todos);
-        }
-      });
+      lastConfigCheckRef.current = Date.now();
+      void syncBidirectional(settings, todos).then(applyRemoteConfig);
     }, 120_000);
     return () => clearInterval(interval);
-  }, [activeSyncCode, settings.githubRepo, settings, todos, syncBidirectional, syncing, mergeTodos]);
+  }, [activeSyncCode, settings.githubRepo, settings, todos, syncBidirectional, syncing, applyRemoteConfig]);
 
   // --- Periodic refresh: reload daily pomodoro data every 3 minutes for charts ---
   useEffect(() => {
@@ -207,7 +203,13 @@ export default function App() {
     syncConfig(settings, todos);
   }, [settings, todos, syncConfig]);
 
-  const handleSaveSettings = (s: AppSettings) => setSettings(normalizeSettings(s));
+  const handleSaveSettings = (s: AppSettings) => {
+    const normalized = normalizeSettings(s);
+    if (!timer.isRunning && timer.mode === 'work' && normalized.workMinutes !== settings.workMinutes) {
+      timer.setTotalTime(normalized.workMinutes * 60);
+    }
+    setSettings(normalized);
+  };
 
   const handleActivateSyncCode = async (code: string, keepCurrentData: boolean) => {
     await flush();
@@ -241,20 +243,14 @@ export default function App() {
   const handleQuickStart = (todo: Todo) => {
     setCurrentTaskId(todo.id);
     timer.setTaskInfo(todo.id, todo.title, todo.category);
-    // If timer is already running, just switch task without restarting
-    if (!timer.isRunning) {
-      timer.setTotalTime(settings.workMinutes * 60);
-      timer.start();
-    }
+    // During active focus, only switch attribution. From pause/break, begin a fresh focus session.
+    if (!timer.isRunning || timer.mode !== 'work') timer.startWork();
   };
 
   const handleQuickStartSubtask = (subtask: { id: string; title: string; category: Category }) => {
     setCurrentTaskId(subtask.id);
     timer.setTaskInfo(subtask.id, subtask.title, subtask.category);
-    if (!timer.isRunning) {
-      timer.setTotalTime(settings.workMinutes * 60);
-      timer.start();
-    }
+    if (!timer.isRunning || timer.mode !== 'work') timer.startWork();
   };
 
   const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
@@ -301,7 +297,12 @@ export default function App() {
     reader.readAsText(file);
   };
 
-  const handleClear = () => { localStorage.clear(); window.location.reload(); };
+  const handleClear = () => {
+    ['todotime_settings', 'todotime_todos', 'todotime_today_date', 'todotime_today_pomodoros', 'todotime_last_sync']
+      .forEach(key => localStorage.removeItem(profileStorageKey(key, profileId)));
+    clearActiveSyncCode();
+    window.location.reload();
+  };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
   const handleCountdownUpdate = (title: string, date: string) => setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
 
@@ -357,7 +358,10 @@ export default function App() {
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
-              todayPomodoros={timer.todayPomodoros.length}
+              todayPomodoros={new Set([
+                ...(dayDataMap.get(today)?.pomodoros ?? []),
+                ...timer.todayPomodoros.filter(record => (record.date || today) === today),
+              ].filter(record => record.completed).map(record => record.id || `${record.start}-${record.end}`)).size}
               categories={settings.categories}
               onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
@@ -417,10 +421,18 @@ export default function App() {
                 无任务（其他）
               </button>
               {todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => (
-                <button key={t.id} className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
-                  onClick={() => { setCurrentTaskId(t.id); timer.setTaskInfo(t.id, t.title, t.category); setShowTaskPicker(false); }}>
-                  {t.title}（{t.category}）
-                </button>
+                <div key={t.id} style={{ display: 'contents' }}>
+                  <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
+                    onClick={() => { setCurrentTaskId(t.id); timer.setTaskInfo(t.id, t.title, t.category); setShowTaskPicker(false); }}>
+                    {t.title}（{t.category}）
+                  </button>
+                  {t.subtasks.filter(subtask => !subtask.deletedAt && !subtask.done && !subtask.abandoned).map(subtask => (
+                    <button key={subtask.id} className="cat-pick-btn" style={{ width: '92%', alignSelf: 'flex-end', justifyContent: 'center', padding: '7px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === subtask.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === subtask.id ? 'white' : undefined }}
+                      onClick={() => { setCurrentTaskId(subtask.id); timer.setTaskInfo(subtask.id, subtask.title, t.category); setShowTaskPicker(false); }}>
+                      ↳ {subtask.title}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           </div>

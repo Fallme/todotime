@@ -168,7 +168,6 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         loadMultipleDays(repo, syncCode, dates),
       ]);
       setDayDataMap(days);
-      if (configData?.updatedAt) markSynced(configData.updatedAt);
       return { settings: configData?.settings ?? null, todos: configData?.todos ?? null };
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : '同步读取失败');
@@ -177,7 +176,7 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
       activeRequestsRef.current -= 1;
       if (activeRequestsRef.current === 0) setSyncing(false);
     }
-  }, [repo, syncCode, markSynced]);
+  }, [repo, syncCode]);
 
   const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
     if (!repo || !syncCode) return;
@@ -197,6 +196,11 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         totalTasksCompleted: current?.totalTasksCompleted ?? 0,
         streak: current?.streak ?? 0,
       };
+      const unchanged = Boolean(current)
+        && current?.totalFocusMinutes === payload.totalFocusMinutes
+        && current?.totalPomodoros === payload.totalPomodoros
+        && JSON.stringify(current?.pomodoros ?? []) === JSON.stringify(payload.pomodoros);
+      if (unchanged) return previous;
       pendingDaysRef.current.set(date, payload);
       const existingTimer = dayTimersRef.current.get(date);
       if (existingTimer) clearTimeout(existingTimer);

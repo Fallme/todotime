@@ -14,15 +14,19 @@ interface TaskAssignModalProps {
 
 export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll, onStartNextGroup, onStop, onSelectTask }: TaskAssignModalProps) {
   const activeTodos = todos.filter(t => !t.deletedAt && !t.done && !t.abandoned);
+  const activeSubtasks = activeTodos.flatMap(todo => todo.subtasks
+    .filter(subtask => !subtask.deletedAt && !subtask.done && !subtask.abandoned)
+    .map(subtask => ({ ...subtask, category: todo.category, parentTitle: todo.title })));
   const [selectedTodoId, setSelectedTodoId] = useState(currentTaskId ?? 'other');
   const totalMinutes = assignments.reduce((s, a) => s + a.duration, 0);
 
   const getResult = (todoId: string | null) => {
     const todo = todoId ? activeTodos.find(t => t.id === todoId) : null;
+    const subtask = todoId ? activeSubtasks.find(t => t.id === todoId) : null;
     return {
-      taskId: todo?.id ?? null,
-      taskTitle: todo?.title ?? '未分配',
-      category: (todo?.category ?? '其他') as Category,
+      taskId: todo?.id ?? subtask?.id ?? null,
+      taskTitle: todo?.title ?? subtask?.title ?? '未分配',
+      category: (todo?.category ?? subtask?.category ?? '其他') as Category,
     };
   };
 
@@ -56,6 +60,9 @@ export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll
               <option value="other">其他 (不分配任务)</option>
               {activeTodos.map(t => (
                 <option key={t.id} value={t.id}>{t.title} ({t.category})</option>
+              ))}
+              {activeSubtasks.map(t => (
+                <option key={t.id} value={t.id}>↳ {t.title} ({t.parentTitle})</option>
               ))}
             </select>
         </div>

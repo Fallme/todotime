@@ -64,7 +64,7 @@ function computePeriodData(
     const totalTasksDay = todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length || tasksDone;
     if (date === today) {
       const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
-      poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(p.id || `${p.start}-${p.end}`))];
+      poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === date && !existing.has(p.id || `${p.start}-${p.end}`))];
     }
     const mins = poms.reduce((s, p) => s + p.duration, 0);
     totalPomodoros += poms.length;
@@ -119,7 +119,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, o
     const dayData = dayDataMap.get(today);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
-    poms = [...poms, ...todayPomodoros.filter(p => p.completed && !existing.has(p.id || `${p.start}-${p.end}`))];
+    poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0);
     const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
     return { pomodoros: poms.length, minutes: mins, tasksDone };

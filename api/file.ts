@@ -82,6 +82,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
         headers: { Accept: 'application/vnd.github.v3+json', Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      if (r.status === 409 || r.status === 422) return res.status(409).json({ error: 'file changed' });
       if (!r.ok) throw new Error(`${r.status}`);
       const result = await r.json() as GitHubWriteResponse;
       if (!result.content?.sha) throw new Error('GitHub returned no file SHA');

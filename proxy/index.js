@@ -54,6 +54,7 @@ app.put('/api/file', async (req, res) => {
       headers: { Accept: 'application/vnd.github.v3+json', Authorization: `Bearer ${TOKEN}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     });
+    if (r.status === 409 || r.status === 422) return res.status(409).json({ error: 'file changed' });
     if (!r.ok) throw new Error(`${r.status}`);
     const d = await r.json();
     res.json({ sha: d.content.sha });

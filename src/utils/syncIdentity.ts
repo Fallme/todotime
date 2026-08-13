@@ -39,6 +39,10 @@ export function setActiveSyncCode(value: string): string {
   return code;
 }
 
+export function clearActiveSyncCode(): void {
+  localStorage.removeItem(ACTIVE_CODE_KEY);
+}
+
 export function getProfileId(syncCode: string): string {
   const code = normalizeSyncCode(syncCode);
   return code || 'local';

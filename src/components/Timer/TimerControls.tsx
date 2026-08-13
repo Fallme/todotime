@@ -11,7 +11,7 @@ interface TimerControlsProps {
 export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip }: TimerControlsProps) {
   return (
     <div className="timer-controls">
-      <button className="ctrl-btn secondary" onClick={onNewRound} title="结束本轮，开始新轮次">
+      <button className="ctrl-btn secondary" onClick={onNewRound} title="结束并记录本轮">
         <RotateCcw size={18} />
       </button>
       {isRunning ? (
