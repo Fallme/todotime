@@ -4,6 +4,7 @@ import { loadConfig, loadMultipleDays, saveConfig, saveDayData } from '../servic
 import { formatDate } from '../utils/dateUtils';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
 import { profileStorageKey } from '../utils/syncIdentity';
+import { mergeDayData, mergeDayDataMaps, samePomodoroRecords } from '../utils/syncMerge';
 
 type RemoteSettings = Omit<AppSettings, 'syncCode'>;
 
@@ -27,6 +28,22 @@ interface UseGithubSyncReturn {
 
 const CONFIG_DEBOUNCE_MS = 2500;
 const DAY_DEBOUNCE_MS = 1500;
+const HISTORY_CACHE_KEY = 'todotime_history_cache';
+
+function readHistoryCache(profileId: string): Map<string, DayData> {
+  try {
+    const raw = localStorage.getItem(profileStorageKey(HISTORY_CACHE_KEY, profileId));
+    if (!raw) return new Map();
+    const parsed = JSON.parse(raw) as Record<string, DayData>;
+    return new Map(Object.entries(parsed));
+  } catch {
+    return new Map();
+  }
+}
+
+function persistHistoryCache(profileId: string, days: Map<string, DayData>): void {
+  localStorage.setItem(profileStorageKey(HISTORY_CACHE_KEY, profileId), JSON.stringify(Object.fromEntries(days)));
+}
 
 function settingsSubset(settings: AppSettings): RemoteSettings {
   return {
@@ -69,7 +86,7 @@ function comparableConfig(settings: RemoteSettings, todos: Todo[]): string {
 
 export function useGithubSync(repo: string, syncCode: string, profileId: string): UseGithubSyncReturn {
   const syncTimeKey = profileStorageKey('todotime_last_sync', profileId);
-  const [dayDataMap, setDayDataMap] = useState<Map<string, DayData>>(new Map());
+  const [dayDataMap, setDayDataMap] = useState<Map<string, DayData>>(() => readHistoryCache(profileId));
   const [syncing, setSyncing] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState(() => localStorage.getItem(syncTimeKey) || '');
@@ -80,6 +97,12 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
   const pendingDaysRef = useRef(new Map<string, DayData>());
   const lastConfigHashRef = useRef('');
   const activeRequestsRef = useRef(0);
+  const dayDataRef = useRef(dayDataMap);
+
+  useEffect(() => {
+    dayDataRef.current = dayDataMap;
+    persistHistoryCache(profileId, dayDataMap);
+  }, [dayDataMap, profileId]);
 
   const getSyncTime = useCallback(() => localStorage.getItem(syncTimeKey) || '', [syncTimeKey]);
   const markSynced = useCallback((value = new Date().toISOString()) => {
@@ -168,7 +191,19 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
         loadConfig(repo, syncCode),
         loadMultipleDays(repo, syncCode, dates),
       ]);
-      setDayDataMap(days);
+      const mergedDays = mergeDayDataMaps(dayDataRef.current, days);
+      dayDataRef.current = mergedDays;
+      setDayDataMap(mergedDays);
+
+      // Restore any records that only existed in this browser back to the cloud.
+      const loadedDates = new Set(dates);
+      for (const [date, mergedDay] of mergedDays) {
+        if (!loadedDates.has(date)) continue;
+        const remoteDay = days.get(date);
+        if (!remoteDay || !samePomodoroRecords(mergedDay.pomodoros, remoteDay.pomodoros)) {
+          pendingDaysRef.current.set(date, mergedDay);
+        }
+      }
       return { settings: configData?.settings ?? null, todos: configData?.todos ?? null };
     } catch (error) {
       setSyncError(error instanceof Error ? error.message : '同步读取失败');
@@ -180,37 +215,32 @@ export function useGithubSync(repo: string, syncCode: string, profileId: string)
   }, [repo, syncCode]);
 
   const syncDayData = useCallback((date: string, pomodoros: PomodoroRecord[]) => {
-    if (!repo || !syncCode) return;
     setDayDataMap(previous => {
       const current = previous.get(date);
-      const records = new Map<string, PomodoroRecord>();
-      for (const record of [...(current?.pomodoros ?? []), ...pomodoros.filter(item => (item.date || date) === date)]) {
-        records.set(record.id || [record.start, record.end, record.taskId ?? '', record.createdAt].join('|'), record);
-      }
-      const merged = [...records.values()].sort((a, b) => a.createdAt.localeCompare(b.createdAt));
-      const payload: DayData = {
-        date,
-        pomodoros: merged,
-        tasks: current?.tasks ?? [],
-        totalFocusMinutes: merged.reduce((sum, record) => sum + record.duration, 0),
-        totalPomodoros: merged.filter(isPomodoroRecord).length,
-        totalTasksCompleted: current?.totalTasksCompleted ?? 0,
-        streak: current?.streak ?? 0,
-      };
+      const incoming = pomodoros.filter(item => (item.date || date) === date);
+      const payload = mergeDayData({
+        date, pomodoros: incoming, tasks: [],
+        totalFocusMinutes: 0, totalPomodoros: incoming.filter(isPomodoroRecord).length,
+        totalTasksCompleted: 0, streak: 0,
+      }, current, date) as DayData;
       const unchanged = Boolean(current)
         && current?.totalFocusMinutes === payload.totalFocusMinutes
         && current?.totalPomodoros === payload.totalPomodoros
         && JSON.stringify(current?.pomodoros ?? []) === JSON.stringify(payload.pomodoros);
       if (unchanged) return previous;
-      pendingDaysRef.current.set(date, payload);
-      const existingTimer = dayTimersRef.current.get(date);
-      if (existingTimer) clearTimeout(existingTimer);
-      dayTimersRef.current.set(date, setTimeout(() => { void flushDay(date); }, DAY_DEBOUNCE_MS));
       const next = new Map(previous);
       next.set(date, payload);
+      dayDataRef.current = next;
+      persistHistoryCache(profileId, next);
+      if (repo && syncCode) {
+        pendingDaysRef.current.set(date, payload);
+        const existingTimer = dayTimersRef.current.get(date);
+        if (existingTimer) clearTimeout(existingTimer);
+        dayTimersRef.current.set(date, setTimeout(() => { void flushDay(date); }, DAY_DEBOUNCE_MS));
+      }
       return next;
     });
-  }, [repo, syncCode, flushDay]);
+  }, [repo, syncCode, profileId, flushDay]);
 
   const syncConfig = useCallback((settings: AppSettings, todos: Todo[]) => {
     if (!repo || !syncCode) return;

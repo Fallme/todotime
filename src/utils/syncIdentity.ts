@@ -52,19 +52,49 @@ export function profileStorageKey(base: string, profileId: string): string {
   return `${base}:${profileId}`;
 }
 
+function legacyOwnerProfile(): string {
+  try {
+    const settings = JSON.parse(localStorage.getItem('todotime_settings') || '{}') as { syncSecret?: string; syncCode?: string };
+    const code = normalizeSyncCode(settings.syncCode || settings.syncSecret || localStorage.getItem(ACTIVE_CODE_KEY) || '');
+    return isValidSyncCode(code) ? code : 'local';
+  } catch {
+    return 'local';
+  }
+}
+
+function mergeLegacyArray(base: string, scoped: string | null, legacy: string): string | null {
+  if (base !== 'todotime_todos' && base !== 'todotime_today_pomodoros') return scoped ?? legacy;
+  try {
+    const currentItems = scoped ? JSON.parse(scoped) as Array<Record<string, unknown>> : [];
+    const legacyItems = JSON.parse(legacy) as Array<Record<string, unknown>>;
+    if (!Array.isArray(currentItems) || !Array.isArray(legacyItems)) return scoped ?? legacy;
+    const merged = new Map<string, Record<string, unknown>>();
+    for (const item of [...legacyItems, ...currentItems]) {
+      const key = String(item.id || [item.start, item.end, item.taskId ?? '', item.createdAt].join('|'));
+      const previous = merged.get(key);
+      const previousTime = String(previous?.updatedAt || previous?.createdAt || '');
+      const itemTime = String(item.updatedAt || item.createdAt || '');
+      if (!previous || itemTime >= previousTime) merged.set(key, item);
+    }
+    return JSON.stringify([...merged.values()]);
+  } catch {
+    return scoped ?? legacy;
+  }
+}
+
 export function readProfileStorage(base: string, profileId: string): string | null {
   const scopedKey = profileStorageKey(base, profileId);
-  const scoped = localStorage.getItem(scopedKey);
-  if (scoped !== null) return scoped;
+  let scoped = localStorage.getItem(scopedKey);
 
-  const migrationKey = `${base}:legacy_migrated`;
-  if (localStorage.getItem(migrationKey) !== '1') {
+  // Recovery v2 is scoped per identity. The previous global marker could skip the real owner.
+  const recoveryKey = `${scopedKey}:legacy_recovery_v2`;
+  if (localStorage.getItem(recoveryKey) !== '1' && legacyOwnerProfile() === profileId) {
     const legacy = localStorage.getItem(base);
-    localStorage.setItem(migrationKey, '1');
     if (legacy !== null) {
-      localStorage.setItem(scopedKey, legacy);
-      return legacy;
+      scoped = mergeLegacyArray(base, scoped, legacy);
+      if (scoped !== null) localStorage.setItem(scopedKey, scoped);
     }
+    localStorage.setItem(recoveryKey, '1');
   }
-  return null;
+  return scoped;
 }

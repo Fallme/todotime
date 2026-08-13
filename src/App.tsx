@@ -150,13 +150,12 @@ export default function App() {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
         const now = Date.now();
-        if (now - lastDailyRefreshRef.current > 10 * 60_000) {
+        if (now - lastDailyRefreshRef.current > 60_000) {
           lastDailyRefreshRef.current = now;
-          void loadAll();
-        }
-        if (now - lastConfigCheckRef.current > 60_000) {
           lastConfigCheckRef.current = now;
-          void syncBidirectional(settings, todos).then(applyRemoteConfig);
+          void loadAll()
+            .then(() => syncBidirectional(settings, todos))
+            .then(applyRemoteConfig);
         }
       }
     };
@@ -164,28 +163,35 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [activeSyncCode, settings.githubRepo, loadAll, syncBidirectional, settings, todos, applyRemoteConfig]);
 
-  // --- Periodic sync: bidirectional every 30s for cross-device consistency ---
+  // --- Periodic sync: recover/merge history and config once per minute ---
   useEffect(() => {
     if (!settings.githubRepo || !activeSyncCode) return;
     const interval = setInterval(() => {
-      if (syncing || document.visibilityState !== 'visible') return;
+      if (syncing) return;
       lastConfigCheckRef.current = Date.now();
-      void syncBidirectional(settings, todos).then(applyRemoteConfig);
-    }, 120_000);
+      lastDailyRefreshRef.current = Date.now();
+      void loadAll()
+        .then(() => syncBidirectional(settings, todos))
+        .then(applyRemoteConfig);
+    }, 60_000);
     return () => clearInterval(interval);
-  }, [activeSyncCode, settings.githubRepo, settings, todos, syncBidirectional, syncing, applyRemoteConfig]);
+  }, [activeSyncCode, settings.githubRepo, settings, todos, loadAll, syncBidirectional, syncing, applyRemoteConfig]);
 
-  // --- Periodic refresh: reload daily pomodoro data every 3 minutes for charts ---
+  // Best-effort flush before a refresh, deployment reload or background suspension.
   useEffect(() => {
     if (!settings.githubRepo || !activeSyncCode) return;
-    const interval = setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        lastDailyRefreshRef.current = Date.now();
-        void loadAll();
-      }
-    }, 10 * 60_000);
-    return () => clearInterval(interval);
-  }, [activeSyncCode, settings.githubRepo, loadAll]);
+    const flushPending = () => { void flush(); };
+    const handlePageHide = () => flushPending();
+    const handleVisibility = () => {
+      if (document.visibilityState === 'hidden') flushPending();
+    };
+    window.addEventListener('pagehide', handlePageHide);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.removeEventListener('pagehide', handlePageHide);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [activeSyncCode, settings.githubRepo, flush]);
 
   // --- Sync pomodoro data: on every new pomodoro ---
   const todayPomodoros = timer.todayPomodoros;
@@ -299,7 +305,7 @@ export default function App() {
   };
 
   const handleClear = () => {
-    ['todotime_settings', 'todotime_todos', 'todotime_today_date', 'todotime_today_pomodoros', 'todotime_last_sync']
+    ['todotime_settings', 'todotime_todos', 'todotime_today_date', 'todotime_today_pomodoros', 'todotime_last_sync', 'todotime_history_cache']
       .forEach(key => localStorage.removeItem(profileStorageKey(key, profileId)));
     clearActiveSyncCode();
     window.location.reload();
