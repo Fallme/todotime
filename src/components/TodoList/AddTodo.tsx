@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import type { Priority, Category, CategoryItem } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface AddTodoProps {
   onAdd: (title: string, priority: Priority, category: Category) => void;
@@ -21,6 +22,7 @@ function getRandomHSL(): string {
 }
 
 export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, onRenameCategory }: AddTodoProps) {
+  const { t } = useLanguage();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<string>('数学');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -85,7 +87,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
           onClick={() => { setShowCatPicker(!showCatPicker); setEditingCat(null); setShowCatAdd(false); }}>
           {category}
         </button>
-        <input className="add-todo-input" placeholder="输入任务名称..."
+        <input className="add-todo-input" placeholder={t('taskNamePlaceholder')}
           value={title} onChange={e => setTitle(e.target.value)} />
         <button className="add-todo-btn" type="submit" disabled={!title.trim()}>
           <Plus size={18} />
@@ -110,9 +112,9 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                   onClick={() => { const c = getRandomHSL(); setRandomPreview(c); setEditColor(c); }}>?</button>
               </div>
               <div className="cat-edit-actions">
-                <button type="button" className="cat-edit-save" onClick={saveEdit} disabled={!editName.trim()}>保存</button>
-                <button type="button" className="cat-edit-del" onClick={deleteEditing}>删除</button>
-                <button type="button" className="cat-edit-cancel" onClick={() => setEditingCat(null)}>取消</button>
+                <button type="button" className="cat-edit-save" onClick={saveEdit} disabled={!editName.trim()}>{t('save')}</button>
+                <button type="button" className="cat-edit-del" onClick={deleteEditing}>{t('delete')}</button>
+                <button type="button" className="cat-edit-cancel" onClick={() => setEditingCat(null)}>{t('cancel')}</button>
               </div>
             </div>
           ) : (
@@ -128,17 +130,17 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                       {cat.name}
                     </button>
                     <button type="button" className="category-chip-del" disabled={categories.length <= 1}
-                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '其他'); }} title={categories.length <= 1 ? '至少保留一个板块' : '删除板块'}>×</button>
+                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '其他'); }} title={categories.length <= 1 ? t('keepOneCategory') : t('deleteCategory')}>×</button>
                   </div>
                 ))}
                 <button type="button" className="category-chip add" onClick={() => { setShowCatAdd(!showCatAdd); }}>+</button>
               </div>
               {showCatAdd && (
                 <div className="category-add-row">
-                  <input className="cat-add-input" placeholder="输入新分类名称"
+                  <input className="cat-add-input" placeholder={t('addCategory')}
                     value={newCatName} onChange={e => setNewCatName(e.target.value)}
                     onKeyDown={handleCatKeyDown} autoFocus />
-                  <button type="button" className="cat-add-confirm" onClick={handleAddCat} disabled={!newCatName.trim()}>添加</button>
+                  <button type="button" className="cat-add-confirm" onClick={handleAddCat} disabled={!newCatName.trim()}>{t('add')}</button>
                 </div>
               )}
               {showCatAdd && (
@@ -149,7 +151,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                   ))}
                 </div>
               )}
-              <div className="cat-edit-hint">双击标签可编辑名称和颜色</div>
+              <div className="cat-edit-hint">{t('editCategoryHint')}</div>
             </>
           )}
         </div>

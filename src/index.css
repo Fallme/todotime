@@ -62,6 +62,8 @@ body { background: var(--bg); margin: 0; min-width: 280px; }
   box-shadow: 0 24px 80px rgba(45, 52, 54, 0.12);
 }
 .sync-gate-brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; font-size: 18px; }
+.gate-language-toggle { margin-left: auto; padding: 6px 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg); color: var(--text-secondary); font-size: 12px; cursor: pointer; }
+.gate-language-toggle:hover { color: var(--accent); border-color: var(--accent); }
 .sync-gate-logo { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: white; background: linear-gradient(135deg, var(--accent), var(--accent-light)); box-shadow: 0 8px 20px rgba(255,107,107,0.25); }
 .sync-gate-heading { margin: 30px 0 24px; }
 .sync-gate-kicker { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .08em; }
@@ -128,6 +130,8 @@ body { background: var(--bg); margin: 0; min-width: 280px; }
 .header-icon { color: var(--accent); }
 .header-title { font-size: 20px; font-weight: 700; color: var(--text); }
 .header-right { display: flex; align-items: center; gap: 8px; }
+.language-toggle { display: inline-flex; align-items: center; gap: 3px; padding: 5px 7px; border: 1px solid var(--border); border-radius: 8px; background: var(--bg-card); color: var(--text-secondary); font-size: 11px; font-weight: 700; cursor: pointer; }
+.language-toggle:hover { color: var(--accent); border-color: var(--accent); }
 .icon-btn {
   background: none; border: none; cursor: pointer;
   color: var(--text-secondary); padding: 6px; border-radius: 8px;
@@ -1065,6 +1069,9 @@ body { background: var(--bg); margin: 0; min-width: 280px; }
 .settings-row input[type="password"],
 .settings-row input[type="text"] { width: 200px; text-align: left; }
 .settings-hint { font-size: 12px; color: var(--text-muted); margin-top: 8px; line-height: 1.5; }
+.settings-language-switch { display: flex; padding: 3px; border-radius: 9px; background: var(--bg-hover); }
+.settings-language-switch button { border: 0; border-radius: 7px; padding: 6px 10px; background: transparent; color: var(--text-secondary); cursor: pointer; }
+.settings-language-switch button.active { background: var(--bg-card); color: var(--accent); box-shadow: var(--shadow); }
 .toggle-btn {
   padding: 4px 16px; border-radius: 20px; border: 1px solid var(--border);
   cursor: pointer; font-size: 13px; background: var(--bg);

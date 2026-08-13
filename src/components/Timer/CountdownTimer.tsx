@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 interface CountdownTimerProps {
   title: string;
@@ -7,6 +8,7 @@ interface CountdownTimerProps {
 }
 
 export function CountdownTimer({ title, targetDate, onUpdate }: CountdownTimerProps) {
+  const { t } = useLanguage();
   const [editing, setEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(title);
   const [editDate, setEditDate] = useState(targetDate);
@@ -39,12 +41,12 @@ export function CountdownTimer({ title, targetDate, onUpdate }: CountdownTimerPr
     return (
       <div className="countdown-card editing">
         <div className="cd-edit-row">
-          <input className="cd-input" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder="目标名称" />
+          <input className="cd-input" value={editTitle} onChange={e => setEditTitle(e.target.value)} placeholder={t('targetName')} />
           <input className="cd-input" type="date" value={editDate} onChange={e => setEditDate(e.target.value)} />
         </div>
         <div className="cd-edit-btns">
-          <button className="cd-btn save" onClick={handleSave} disabled={!editTitle.trim() || !editDate}>保存</button>
-          <button className="cd-btn cancel" onClick={() => setEditing(false)}>取消</button>
+          <button className="cd-btn save" onClick={handleSave} disabled={!editTitle.trim() || !editDate}>{t('save')}</button>
+          <button className="cd-btn cancel" onClick={() => setEditing(false)}>{t('cancel')}</button>
         </div>
       </div>
     );
@@ -58,26 +60,26 @@ export function CountdownTimer({ title, targetDate, onUpdate }: CountdownTimerPr
         <span className="cd-edit-hint">✎</span>
       </div>
       {invalidTarget ? (
-        <div className="cd-passed">日期无效，点击修改</div>
+        <div className="cd-passed">{t('invalidDate')}</div>
       ) : now === null ? null : passed ? (
-        <div className="cd-passed">🎉 已到达！</div>
+        <div className="cd-passed">{t('arrived')}</div>
       ) : (
         <div className="cd-blocks">
           <div className="cd-block">
             <span className="cd-num">{days}</span>
-            <span className="cd-unit">天</span>
+            <span className="cd-unit">{t('days')}</span>
           </div>
           <div className="cd-block">
             <span className="cd-num">{String(hours).padStart(2, '0')}</span>
-            <span className="cd-unit">时</span>
+            <span className="cd-unit">{t('hours')}</span>
           </div>
           <div className="cd-block">
             <span className="cd-num">{String(minutes).padStart(2, '0')}</span>
-            <span className="cd-unit">分</span>
+            <span className="cd-unit">{t('minutesShort')}</span>
           </div>
           <div className="cd-block">
             <span className="cd-num">{String(seconds).padStart(2, '0')}</span>
-            <span className="cd-unit">秒</span>
+            <span className="cd-unit">{t('seconds')}</span>
           </div>
         </div>
       )}

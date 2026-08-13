@@ -6,17 +6,12 @@ import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, 
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 ChartJS.register(CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
 type Period = 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
-
-const METRIC_LABELS: Record<ChartMetric, { label: string; unit: string; color: string }> = {
-  minutes: { label: '专注时长', unit: '分钟', color: '#FF6B6B' },
-  pomodoros: { label: '番茄数', unit: '个', color: '#FF6B6B' },
-  tasks: { label: '完成任务', unit: '个', color: '#27ae60' },
-};
 
 interface StatsOverviewProps {
   dayDataMap: Map<string, DayData>;
@@ -116,6 +111,7 @@ function diffText(current: number, previous: number): { text: string; cls: strin
 }
 
 export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
+  const { language, t } = useLanguage();
   const [period, setPeriod] = useState<Period>('week');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
@@ -186,7 +182,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, []);
 
-  const metricInfo = METRIC_LABELS[chartMetric];
+  const metricInfo = chartMetric === 'minutes' ? { label: t('focusDuration'), unit: language === 'zh-CN' ? '分钟' : 'min' } : chartMetric === 'pomodoros' ? { label: t('pomodoroCount'), unit: language === 'zh-CN' ? '个' : '' } : { label: t('completedTasks'), unit: language === 'zh-CN' ? '个' : '' };
   const dateRange = `${activeData.daily[0]?.date.slice(5)} ~ ${activeData.daily[activeData.daily.length - 1]?.date.slice(5)}`;
   const activeDays = activeData.daily.filter(d => d.minutes > 0 || d.tasksDone > 0).length;
 
@@ -196,19 +192,19 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     datasets: [
       {
         type: 'bar' as const,
-        label: '专注时长（分钟）', data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
+        label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
         borderColor: '#6c5ce799', backgroundColor: '#6c5ce755', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
         type: 'line' as const,
-        label: '番茄数', data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
+        label: t('pomodoroCount'), data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
         borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', pointBackgroundColor: '#FF6B6B',
         pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, tension: 0.3, order: 1,
       },
       {
         type: 'line' as const,
-        label: '完成任务', data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
+        label: t('completedTasks'), data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
         borderColor: '#27ae60', backgroundColor: '#27ae6033', pointBackgroundColor: '#27ae60',
         pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, borderDash: [5, 4], tension: 0.3, order: 2,
       },
@@ -267,9 +263,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: '时长(分钟)', data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
-      { label: '番茄', data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
-      { label: '任务', data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
@@ -288,35 +284,35 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     <div className="stats-overview">
       {/* Today summary */}
       <div className="stats-top-row">
-        <div className="stats-top-item accent"><span className="stats-top-val">{todayData.pomodoros}</span><span className="stats-top-label">🍅 今日番茄</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{todayData.minutes}m</span><span className="stats-top-label"><Clock size={12} /> 今日时长</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> 今日完成</span></div>
+        <div className="stats-top-item accent"><span className="stats-top-val">{todayData.pomodoros}</span><span className="stats-top-label">🍅 {t('todayPomodoros')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{todayData.minutes}m</span><span className="stats-top-label"><Clock size={12} /> {t('todayDuration')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> {t('todayCompleted')}</span></div>
       </div>
 
       {/* Toolbar: all controls in one row */}
       <div className="stats-toolbar">
         <div className="stats-period-toggle">
-          <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>近七天</button>
-          <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>近一个月</button>
+          <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>{t('lastSevenDays')}</button>
+          <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>{t('lastMonth')}</button>
         </div>
         <div className="stats-report-btns">
-          <button className="btn secondary small" onClick={() => setShowReport('week')}><BarChart3 size={13} /> 周报</button>
-          <button className="btn secondary small" onClick={() => setShowReport('month')}><BarChart3 size={13} /> 月报</button>
+          <button className="btn secondary small" onClick={() => setShowReport('week')}><BarChart3 size={13} /> {t('weeklyReport')}</button>
+          <button className="btn secondary small" onClick={() => setShowReport('month')}><BarChart3 size={13} /> {t('monthlyReport')}</button>
         </div>
       </div>
 
       {/* Aggregate summary */}
       <div className="stats-aggregate-card">
-        <div className="agg-item"><span className="agg-val">{activeData.totalPomodoros}</span><span className="agg-label">🍅 番茄</span></div>
-        <div className="agg-item"><span className="agg-val">{activeData.totalMinutes}m</span><span className="agg-label"><Clock size={11} /> 时长</span></div>
-        <div className="agg-item"><span className="agg-val">{activeData.totalTasksCompleted}</span><span className="agg-label"><CheckCircle2 size={11} /> 完成任务</span></div>
-        <div className="agg-item"><span className="agg-val">{activeDays}/{activeData.daily.length}</span><span className="agg-label"><Calendar size={11} /> 活跃天</span></div>
+        <div className="agg-item"><span className="agg-val">{activeData.totalPomodoros}</span><span className="agg-label">🍅 {t('pomodoros')}</span></div>
+        <div className="agg-item"><span className="agg-val">{activeData.totalMinutes}m</span><span className="agg-label"><Clock size={11} /> {t('duration')}</span></div>
+        <div className="agg-item"><span className="agg-val">{activeData.totalTasksCompleted}</span><span className="agg-label"><CheckCircle2 size={11} /> {t('completedTasks')}</span></div>
+        <div className="agg-item"><span className="agg-val">{activeDays}/{activeData.daily.length}</span><span className="agg-label"><Calendar size={11} /> {t('activeDays')}</span></div>
       </div>
 
       {/* Combined trend chart */}
       <div className="stats-card-full">
         <div className="chart-header">
-          <h4 className="chart-sub-title">{period === 'week' ? '近七天' : '近一个月'} · 综合走势</h4>
+          <h4 className="chart-sub-title">{period === 'week' ? t('lastSevenDays') : t('lastMonth')} · {t('combinedTrend')}</h4>
           <span className="stats-period-range">{dateRange}</span>
         </div>
         <div className="chart-wrapper-lg trend-chart"><Chart type="bar" data={trendData} options={trendOptions} /></div>
@@ -325,11 +321,11 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       {/* Pie chart */}
       <div className="stats-card-full">
         <div className="chart-header pie-chart-header">
-          <h4 className="chart-sub-title">板块占比 · {metricInfo.label}</h4>
+          <h4 className="chart-sub-title">{t('categoryShare')} · {metricInfo.label}</h4>
           <div className="stats-metric-toggle" aria-label="饼图分布指标">
-            <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> 时长</button>
-            <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 番茄</button>
-            <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> 任务</button>
+            <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> {t('duration')}</button>
+            <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 {t('pomodoros')}</button>
+            <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> {t('tasks')}</button>
           </div>
         </div>
         {pieData ? (
@@ -345,13 +341,13 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               ))}
             </div>
           </div>
-        ) : <div className="chart-empty">暂无数据</div>}
+        ) : <div className="chart-empty">{t('noData')}</div>}
       </div>
 
       {/* Report Modal */}
       {showReport && (() => {
         const { rd, pd } = reportData;
-        const reportType = showReport === 'week' ? '周报' : '月报';
+        const reportType = showReport === 'week' ? t('weeklyReport') : t('monthlyReport');
         const activeDays = rd.daily.filter(d => d.pomodoros > 0).length;
         const reportCats = Object.entries(rd.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
 
@@ -373,6 +369,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         const periodTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
 
         const insights = generateReportInsights({
+          language,
           period: showReport,
           daily: rd.daily,
           totalMinutes: rd.totalMinutes,
@@ -397,34 +394,34 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               {/* Summary stats row */}
               <div className="report-apple-stats">
                 <div className="report-apple-stat">
-                  <span className="report-apple-stat-label">专注时长</span>
+                  <span className="report-apple-stat-label">{t('focusDuration')}</span>
                   <span className="report-apple-stat-val">{formatDuration(rd.totalMinutes)}</span>
                   <span className={`report-apple-stat-diff ${diffText(rd.totalMinutes, pd.totalMinutes).cls}`}>
                     {diffText(rd.totalMinutes, pd.totalMinutes).icon} {diffText(rd.totalMinutes, pd.totalMinutes).text}
                   </span>
                 </div>
                 <div className="report-apple-stat">
-                  <span className="report-apple-stat-label">🍅 番茄</span>
+                  <span className="report-apple-stat-label">🍅 {t('pomodoros')}</span>
                   <span className="report-apple-stat-val">{rd.totalPomodoros}个</span>
                   <span className={`report-apple-stat-diff ${diffText(rd.totalPomodoros, pd.totalPomodoros).cls}`}>
                     {diffText(rd.totalPomodoros, pd.totalPomodoros).icon} {diffText(rd.totalPomodoros, pd.totalPomodoros).text}
                   </span>
                 </div>
                 <div className="report-apple-stat">
-                  <span className="report-apple-stat-label">✓ 任务量</span>
+                  <span className="report-apple-stat-label">✓ {t('tasks')}</span>
                   <span className="report-apple-stat-val">{rd.totalTasksCompleted}个</span>
                   <span className={`report-apple-stat-diff ${diffText(rd.totalTasksCompleted, pd.totalTasksCompleted).cls}`}>
                     {diffText(rd.totalTasksCompleted, pd.totalTasksCompleted).icon} {diffText(rd.totalTasksCompleted, pd.totalTasksCompleted).text}
                   </span>
                 </div>
                 <div className="report-apple-stat">
-                  <span className="report-apple-stat-label">活跃天数</span>
+                  <span className="report-apple-stat-label">{t('activeDays')}</span>
                   <span className="report-apple-stat-val">{activeDays}天</span>
                 </div>
               </div>
 
               {/* Data-aware analysis */}
-              <div className="report-insights" aria-label="报告分析">
+              <div className="report-insights" aria-label={t('reportAnalysis')}>
                 {insights.map(insight => (
                   <div key={`${insight.title}-${insight.text}`} className={`report-insight ${insight.kind}`}>
                     <strong>{insight.title}</strong>
@@ -441,7 +438,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               {/* Pie chart - category distribution */}
               {pieData && (
                 <div className="report-section-apple">
-                  <h4>板块分布</h4>
+                  <h4>{t('categoryDistribution')}</h4>
                   <div className="report-pie-layout">
                     <div className="report-pie-chart"><Doughnut data={pieData} options={pieOpts} /></div>
                     <div className="report-pie-legend">
@@ -460,7 +457,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               {/* Completed tasks */}
               {periodTasks.length > 0 && (
                 <div className="report-section-apple">
-                  <h4>完成的任务 ({periodTasks.length}个)</h4>
+                  <h4>{t('completedTaskSection')} ({periodTasks.length})</h4>
                   <div className="report-task-list">
                     {periodTasks.slice(0, 8).map(t => (
                       <div key={t.id} className="report-task-row">
@@ -470,7 +467,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                         <span className="report-task-pom">🍅 {t.completedPomodoros}</span>
                       </div>
                     ))}
-                    {periodTasks.length > 8 && <div className="report-task-more">还有 {periodTasks.length - 8} 个任务...</div>}
+                    {periodTasks.length > 8 && <div className="report-task-more">{t('moreTasks', { count: periodTasks.length - 8 })}</div>}
                   </div>
                 </div>
               )}
@@ -478,10 +475,10 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               {/* Footer */}
               <div className="report-footer-apple">
                 <button className="report-share-btn" onClick={handleRefresh} disabled={refreshing}>
-                  <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> {refreshing ? '同步中...' : '刷新'}
+                  <RefreshCw size={14} className={refreshing ? 'spin' : ''} /> {refreshing ? t('refreshing') : t('refresh')}
                 </button>
                 <button className="report-share-btn primary" onClick={() => handleDownload(rd, reportType, insights)}>
-                  <Download size={14} /> 下载
+                  <Download size={14} /> {t('download')}
                 </button>
               </div>
             </div>

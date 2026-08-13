@@ -6,6 +6,7 @@ export interface ReportDaySummary {
 }
 
 export interface ReportInsightInput {
+  language?: 'zh-CN' | 'en';
   period: 'week' | 'month';
   daily: ReportDaySummary[];
   totalMinutes: number;
@@ -41,6 +42,37 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
   const activeRatio = daily.length ? activeDays / daily.length : 0;
   const activeAverage = activeDays ? Math.round(totalMinutes / activeDays) : 0;
   const seed = totalMinutes + totalPomodoros * 7 + totalTasksCompleted * 13 + activeDays * 17;
+
+  if (input.language === 'en') {
+    const changes = [percentChange(totalMinutes, previousMinutes), percentChange(totalPomodoros, previousPomodoros), percentChange(totalTasksCompleted, previousTasksCompleted)].filter((value): value is number => value !== null);
+    const averageChange = changes.length ? Math.round(changes.reduce((sum, value) => sum + value, 0) / changes.length) : null;
+    const insights: ReportInsight[] = [];
+    if (totalMinutes === 0 && totalTasksCompleted === 0) return [
+      { kind: 'neutral', title: 'Ready for your first entry', text: `There is no focus data for this ${period === 'week' ? 'week' : 'month'} yet. Begin with one small 15-minute target.` },
+      { kind: 'attention', title: 'A simple next step', text: `Aim for one pomodoro and one completed task ${period === 'week' ? 'next week' : 'next month'}, then build gradually.` },
+    ];
+    if (averageChange === null) insights.push({ kind: 'positive', title: 'A new baseline', text: `You logged ${totalMinutes} focused minutes, ${totalPomodoros} pomodoros, and ${totalTasksCompleted} completed tasks. Keep tracking to reveal a useful trend.` });
+    else if (averageChange >= 20) insights.push({ kind: 'positive', title: 'Strong overall growth', text: `Your core metrics improved by about ${averageChange}% on average. The current rhythm is turning effort into outcomes.` });
+    else if (averageChange >= 5) insights.push({ kind: 'positive', title: 'Steady progress', text: `Core metrics rose by about ${averageChange}%—a healthy, sustainable pace.` });
+    else if (averageChange > -5) insights.push({ kind: 'neutral', title: 'A stable rhythm', text: 'Results are close to the previous period. Choose one metric for a small, focused improvement next.' });
+    else if (averageChange > -20) insights.push({ kind: 'neutral', title: 'A small dip', text: `Core metrics fell about ${Math.abs(averageChange)}%. Check for temporary disruptions and avoid compensating with an unsustainable sprint.` });
+    else insights.push({ kind: 'attention', title: 'Rebuild the rhythm', text: `Core metrics fell about ${Math.abs(averageChange)}%. Restore a consistent start time before trying to recover total volume.` });
+    if (activeRatio >= .8) insights.push({ kind: 'positive', title: 'Excellent consistency', text: `${activeDays} active days gave you ${Math.round(activeRatio * 100)}% coverage. Showing up consistently is a real strength.` });
+    else if (activeRatio >= .5) insights.push({ kind: 'neutral', title: 'A rhythm is forming', text: `${activeDays} active days averaged ${activeAverage} focused minutes. Turn a few gaps into light-focus days.` });
+    else insights.push({ kind: 'attention', title: 'Focus is concentrated', text: `Only ${activeDays} days have meaningful activity. Smaller tasks on more days may work better than occasional high-volume sessions.` });
+    if (totalPomodoros >= 4 && totalTasksCompleted === 0) insights.push({ kind: 'attention', title: 'Effort needs a finish line', text: `${totalPomodoros} pomodoros were logged without a completed task. Break large work into pieces that can close within a day.` });
+    else if (totalTasksCompleted > totalPomodoros && totalMinutes < totalTasksCompleted * 10) insights.push({ kind: 'neutral', title: 'Many fragmented tasks', text: `You completed ${totalTasksCompleted} tasks with short focus per item. Batch similar small tasks to reduce switching costs.` });
+    else if (totalTasksCompleted > 0 && totalPomodoros > 0) insights.push({ kind: 'positive', title: 'Effort reached outcomes', text: `${totalMinutes} focused minutes produced ${totalTasksCompleted} completed tasks—about ${Math.round(totalMinutes / totalTasksCompleted)} minutes each.` });
+    const categories = Object.entries(categoryMinutes).filter(([, minutes]) => minutes > 0).sort((a, b) => b[1] - a[1]);
+    if (categories.length) {
+      const [topCategory, topMinutes] = categories[0]; const topShare = totalMinutes ? topMinutes / totalMinutes : 0;
+      if (topShare >= .7) insights.push({ kind: 'neutral', title: 'Highly concentrated energy', text: `${topCategory} received ${Math.round(topShare * 100)}% of your focus. Great if it is the priority; otherwise, check what is being crowded out.` });
+      else if (categories.length >= 3 && topShare < .5) insights.push({ kind: 'positive', title: 'Balanced categories', text: `Focus was spread across ${categories.length} categories, with the largest at only ${Math.round(topShare * 100)}%.` });
+    }
+    const bestDay = daily.reduce<ReportDaySummary | null>((best, day) => !best || day.minutes > best.minutes ? day : best, null);
+    if (bestDay?.minutes) insights.push({ kind: 'positive', title: 'A clue from your best day', text: `${bestDay.date.slice(5)} led with ${bestDay.minutes} focused minutes. Review that day’s timing, environment, and task setup.` });
+    return insights.slice(0, 4);
+  }
 
   if (totalMinutes === 0 && totalTasksCompleted === 0) {
     return [

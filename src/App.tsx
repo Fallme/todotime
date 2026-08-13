@@ -20,6 +20,7 @@ import { useGithubSync } from './hooks/useGithubSync';
 import { loadConfig } from './services/github';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 import { isPomodoroRecord } from './utils/pomodoroRules';
+import { useLanguage } from './i18n/LanguageContext';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
@@ -61,6 +62,7 @@ function normalizeSettings(settings: AppSettings): AppSettings {
 }
 
 export default function App() {
+  const { language, t } = useLanguage();
   const [activeSyncCode, setActiveCode] = useState(getActiveSyncCode);
   const profileId = getProfileId(activeSyncCode);
   const [settings, setSettings] = useState<AppSettings>(() => loadSettings(profileId, activeSyncCode));
@@ -239,10 +241,10 @@ export default function App() {
     await flush();
     const remoteProfile = await loadConfig(code);
     if (mode === 'existing' && !remoteProfile) {
-      throw new Error('没有找到这个专属码的数据，请检查是否输错。新用户请创建新专属码。');
+      throw new Error(language === 'zh-CN' ? '没有找到这个专属码的数据，请检查是否输错。新用户请创建新专属码。' : 'No data was found for this code. Check for a typo, or create a new code.');
     }
     if (mode === 'new' && remoteProfile) {
-      throw new Error('这个专属码已经存在，请重新生成一个。');
+      throw new Error(language === 'zh-CN' ? '这个专属码已经存在，请重新生成一个。' : 'This code already exists. Generate another one.');
     }
 
     const normalized = setActiveSyncCode(code);
@@ -321,7 +323,7 @@ export default function App() {
         }
         if (Array.isArray(data.todos)) replaceTodos(data.todos);
       } catch {
-        alert('导入失败：文件格式无效');
+        alert(language === 'zh-CN' ? '导入失败：文件格式无效' : 'Import failed: invalid file format.');
       }
     };
     reader.readAsText(file);
@@ -450,11 +452,11 @@ export default function App() {
       {showTaskPicker && (
         <div className="modal-overlay" onClick={() => setShowTaskPicker(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 320 }}>
-            <h3 className="modal-title">切换任务</h3>
+            <h3 className="modal-title">{t('switchTask')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12, maxHeight: 300, overflowY: 'auto' }}>
               <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: '#636e72', background: !currentTaskId ? '#636e72' : undefined, color: !currentTaskId ? 'white' : undefined }}
                 onClick={() => { setCurrentTaskId(null); timer.setTaskInfo(null, '', '其他'); setShowTaskPicker(false); }}>
-                无任务（其他）
+                {t('noTaskOther')}
               </button>
               {todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => (
                 <div key={t.id} style={{ display: 'contents' }}>

@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
 import type { Todo, Category, CategoryItem } from '../../types';
 import { getCategoryColor } from '../../types';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 function formatIsoTime(iso: string): string {
   if (!iso) return '';
@@ -35,6 +36,7 @@ interface TodoItemProps {
 }
 
 export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
+  const { t } = useLanguage();
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -68,13 +70,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       <div className="todo-card-row" onClick={onSelect}>
         <div className="todo-card-status">
           {todo.done ? (
-            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成" aria-label={`取消完成任务：${todo.title}`}><Check size={15} /></button>
+            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><Check size={15} /></button>
           ) : todo.abandoned ? (
-            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复" aria-label={`恢复任务：${todo.title}`}><RotateCcw size={14} /></button>
+            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><RotateCcw size={14} /></button>
           ) : (
             <>
-              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成" aria-label={`完成任务：${todo.title}`}>✓</button>
-              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃" aria-label={`放弃任务：${todo.title}`}>✕</button>
+              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('complete')} aria-label={`${t('complete')}: ${todo.title}`}>✓</button>
+              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title={t('abandon')} aria-label={`${t('abandon')}: ${todo.title}`}>✕</button>
             </>
           )}
         </div>
@@ -85,7 +87,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             {todo.category}
           </span>
           <span className="todo-card-title">{todo.title}</span>
-          {todo.abandoned && <span className="abandoned-tag">已放弃</span>}
+          {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
         </div>
 
         <div className="todo-card-meta">
@@ -100,9 +102,9 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-actions">
-          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title="开始番茄"><Play size={14} /></button>}
-          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title="子任务"><Plus size={14} /></button>}
-          <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title="删除"><Trash2 size={14} /></button>
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title={t('startPomodoro')}><Play size={14} /></button>}
+          {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title={t('subtask')}><Plus size={14} /></button>}
+          <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title={t('delete')}><Trash2 size={14} /></button>
         </div>
       </div>
 
@@ -138,7 +140,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
               {sub.createdAt && <span className="sub-time">{formatIsoTime(sub.createdAt)}</span>}
               <span className="sub-pom">🍅 {sub.completedPomodoros}</span>
               {!sub.done && !sub.abandoned && (
-                <button className="sub-play" onClick={e => { e.stopPropagation(); onQuickStartSubtask({ id: sub.id, title: sub.title, category: todo.category }); }} title="开始番茄"><Play size={11} /></button>
+                <button className="sub-play" onClick={e => { e.stopPropagation(); onQuickStartSubtask({ id: sub.id, title: sub.title, category: todo.category }); }} title={t('startPomodoro')}><Play size={11} /></button>
               )}
               <button className="sub-del" onClick={e => { e.stopPropagation(); onDeleteSubtask(sub.id); }}>×</button>
             </div>
@@ -149,7 +151,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       {/* Subtask input */}
       {showSubInput && isActive && (
         <form className="todo-card-sub-input" onSubmit={handleAddSub}>
-          <input className="sub-input" placeholder="子任务名称" value={subTitle}
+          <input className="sub-input" placeholder={t('subtaskName')} value={subTitle}
             onChange={e => setSubTitle(e.target.value)} autoFocus
             onBlur={() => { if (!subTitle.trim()) setShowSubInput(false); }} />
           <button className="sub-confirm" type="submit" disabled={!subTitle.trim()}>✓</button>

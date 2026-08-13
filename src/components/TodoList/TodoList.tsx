@@ -5,6 +5,7 @@ import { formatDate } from '../../utils/dateUtils';
 import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
 import { ListTodo, ChevronDown, ChevronRight, Archive } from 'lucide-react';
+import { useLanguage } from '../../i18n/LanguageContext';
 
 type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
 
@@ -32,12 +33,11 @@ interface TodoListProps {
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
 }
 
-const STATUS_TABS: { id: StatusTab; label: string }[] = [
-  { id: 'all', label: '全部' }, { id: 'active', label: '进行中' },
-  { id: 'done', label: '已完成' }, { id: 'abandoned', label: '已放弃' },
-];
-
 export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
+  const { language, t } = useLanguage();
+  const statusTabs: { id: StatusTab; label: ReturnType<typeof t> }[] = [
+    { id: 'all', label: t('all') }, { id: 'active', label: t('active') }, { id: 'done', label: t('done') }, { id: 'abandoned', label: t('abandoned') },
+  ];
   const [statusTab, setStatusTab] = useState<StatusTab>('all');
   const [filterCategory, setFilterCategory] = useState<Category | 'all'>('all');
   const [expandedArchives, setExpandedArchives] = useState<Set<string>>(new Set());
@@ -106,7 +106,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
   return (
     <div className="todo-list-container">
       <div className="todo-list-header">
-        <ListTodo size={20} /><span>任务清单</span>
+        <ListTodo size={20} /><span>{t('taskList')}</span>
         <div className="todo-header-stats">
           <span className="todo-stat-done">{todos.filter(t => !t.deletedAt && t.done).length}/{todos.filter(t => !t.deletedAt && !t.abandoned).length}</span>
           <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
@@ -114,7 +114,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
       </div>
 
       <div className="status-tabs">
-        {STATUS_TABS.map(tab => (
+        {statusTabs.map(tab => (
           <button key={tab.id} className={`status-tab ${statusTab === tab.id ? 'active' : ''}`}
             onClick={() => setStatusTab(tab.id)}>{tab.label}</button>
         ))}
@@ -122,7 +122,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
 
       {(statusTab === 'all' || statusTab === 'active') && usedCategories.length > 0 && (
         <div className="category-filter-bar">
-          <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>全部</button>
+          <button className={`category-filter-chip ${filterCategory === 'all' ? 'active' : ''}`} onClick={() => setFilterCategory('all')}>{t('all')}</button>
           {usedCategories.map(cat => (
             <button key={cat} className={`category-filter-chip ${filterCategory === cat ? 'active' : ''}`}
               style={{ color: 'var(--text)', borderColor: getCategoryColor(categories, cat) }}
@@ -135,7 +135,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
 
       <div className="todo-list-items">
         {sorted.length === 0 && archiveGroups.size === 0 ? (
-          <div className="todo-empty">{statusTab === 'active' ? '没有进行中的任务' : statusTab === 'done' ? '还没有完成的任务' : statusTab === 'abandoned' ? '没有放弃的任务' : '添加一个任务开始吧'}</div>
+          <div className="todo-empty">{statusTab === 'active' ? t('noActiveTasks') : statusTab === 'done' ? t('noDoneTasks') : statusTab === 'abandoned' ? t('noAbandonedTasks') : t('emptyTasks')}</div>
         ) : (
           <>
             {sorted.map(todo => (
@@ -151,7 +151,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
             {/* Archive groups */}
             {Array.from(archiveGroups.entries()).sort((a, b) => b[0].localeCompare(a[0])).map(([monthKey, tasks]) => {
               const [year, month] = monthKey.split('-');
-              const label = `${year}年${parseInt(month)}月`;
+              const label = language === 'zh-CN' ? `${year}年${parseInt(month)}月` : new Date(Number(year), Number(month) - 1).toLocaleDateString('en', { month: 'long', year: 'numeric' });
               const isExpanded = expandedArchives.has(monthKey);
               return (
                 <div key={monthKey} className="archive-group">
@@ -159,7 +159,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                     <Archive size={14} />
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     <span>{label}</span>
-                    <span className="archive-count">{tasks.length}个任务</span>
+                    <span className="archive-count">{tasks.length} {t('tasksCount')}</span>
                   </button>
                   {isExpanded && (
                     <div className="archive-items">
