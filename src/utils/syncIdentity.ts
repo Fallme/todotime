@@ -55,7 +55,9 @@ export function profileStorageKey(base: string, profileId: string): string {
 function legacyOwnerProfile(): string {
   try {
     const settings = JSON.parse(localStorage.getItem('todotime_settings') || '{}') as { syncSecret?: string; syncCode?: string };
-    const code = normalizeSyncCode(settings.syncCode || settings.syncSecret || localStorage.getItem(ACTIVE_CODE_KEY) || '');
+    // Unscoped data is migrated only when it carried an explicit owner in the
+    // old settings. The active code may have been entered by another person.
+    const code = normalizeSyncCode(settings.syncCode || settings.syncSecret || '');
     return isValidSyncCode(code) ? code : 'local';
   } catch {
     return 'local';

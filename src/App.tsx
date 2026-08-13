@@ -12,9 +12,12 @@ import { TaskAssignModal } from './components/Timer/TaskAssignModal';
 import { TodoList } from './components/TodoList/TodoList';
 import { StatsOverview } from './components/Stats/StatsOverview';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
+import { SyncCodeGate } from './components/Auth/SyncCodeGate';
+import type { SyncCodeMode } from './components/Auth/SyncCodeGate';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
+import { loadConfig } from './services/github';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 import { isPomodoroRecord } from './utils/pomodoroRules';
 
@@ -232,15 +235,21 @@ export default function App() {
     setSettings(normalized);
   };
 
-  const handleActivateSyncCode = async (code: string, keepCurrentData: boolean) => {
+  const handleActivateSyncCode = async (code: string, mode: SyncCodeMode) => {
     await flush();
+    const remoteProfile = await loadConfig(settings.githubRepo, code);
+    if (mode === 'existing' && !remoteProfile) {
+      throw new Error('没有找到这个专属码的数据，请检查是否输错。新用户请创建新专属码。');
+    }
+    if (mode === 'new' && remoteProfile) {
+      throw new Error('这个专属码已经存在，请重新生成一个。');
+    }
+
     const normalized = setActiveSyncCode(code);
     const nextProfileId = getProfileId(normalized);
-    if (keepCurrentData) {
-      localStorage.setItem(profileStorageKey('todotime_settings', nextProfileId), JSON.stringify({ ...settings, syncCode: normalized }));
-      localStorage.setItem(profileStorageKey('todotime_todos', nextProfileId), JSON.stringify(todos));
-      localStorage.setItem(profileStorageKey('todotime_today_date', nextProfileId), today);
-      localStorage.setItem(profileStorageKey('todotime_today_pomodoros', nextProfileId), JSON.stringify(timer.todayPomodoros));
+    if (mode === 'new') {
+      ['todotime_settings', 'todotime_todos', 'todotime_today_date', 'todotime_today_pomodoros', 'todotime_last_sync', 'todotime_history_cache']
+        .forEach(key => localStorage.removeItem(profileStorageKey(key, nextProfileId)));
     }
     setActiveCode(normalized);
     window.location.reload();
@@ -360,6 +369,10 @@ export default function App() {
     if (diff > 0 && idx < tabs.length - 1) setTab(tabs[idx + 1]); // swipe left → next
     else if (diff < 0 && idx > 0) setTab(tabs[idx - 1]); // swipe right → prev
   };
+
+  if (!activeSyncCode) {
+    return <SyncCodeGate onActivate={handleActivateSyncCode} />;
+  }
 
   return (
     <div className="app">

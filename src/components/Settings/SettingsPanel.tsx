@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { AppSettings } from '../../types';
 import { Download, Upload, Trash2, Copy, RefreshCw } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
+import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -9,7 +10,7 @@ interface SettingsPanelProps {
   onExport: () => void;
   onImport: (file: File) => void;
   onClear: () => void;
-  onActivateSyncCode: (code: string, keepCurrentData: boolean) => Promise<void>;
+  onActivateSyncCode: (code: string, mode: SyncCodeMode) => Promise<void>;
   syncing: boolean;
   lastSyncedAt: string;
 }
@@ -30,17 +31,19 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
     if (file) onImport(file);
   };
 
-  const activateCode = async (keepCurrentData: boolean) => {
+  const activateCode = async (mode: SyncCodeMode) => {
     const code = normalizeSyncCode(syncCodeDraft);
     if (!isValidSyncCode(code)) {
       setCodeMessage('识别码至少 12 位，只能包含字母、数字、下划线和短横线');
       return;
     }
-    setCodeMessage(keepCurrentData ? '正在创建并保存当前数据…' : '正在加载该用户的数据…');
-    await onActivateSyncCode(code, keepCurrentData);
-    setSyncCodeDraft(code);
-    setIsNewCode(false);
-    setCodeMessage(keepCurrentData ? '识别码已创建，当前数据已归档到该用户' : '用户数据已加载');
+    setCodeMessage(mode === 'new' ? '正在创建独立数据空间…' : '正在加载该用户的数据…');
+    try {
+      await onActivateSyncCode(code, mode);
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : '';
+      setCodeMessage(detail === 'Failed to fetch' ? '暂时无法连接同步服务，请检查网络后重试' : detail || '加载失败，请稍后重试');
+    }
   };
 
   const createCode = () => {
@@ -138,11 +141,11 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           <button className="btn secondary" type="button" onClick={createCode}>生成新识别码</button>
           <button className="btn secondary" type="button" onClick={() => setCodeVisible(value => !value)}>{codeVisible ? '隐藏' : '显示'}</button>
           <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => { void navigator.clipboard.writeText(syncCodeDraft); setCodeMessage('识别码已复制，请妥善保存'); }}><Copy size={15} /> 复制</button>
-          <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft || !isNewCode} onClick={() => void activateCode(true)}>
+          <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft || !isNewCode} onClick={() => void activateCode('new')}>
             <RefreshCw size={15} className={syncing ? 'spin' : ''} />
             启用新识别码
           </button>
-          <button className="btn secondary" type="button" disabled={syncing || !syncCodeDraft || syncCodeDraft === settings.syncCode} onClick={() => void activateCode(false)}>
+          <button className="btn secondary" type="button" disabled={syncing || !syncCodeDraft || syncCodeDraft === settings.syncCode} onClick={() => void activateCode('existing')}>
             加载已有识别码
           </button>
         </div>
@@ -155,7 +158,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           />
         </div>
         <p className="settings-hint">
-          每个识别码对应完全独立的任务、设置和统计文件。首次使用先生成并启用新识别码；其他设备输入同一码后点击“加载已有识别码”。识别码等同于访问凭证，请勿分享，遗失后无法找回。
+          每个识别码对应完全独立的任务、设置和统计文件。创建新码会从空白数据开始，不会复制当前用户数据；其他设备输入同一码后点击“加载已有识别码”。识别码等同于访问凭证，请勿分享，遗失后无法找回。
         </p>
         {codeMessage && <p className="settings-hint">{codeMessage}</p>}
         {lastSyncedAt && <p className="settings-hint">最近同步：{new Date(lastSyncedAt).toLocaleString()}</p>}

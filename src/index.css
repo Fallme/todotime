@@ -42,6 +42,60 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 body { background: var(--bg); margin: 0; min-width: 280px; }
 
+/* First-visit identity gate */
+.sync-gate {
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: clamp(20px, 6vw, 56px) 16px;
+  background:
+    radial-gradient(circle at 12% 18%, rgba(255, 107, 107, 0.18), transparent 34%),
+    radial-gradient(circle at 88% 82%, rgba(72, 219, 251, 0.14), transparent 32%),
+    var(--bg);
+}
+.sync-gate-card {
+  width: min(100%, 480px);
+  background: color-mix(in srgb, var(--bg-card) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  padding: clamp(24px, 6vw, 40px);
+  box-shadow: 0 24px 80px rgba(45, 52, 54, 0.12);
+}
+.sync-gate-brand { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 800; font-size: 18px; }
+.sync-gate-logo { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 13px; color: white; background: linear-gradient(135deg, var(--accent), var(--accent-light)); box-shadow: 0 8px 20px rgba(255,107,107,0.25); }
+.sync-gate-heading { margin: 30px 0 24px; }
+.sync-gate-kicker { color: var(--accent); font-size: 13px; font-weight: 700; letter-spacing: .08em; }
+.sync-gate-heading h1 { margin: 5px 0 9px; color: var(--text); font-size: clamp(28px, 8vw, 36px); line-height: 1.2; letter-spacing: -.03em; }
+.sync-gate-heading > p:last-child { color: var(--text-secondary); font-size: 14px; line-height: 1.7; }
+.sync-gate-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 5px; padding: 4px; background: var(--bg-hover); border-radius: 12px; margin-bottom: 20px; }
+.sync-gate-tabs button { border: 0; border-radius: 9px; padding: 10px 8px; background: transparent; color: var(--text-secondary); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.sync-gate-tabs button.active { color: var(--text); background: var(--bg-card); box-shadow: 0 2px 8px rgba(45,52,54,.08); }
+.sync-code-label { display: block; color: var(--text-secondary); font-size: 13px; font-weight: 650; margin-bottom: 7px; }
+.sync-code-field { display: flex; align-items: stretch; border: 1.5px solid var(--border); border-radius: 12px; background: var(--bg); overflow: hidden; transition: border-color .2s, box-shadow .2s; }
+.sync-code-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.sync-code-field input { min-width: 0; flex: 1; border: 0; outline: 0; padding: 12px 13px; background: transparent; color: var(--text); font: inherit; font-size: 14px; letter-spacing: .02em; }
+.sync-code-field input::placeholder { color: var(--text-muted); letter-spacing: 0; }
+.sync-code-icon-btn { width: 42px; border: 0; border-left: 1px solid var(--border); background: transparent; color: var(--text-secondary); cursor: pointer; display: grid; place-items: center; }
+.sync-code-icon-btn:hover { color: var(--accent); background: var(--accent-bg); }
+.sync-gate-primary { width: 100%; border: 0; border-radius: 12px; padding: 13px 18px; margin-top: 14px; background: linear-gradient(135deg, var(--accent), #f05d6d); color: white; font: inherit; font-size: 15px; font-weight: 750; cursor: pointer; box-shadow: 0 10px 24px rgba(255,107,107,.22); }
+.sync-gate-primary:hover:not(:disabled) { filter: brightness(.97); transform: translateY(-1px); }
+.sync-gate-primary:disabled { opacity: .52; cursor: wait; box-shadow: none; }
+.sync-gate-create { width: 100%; padding: 11px; border: 0; background: transparent; color: var(--accent); font: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.sync-gate-message { min-height: 0; color: var(--text-secondary); font-size: 12px; text-align: center; line-height: 1.5; }
+.sync-gate-message.show { min-height: 36px; margin-top: 2px; }
+.sync-gate-note { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; padding: 13px; border-radius: 12px; color: var(--text-secondary); background: var(--accent-bg); }
+.sync-gate-note > svg { flex: 0 0 auto; margin-top: 2px; color: var(--accent); }
+.sync-gate-note p { font-size: 12px; line-height: 1.55; }
+.sync-gate-note strong, .sync-gate-note span { display: block; }
+.sync-gate-note strong { color: var(--text); margin-bottom: 2px; }
+
+@media (max-width: 380px) {
+  .sync-gate { padding-inline: 10px; }
+  .sync-gate-card { border-radius: 18px; padding: 22px 17px; }
+  .sync-gate-tabs button { font-size: 12px; }
+  .sync-code-field input { font-size: 12px; padding-inline: 10px; }
+}
+
 /* App layout */
 .app {
   width: 100%;
