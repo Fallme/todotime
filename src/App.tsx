@@ -210,6 +210,7 @@ export default function App() {
   const handleSaveSettings = (s: AppSettings) => setSettings(normalizeSettings(s));
 
   const handleActivateSyncCode = async (code: string, keepCurrentData: boolean) => {
+    await flush();
     const normalized = setActiveSyncCode(code);
     const nextProfileId = getProfileId(normalized);
     if (keepCurrentData) {
@@ -218,7 +219,6 @@ export default function App() {
       localStorage.setItem(profileStorageKey('todotime_today_date', nextProfileId), today);
       localStorage.setItem(profileStorageKey('todotime_today_pomodoros', nextProfileId), JSON.stringify(timer.todayPomodoros));
     }
-    await flush();
     setActiveCode(normalized);
     window.location.reload();
   };

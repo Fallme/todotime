@@ -18,6 +18,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [syncCodeDraft, setSyncCodeDraft] = useState(settings.syncCode);
   const [codeMessage, setCodeMessage] = useState('');
+  const [isNewCode, setIsNewCode] = useState(false);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => {
     onSave({ ...settings, [key]: value });
@@ -37,6 +38,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
     setCodeMessage(keepCurrentData ? '正在创建并保存当前数据…' : '正在加载该用户的数据…');
     await onActivateSyncCode(code, keepCurrentData);
     setSyncCodeDraft(code);
+    setIsNewCode(true);
     setCodeMessage(keepCurrentData ? '识别码已创建，当前数据已归档到该用户' : '用户数据已加载');
   };
 
@@ -126,13 +128,13 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
             spellCheck={false}
             placeholder="输入已有识别码，或点击创建"
             value={syncCodeDraft}
-            onChange={e => setSyncCodeDraft(normalizeSyncCode(e.target.value))}
+            onChange={e => { setSyncCodeDraft(normalizeSyncCode(e.target.value)); setIsNewCode(false); }}
           />
         </div>
         <div className="settings-actions" style={{ marginTop: 8 }}>
           <button className="btn secondary" type="button" onClick={createCode}>创建识别码</button>
           <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => navigator.clipboard.writeText(syncCodeDraft)}><Copy size={15} /> 复制</button>
-          <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft} onClick={() => void activateCode(true)}>
+          <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft || !isNewCode} onClick={() => void activateCode(true)}>
             <RefreshCw size={15} className={syncing ? 'spin' : ''} />
             创建并保存当前数据
           </button>
