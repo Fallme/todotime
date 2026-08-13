@@ -68,13 +68,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       <div className="todo-card-row" onClick={onSelect}>
         <div className="todo-card-status">
           {todo.done ? (
-            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成"><Check size={15} /></button>
+            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title="取消完成" aria-label={`取消完成任务：${todo.title}`}><Check size={15} /></button>
           ) : todo.abandoned ? (
-            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复"><RotateCcw size={14} /></button>
+            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title="恢复" aria-label={`恢复任务：${todo.title}`}><RotateCcw size={14} /></button>
           ) : (
             <>
-              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成">✓</button>
-              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃">✕</button>
+              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title="完成" aria-label={`完成任务：${todo.title}`}>✓</button>
+              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title="放弃" aria-label={`放弃任务：${todo.title}`}>✕</button>
             </>
           )}
         </div>
@@ -125,13 +125,13 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           {todo.subtasks.filter(sub => !sub.deletedAt).map(sub => (
             <div key={sub.id} className={`sub-row ${sub.done ? 'done' : ''} ${sub.abandoned ? 'abandoned' : ''}`}>
               {sub.done ? (
-                <button className="sub-dot done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}><Check size={10} /></button>
+              <button className="sub-dot done" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }} aria-label={`取消完成子任务：${sub.title}`}><Check size={10} /></button>
               ) : sub.abandoned ? (
-                <button className="sub-dot restore" onClick={e => { e.stopPropagation(); onRestoreSubtask(sub.id); }} title="恢复子任务"><RotateCcw size={9} /></button>
+                <button className="sub-dot restore" onClick={e => { e.stopPropagation(); onRestoreSubtask(sub.id); }} title="恢复子任务" aria-label={`恢复子任务：${sub.title}`}><RotateCcw size={9} /></button>
               ) : (
                 <>
-                  <button className="sub-dot check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }}>✓</button>
-                  <button className="sub-dot abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }}>✕</button>
+                  <button className="sub-dot check" onClick={e => { e.stopPropagation(); onToggleSubtask(sub.id); }} aria-label={`完成子任务：${sub.title}`}>✓</button>
+                  <button className="sub-dot abandon" onClick={e => { e.stopPropagation(); onAbandonSubtask(sub.id); }} aria-label={`放弃子任务：${sub.title}`}>✕</button>
                 </>
               )}
               <span className="sub-text">{sub.title}</span>

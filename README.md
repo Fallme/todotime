@@ -1,13 +1,34 @@
 # TodoTime
 
-个人番茄钟与 Todo 管理工具，采用本地优先的数据模型：浏览器本地存储负责离线使用，独立的 GitHub 私有仓库负责多端 JSON 同步和版本备份。
+TodoTime 是一个本地优先的个人番茄钟与任务管理工具。没有识别码时可纯本地使用；启用个人同步识别码后，任务、设置和统计数据会同步到独立的 GitHub 私有数据仓库。
 
-## 仓库分工
+## 核心能力
 
-- `Fallme/todotime`：程序代码，不存放个人任务数据。
-- `Fallme/todotime_data`：必须设为 Private，仅存放 `config.json` 和 `data/YYYY/MM/YYYY-MM-DD.json`。
+- 番茄工作、短休息、长休息循环，可自定义时长和长休息间隔。
+- 主任务、子任务、板块分类、完成、放弃、恢复、软删除和历史归档。
+- 专注记录按结束当时的任务归属；未选任务时可在轮次结束后分配。
+- 今日、近七天、近一个月统计，以及周报、月报和板块占比。
+- 每个个人同步识别码拥有完全隔离的本地缓存和云端 JSON 数据。
+- 本地离线优先，恢复网络后自动合并；同一条任务按 `updatedAt` 较新版本获胜。
 
-前端保存用户自己创建的个人同步识别码。服务端对识别码做 SHA-256 哈希，并将每位用户的配置和历史分别隔离在 `profiles/<hash>/config.json` 与 `profiles/<hash>/history.json`；仓库内不会出现原始识别码。GitHub Token 仅由 Vercel 服务端函数读取。
+详细规则见 [功能说明](docs/FEATURES.md)，当前验证结果见 [测试报告](docs/TEST_REPORT.md)。
+
+## 数据与安全
+
+- `Fallme/todotime`：程序代码，不保存个人任务数据。
+- `Fallme/todotime_data`：Private 数据仓库，保存用户配置和统计历史。
+- 云端目录：`profiles/<识别码哈希>/config.json` 与 `profiles/<识别码哈希>/history.json`。
+- 服务端以 SHA-256 哈希后的目录区分用户，不把原始识别码写入仓库。
+- GitHub Token 只存在于 Vercel 服务端环境变量，前端无法读取。
+- 识别码本身相当于个人数据访问凭证，无法找回，不应公开分享。
+
+## 同步节奏
+
+- 设置或任务编辑：停止编辑 2.5 秒后合并同步。
+- 专注历史：记录变化 1.5 秒后合并同步。
+- 页面保持可见：每 2 分钟检查配置，每 10 分钟刷新统计历史。
+- 返回页面：配置检查最多每分钟一次，统计历史最多每 10 分钟一次。
+- 内容没有变化时不提交 Git，避免产生无意义版本。
 
 ## 部署变量
 
@@ -18,87 +39,20 @@ GITHUB_TOKEN=<仅有 todotime_data Contents 读写权限的 fine-grained token>
 GITHUB_DATA_REPO=Fallme/todotime_data
 ```
 
-可选的 `SYNC_ALLOWED_ORIGIN` 只在前端和 API 分属不同域名时使用。同域部署不需要配置。
+前端和 API 分属不同域名时，可额外配置：
 
-## 本地开发
+```text
+SYNC_ALLOWED_ORIGIN=https://your-todotime-domain.example
+```
+
+## 本地开发与验证
 
 ```bash
 npm install
 npm run dev
+npm test
 ```
 
-未配置同步识别码时，应用保持纯本地模式，不会请求 GitHub。
+`npm test` 会依次执行代码检查、前端生产构建和服务端 API 类型检查。
 
-## 原始 Vite 说明
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+线上地址：[https://todotime-mauve.vercel.app/](https://todotime-mauve.vercel.app/)
