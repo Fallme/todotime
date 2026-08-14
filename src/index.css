@@ -457,7 +457,8 @@ html[data-theme="liquidglass"] body {
   position: fixed; bottom: 0; left: 50%; transform: translateX(-50%);
   width: min(100%, var(--app-max-width));
   display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
-  background: var(--bg-card); border-top: 1px solid var(--border);
+  background: var(--bg); border-top: 1px solid var(--border);
+  backdrop-filter: none; -webkit-backdrop-filter: none;
   padding: 6px clamp(4px, 2vw, 14px) calc(6px + env(safe-area-inset-bottom, 0px));
   min-height: calc(62px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -5px 18px rgba(0,0,0,0.05);
@@ -849,13 +850,13 @@ html[data-theme="liquidglass"] body {
   background: var(--border); transition: all 0.3s;
 }
 .cycle-dot.filled { background: var(--accent); transform: scale(1.2); }
-.cycle-finish-btn {
-  height: 24px; display: inline-flex; align-items: center; gap: 4px; margin-left: 4px; padding: 0 8px;
+.cycle-skip-btn {
+  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0;
   border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border)); border-radius: 999px;
-  background: var(--accent-bg); color: var(--accent); font: inherit; font-size: 10px; font-weight: 700; cursor: pointer;
+  background: var(--accent-bg); color: var(--accent); cursor: pointer;
   transition: transform .18s, border-color .18s, background-color .18s;
 }
-.cycle-finish-btn:hover { transform: translateY(-1px); border-color: var(--accent); background: color-mix(in srgb, var(--accent-bg) 72%, var(--bg-card)); }
+.cycle-skip-btn:hover { transform: translateY(-1px); border-color: var(--accent); background: color-mix(in srgb, var(--accent-bg) 72%, var(--bg-card)); }
 
 /* Timer ring */
 .timer-ring-container {
@@ -880,8 +881,8 @@ html[data-theme="liquidglass"] body {
   opacity: .2;
   transform-box: fill-box;
   transform-origin: center;
-  animation: timer-endpoint-breathe 1.6s ease-in-out infinite;
 }
+.timer-ring-container.running .timer-ring-endpoint-halo { animation: timer-endpoint-breathe 1.6s ease-in-out infinite; }
 .timer-ring-endpoint {
   stroke: var(--bg-card);
   stroke-width: 3px;
@@ -1596,7 +1597,7 @@ html[data-theme="liquidglass"] body {
 :root:not([data-theme="tomato"]) .period-btn,
 :root:not([data-theme="tomato"]) .metric-btn,
 :root:not([data-theme="tomato"]) .theme-option,
-:root:not([data-theme="tomato"]) .cycle-finish-btn,
+:root:not([data-theme="tomato"]) .cycle-skip-btn,
 :root:not([data-theme="tomato"]) .cd-btn,
 :root:not([data-theme="tomato"]) .icon-btn,
 :root:not([data-theme="tomato"]) .language-toggle,
@@ -1665,8 +1666,7 @@ html[data-theme="liquidglass"] body {
 :root[data-theme="apple"] .settings-section,
 :root[data-theme="apple"] .stats-card-full,
 :root[data-theme="apple"] .countdown-card,
-:root[data-theme="apple"] .todo-list-container,
-:root[data-theme="apple"] .tab-nav { backdrop-filter: blur(22px) saturate(145%); }
+:root[data-theme="apple"] .todo-list-container { backdrop-filter: blur(22px) saturate(145%); }
 :root[data-theme="sketch"] .settings-section:nth-of-type(odd),
 :root[data-theme="sketch"] .todo-card:nth-child(odd) { transform: rotate(-.12deg); }
 :root[data-theme="sketch"] .settings-section:nth-of-type(even),
@@ -1734,7 +1734,6 @@ html[data-theme="liquidglass"] body {
 :root[data-theme="crayon"] .timer-ring-svg { transform: rotate(-.3deg); }
 :root[data-theme="crayon"] .ctrl-btn.primary { box-shadow: 4px 5px 0 var(--blue); }
 :root[data-theme="liquidglass"] .header-wrapper,
-:root[data-theme="liquidglass"] .tab-nav,
 :root[data-theme="liquidglass"] .settings-section,
 :root[data-theme="liquidglass"] .stats-top-row,
 :root[data-theme="liquidglass"] .stats-aggregate-card,
@@ -1922,8 +1921,6 @@ html[data-theme="liquidglass"] body {
 @media (max-width: 350px) {
   .timer-controls { gap: 7px; }
   .ctrl-btn.primary { padding: 12px 18px; }
-  .cycle-finish-btn span { display: none; }
-  .cycle-finish-btn { width: 24px; padding: 0; justify-content: center; }
   .theme-gallery { grid-template-columns: 1fr; }
   .theme-option { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; }
   .theme-preview { height: 50px; }

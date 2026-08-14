@@ -15,6 +15,7 @@ test('theme gallery exposes exactly seventeen distinct styles', () => {
 
 test('existing profiles keep the classic tomato theme', () => {
   assert.equal(DEFAULT_SETTINGS.theme, 'tomato');
+  assert.equal(DEFAULT_SETTINGS.longBreakInterval, 4);
   assert.equal(normalizeTheme(undefined), 'tomato');
   assert.equal(normalizeTheme('unknown-theme'), 'tomato');
   assert.equal(normalizeTheme('sunset'), 'tomato');

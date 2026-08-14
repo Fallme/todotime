@@ -32,7 +32,7 @@ interface UseTimerReturn {
   pause: () => void;
   reset: () => void;
   skip: () => void;
-  finishRound: () => void;
+  skipRound: () => void;
   setTotalTime: (seconds: number) => void;
   setTaskInfo: (id: string | null, title: string, category: Category) => void;
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
@@ -246,7 +246,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [breakDone]);
 
   // Complete one work pomodoro
-  const completeOne = useCallback((nextStep: 'break' | 'restart' = 'break') => {
+  const completeOne = useCallback(() => {
     clearTimer();
     setIsRunning(false);
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -286,25 +286,9 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       showToast(`已记录 ${elapsed} 分钟；满 ${MIN_POMODORO_MINUTES} 分钟才计 1 个番茄`);
     }
-    const startsLongBreak = advanceCycle();
-    if (nextStep === 'restart') {
-      if (startsLongBreak) {
-        cycleCountRef.current = 0;
-        setCycleCount(0);
-      }
-      isLongBreakRef.current = false;
-      resumeAfterSettleRef.current = false;
-      setMode('work');
-      setTimeLeft(workMinutesRef.current * 60);
-      setTotalTimeState(workMinutesRef.current * 60);
-      setRunningMinutes(0);
-      setIsRunning(false);
-      showToast('本轮已结算，请选择任务后重新开始');
-    } else {
-      startBreak(startsLongBreak);
-    }
+    startBreak(advanceCycle());
     if (requiresAssignment) {
-      resumeAfterSettleRef.current = nextStep === 'break';
+      resumeAfterSettleRef.current = true;
       setIsRunning(false);
       setGroupPhase('settle');
     }
@@ -564,18 +548,74 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, completeOne, startBreak, advanceCycle, playSound, showToast]);
 
-  const finishRound = useCallback(() => {
-    if (modeRef.current !== 'work') return;
+  const skipRound = useCallback(() => {
     clearTimer();
-    timeLeftRef.current = 0;
-    setTimeLeft(0);
-    completeOne('restart');
-  }, [clearTimer, completeOne]);
+    const wasWork = modeRef.current === 'work';
+    const elapsedSeconds = wasWork ? totalTimeRef.current - timeLeftRef.current : 0;
+    const elapsed = completedMinutes(elapsedSeconds);
+    const startTime = startTimeRef.current || new Date().toISOString();
+    const endTime = new Date().toISOString();
+    const recordId = `focus-${deviceIdRef.current}-${startTime}`;
+
+    const freshDuration = workMinutesRef.current * 60;
+    startTimeRef.current = '';
+    lastCheckpointMinuteRef.current = 0;
+    timeLeftRef.current = freshDuration;
+    totalTimeRef.current = freshDuration;
+    modeRef.current = 'work';
+    cycleCountRef.current = 0;
+    isLongBreakRef.current = false;
+    resumeAfterSettleRef.current = false;
+    setIsRunning(false);
+    setRunningMinutes(0);
+    setMode('work');
+    setTimeLeft(freshDuration);
+    setTotalTimeState(freshDuration);
+    setCycleCount(0);
+
+    setPendingAssignments(prev => {
+      let next = prev;
+      let message = wasWork
+        ? `本轮已结算；当前专注未满 ${MIN_FOCUS_RECORD_MINUTES} 分钟，不记录时长`
+        : '本轮已结算，组次已恢复初始状态';
+
+      if (wasWork && shouldRecordFocus(elapsedSeconds)) {
+        const isPomodoro = countsAsPomodoro(elapsed);
+        const assignment = {
+          id: recordId,
+          start: startTime,
+          end: endTime,
+          date: formatDate(new Date(startTime)),
+          duration: Math.max(1, elapsed),
+        };
+        const task = currentTaskRef.current;
+
+        recordPomodoro({
+          ...assignment,
+          taskId: task?.id ?? null,
+          taskTitle: task?.title || '未分配',
+          category: task?.category || '其他',
+          countsAsPomodoro: isPomodoro,
+          completed: true,
+          createdAt: endTime,
+        });
+        if (isPomodoro) setTotalPomodoros(count => count + 1);
+        if (!task?.id) next = [...prev, assignment];
+        message = isPomodoro
+          ? `本轮已结算：${elapsed} 分钟 · 1 个番茄，组次已归零`
+          : `本轮已结算：记录 ${elapsed} 分钟，组次已归零`;
+      }
+
+      setGroupPhase(next.length > 0 ? 'settle' : 'working');
+      setTimeout(() => showToast(message), 0);
+      return next;
+    });
+  }, [clearTimer, recordPomodoro, showToast]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
-    start, startWork, pause, reset, skip, finishRound, setTotalTime, setTaskInfo,
+    start, startWork, pause, reset, skip, skipRound, setTotalTime, setTaskInfo,
     assignAll, skipAssignments, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, addManualPomodoro, setOnComplete,
   };
 }

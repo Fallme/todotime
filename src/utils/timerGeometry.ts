@@ -28,7 +28,7 @@ export function getRemainingRingGeometry(
     elapsedProgress,
     remainingProgress,
     dashLength: circumference * remainingProgress,
-    dashOffset: circumference * elapsedProgress,
+    dashOffset: elapsedProgress === 0 ? 0 : -circumference * elapsedProgress,
   };
 }
 

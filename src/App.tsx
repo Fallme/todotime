@@ -25,7 +25,7 @@ import { isPomodoroRecord } from './utils/pomodoroRules';
 import { pomodoroRecordKey } from './utils/syncMerge';
 import { createManualFocusRecord } from './utils/manualFocus';
 import { useLanguage } from './i18n/LanguageContext';
-import { Zap } from 'lucide-react';
+import { FastForward } from 'lucide-react';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
@@ -432,21 +432,19 @@ export default function App() {
                 {Array.from({ length: settings.longBreakInterval }, (_, i) => (
                   <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                 ))}
-                {timer.mode === 'work' && (
-                  <button
-                    className="cycle-finish-btn"
-                    type="button"
-                    title={language === 'zh-CN' ? '立即结算并准备新的专注任务' : 'Settle now and prepare a new focus task'}
-                    onClick={() => {
-                      timer.finishRound();
-                      setCurrentTaskId(null);
-                      timer.setTaskInfo(null, '', '其他');
-                    }}
-                  >
-                    <Zap size={12} />
-                    <span>{language === 'zh-CN' ? '完成本轮' : 'Complete'}</span>
-                  </button>
-                )}
+                <button
+                  className="cycle-skip-btn"
+                  type="button"
+                  aria-label={language === 'zh-CN' ? '跳过并结算整轮' : 'Skip and settle the whole cycle'}
+                  title={language === 'zh-CN' ? '跳过整轮：结算当前记录并将四组恢复初始' : 'Skip cycle: settle current records and reset all groups'}
+                  onClick={() => {
+                    timer.skipRound();
+                    setCurrentTaskId(null);
+                    timer.setTaskInfo(null, '', '其他');
+                  }}
+                >
+                  <FastForward size={13} />
+                </button>
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
               <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />

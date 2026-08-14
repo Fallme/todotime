@@ -43,12 +43,10 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
           strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={ring.dashOffset}
           r={NR} cx={R} cy={R} className="timer-ring-progress"
           style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
-        {isRunning && (
-          <g className="timer-ring-endpoint-marker" aria-hidden="true">
-            <circle className="timer-ring-endpoint-halo" cx={endpoint.x} cy={endpoint.y} r="10" fill={color} />
-            <circle className="timer-ring-endpoint" cx={endpoint.x} cy={endpoint.y} r="5" fill={color} />
-          </g>
-        )}
+        <g className="timer-ring-endpoint-marker" aria-hidden="true">
+          <circle className="timer-ring-endpoint-halo" cx={endpoint.x} cy={endpoint.y} r="10" fill={color} />
+          <circle className="timer-ring-endpoint" cx={endpoint.x} cy={endpoint.y} r="5" fill={color} />
+        </g>
       </svg>
       <div className="timer-ring-text">
         <div className="timer-time">{mm}:{ss}</div>

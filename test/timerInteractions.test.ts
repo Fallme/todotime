@@ -9,19 +9,25 @@ test('motivation library offers varied Chinese and English copy', () => {
   assert.equal(nextQuoteIndex(0, 12, () => 0), 1);
 });
 
-test('timer exposes quick completion and unassigned skip actions', async () => {
+test('timer separates whole-cycle settlement from stage skipping', async () => {
   const controls = await readFile(new URL('../src/components/Timer/TimerControls.tsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
   const hook = await readFile(new URL('../src/hooks/useTimer.ts', import.meta.url), 'utf8');
   const todos = await readFile(new URL('../src/components/TodoList/TodoList.tsx', import.meta.url), 'utf8');
   const stats = await readFile(new URL('../src/components/Stats/StatsOverview.tsx', import.meta.url), 'utf8');
+  const styles = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
   const assignment = await readFile(new URL('../src/components/Timer/TaskAssignModal.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(controls, /onFinishRound/);
-  assert.match(app, /className="cycle-finish-btn"/);
-  assert.match(app, /timer\.mode === 'work'/);
-  assert.match(app, /完成本轮/);
-  assert.match(hook, /completeOne\('restart'\)/);
+  assert.match(app, /className="cycle-skip-btn"/);
+  assert.match(app, /timer\.skipRound\(\)/);
+  assert.match(app, /跳过并结算整轮/);
+  assert.doesNotMatch(app, /timer\.mode === 'work'[\s\S]{0,200}cycle-skip-btn/);
+  assert.match(hook, /const skipRound = useCallback/);
+  assert.match(hook, /cycleCountRef\.current = 0/);
+  assert.match(hook, /setCycleCount\(0\)/);
   assert.match(controls, /skipStage/);
+  assert.match(controls, /aria-label={t\('skipStage'\)}/);
+  assert.match(styles, /\.tab-nav\s*\{[\s\S]*?background: var\(--bg\);[\s\S]*?backdrop-filter: none/);
   assert.match(todos, /todo-list-header[\s\S]*manual-focus-open[\s\S]*todo-header-stats/);
   assert.doesNotMatch(stats, /type: 'line'/);
   assert.match(assignment, /onSkip/);

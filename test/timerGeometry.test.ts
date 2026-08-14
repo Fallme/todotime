@@ -44,11 +44,12 @@ test('countdown ring starts full and empties clockwise', async () => {
     elapsedProgress: 0.25,
     remainingProgress: 0.75,
     dashLength: 150,
-    dashOffset: 50,
+    dashOffset: -50,
   });
   assert.equal(getRemainingRingGeometry(0, 100, 200).dashLength, 0);
-  assert.equal(getRemainingRingGeometry(0, 100, 200).dashOffset, 200);
+  assert.equal(getRemainingRingGeometry(0, 100, 200).dashOffset, -200);
   const source = await readFile(new URL('../src/components/Timer/TimerRing.tsx', import.meta.url), 'utf8');
   assert.match(source, /strokeDasharray={`\$\{CIRC\} \$\{CIRC\}`}/);
   assert.match(source, /strokeDashoffset={ring\.dashOffset}/);
+  assert.doesNotMatch(source, /isRunning && \([\s\S]{0,80}timer-ring-endpoint-marker/);
 });

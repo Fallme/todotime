@@ -27,7 +27,7 @@ export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip 
           <span>{t('start')}</span>
         </button>
       )}
-      <button className="ctrl-btn secondary" onClick={onSkip} title={t('skipStage')}>
+      <button className="ctrl-btn secondary" onClick={onSkip} title={t('skipStage')} aria-label={t('skipStage')}>
         <SkipForward size={18} />
       </button>
     </div>
