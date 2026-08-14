@@ -341,12 +341,12 @@ html[data-theme="midnight"] body {
 
 /* Timer page */
 .timer-page {
-  display: flex; flex-direction: column; gap: 24px;
+  display: flex; flex-direction: column; gap: clamp(14px, 2vw, 20px);
 }
 .timer-section {
   display: flex; flex-direction: column; align-items: center;
-  padding: 24px 0; gap: 12px;
-  min-height: 420px; /* Fixed height prevents layout jump */
+  padding: 12px 0 8px; gap: 10px;
+  min-height: 350px; /* Stable without pushing the task list below the fold on desktop. */
 }
 
 /* Stats overview */
@@ -697,17 +697,46 @@ html[data-theme="midnight"] body {
   justify-content: center;
   min-height: 260px;
 }
-.timer-ring-svg { display: block; }
-.timer-ring-progress { transition: stroke-dashoffset 0.2s ease; }
+.timer-ring-container::before {
+  content: ''; position: absolute; width: 214px; height: 214px; border-radius: 50%;
+  background: var(--timer-inner-bg, transparent); pointer-events: none;
+}
+.timer-ring-svg { display: block; position: relative; z-index: 1; overflow: visible; }
+.timer-ring-track,
+.timer-ring-progress { stroke-width: var(--timer-ring-width, 8px); }
+.timer-ring-progress {
+  transition: stroke-dashoffset 0.2s ease;
+  filter: var(--timer-ring-filter, none);
+}
+.timer-ring-endpoint-marker { pointer-events: none; }
+.timer-ring-endpoint-halo {
+  opacity: .2;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: timer-endpoint-breathe 1.6s ease-in-out infinite;
+}
+.timer-ring-endpoint {
+  stroke: var(--bg-card);
+  stroke-width: 3px;
+  filter: drop-shadow(0 1px 3px rgba(0,0,0,.22));
+}
+@keyframes timer-endpoint-breathe {
+  0%, 100% { transform: scale(.8); opacity: .16; }
+  50% { transform: scale(1.2); opacity: .34; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .timer-ring-endpoint-halo { animation: none; }
+}
 .timer-ring-handle { pointer-events: none; }
 .timer-ring-text {
   position: absolute; text-align: center;
   display: flex; flex-direction: column; align-items: center;
-  gap: 4px;
+  gap: 4px; z-index: 2;
 }
 .timer-time {
   font-size: 48px; font-weight: 700; font-variant-numeric: tabular-nums;
-  letter-spacing: 2px; color: var(--text);
+  letter-spacing: var(--timer-time-spacing, 2px); color: var(--text);
+  text-shadow: var(--timer-time-shadow, none);
 }
 .timer-mode-label { font-size: 14px; font-weight: 500; }
 .timer-task-name {
@@ -1350,7 +1379,15 @@ html[data-theme="midnight"] body {
 :root:not([data-theme="tomato"]) .sync-gate-primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-light));
 }
-:root:not([data-theme="tomato"]) .timer-ring-progress { stroke: var(--accent); }
+:root[data-theme="apple"] { --timer-ring-width: 6px; --timer-inner-bg: rgba(255,255,255,.32); --timer-time-spacing: -.02em; }
+:root[data-theme="sketch"] { --timer-ring-width: 9px; --timer-inner-bg: rgba(255,250,240,.38); --timer-time-spacing: 3px; }
+:root[data-theme="pixel"] { --timer-ring-width: 10px; --timer-time-spacing: 1px; --timer-time-shadow: 3px 3px 0 var(--accent-bg); }
+:root[data-theme="cyber"] { --timer-ring-width: 7px; --timer-ring-filter: drop-shadow(0 0 7px var(--accent)); --timer-inner-bg: rgba(123,97,255,.035); --timer-time-spacing: .08em; --timer-time-shadow: 0 0 15px rgba(0,245,212,.25); }
+:root[data-theme="matcha"] { --timer-ring-width: 11px; --timer-inner-bg: rgba(111,143,82,.035); --timer-time-spacing: 1px; }
+:root[data-theme="ocean"] { --timer-ring-width: 8px; --timer-ring-filter: drop-shadow(0 5px 8px rgba(8,126,164,.16)); --timer-inner-bg: rgba(73,182,200,.04); --timer-time-spacing: 2px; }
+:root[data-theme="ink"] { --timer-ring-width: 5px; --timer-inner-bg: rgba(38,37,33,.025); --timer-time-spacing: .09em; }
+:root[data-theme="sunset"] { --timer-ring-width: 10px; --timer-ring-filter: drop-shadow(0 6px 10px rgba(240,108,84,.15)); --timer-inner-bg: radial-gradient(circle, rgba(244,162,97,.07), transparent 68%); --timer-time-spacing: 2px; }
+:root[data-theme="midnight"] { --timer-ring-width: 7px; --timer-ring-filter: drop-shadow(0 0 9px rgba(139,124,246,.48)); --timer-inner-bg: radial-gradient(circle, rgba(76,201,240,.065), transparent 68%); --timer-time-spacing: .06em; --timer-time-shadow: 0 0 18px rgba(139,124,246,.32); }
 :root[data-theme="apple"] .settings-section,
 :root[data-theme="apple"] .stats-card-full,
 :root[data-theme="apple"] .countdown-card,
@@ -1360,12 +1397,15 @@ html[data-theme="midnight"] body {
 :root[data-theme="sketch"] .todo-card:nth-child(odd) { transform: rotate(-.12deg); }
 :root[data-theme="sketch"] .settings-section:nth-of-type(even),
 :root[data-theme="sketch"] .todo-card:nth-child(even) { transform: rotate(.1deg); }
+:root[data-theme="sketch"] .timer-ring-svg { transform: rotate(-.35deg); filter: drop-shadow(2px 3px 0 rgba(78,73,64,.12)); }
 :root[data-theme="pixel"] .cycle-dot,
 :root[data-theme="pixel"] .status-dot,
 :root[data-theme="pixel"] .category-badge,
 :root[data-theme="pixel"] .theme-selected-mark { border-radius: 0; }
 :root[data-theme="pixel"] .btn,
 :root[data-theme="pixel"] .ctrl-btn { box-shadow: 3px 3px 0 var(--border); }
+:root[data-theme="pixel"] .timer-ring-progress { stroke-linecap: butt; }
+:root[data-theme="pixel"] .timer-ring-endpoint { stroke-width: 4px; }
 :root[data-theme="pixel"] .btn:active,
 :root[data-theme="pixel"] .ctrl-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--border); }
 :root[data-theme="cyber"] .settings-title,
@@ -1375,7 +1415,7 @@ html[data-theme="midnight"] body {
 :root[data-theme="cyber"] .todo-list-container { background-image: linear-gradient(135deg, rgba(0,245,212,.025), rgba(255,46,136,.025)); }
 :root[data-theme="ink"] .settings-title,
 :root[data-theme="ink"] .header-title { letter-spacing: .09em; }
-:root[data-theme="midnight"] .timer-ring-container { filter: drop-shadow(0 0 12px rgba(139,124,246,.22)); }
+:root[data-theme="ink"] .timer-task-category { border-radius: 2px; }
 
 .settings-actions { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 8px; }
 .btn {
