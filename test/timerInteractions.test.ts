@@ -34,6 +34,8 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(styles, /\.tab-nav\s*\{[\s\S]*?background: var\(--bg\);[\s\S]*?backdrop-filter: none/);
   assert.match(styles, /\.cycle-dots\s*\{[^}]*position: relative/);
   assert.match(styles, /\.cycle-skip-btn\s*\{[^}]*position: absolute/);
+  assert.doesNotMatch(styles, /:root:not\(\[data-theme="tomato"\]\) \.status-tab,/);
+  assert.doesNotMatch(styles, /:root:not\(\[data-theme="tomato"\]\) \.report-tab,/);
   assert.match(todos, /todo-list-header[\s\S]*manual-focus-open[\s\S]*todo-header-stats/);
   assert.doesNotMatch(stats, /type: 'line'/);
   assert.match(assignment, /onSkip/);
