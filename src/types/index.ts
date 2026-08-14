@@ -6,7 +6,7 @@ export type TaskRecurrence =
   | 'everyTwoDays'
   | 'weekly'
   | `weekly:${string}`
-  | `monthly:${number}`;
+  | `monthly:${string}`;
 
 export type Category = string;
 

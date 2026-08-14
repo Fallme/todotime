@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import type { Todo } from '../src/types/index.ts';
-import { completeTodo, getNextTaskRefreshAt, getTodoCompletionRecords, refreshRecurringTodos, shouldArchiveCompletion } from '../src/utils/taskRecurrence.ts';
+import { buildMonthlyRecurrence, completeTodo, getMonthlyRecurrenceDays, getNextTaskRefreshAt, getTodoCompletionRecords, refreshRecurringTodos, shouldArchiveCompletion } from '../src/utils/taskRecurrence.ts';
 import { mergeTodo } from '../src/utils/todoMerge.ts';
 
 function task(overrides: Partial<Todo> = {}): Todo {
@@ -24,6 +24,7 @@ test('recurring due dates support day intervals weekdays and monthly dates', asy
   const weekly = new Date(getNextTaskRefreshAt(at, 'weekly'));
   const weekdays = new Date(getNextTaskRefreshAt('2026-08-14T08:00:00', 'weekly:1,3'));
   const monthly = new Date(getNextTaskRefreshAt('2026-08-14T08:00:00', 'monthly:20'));
+  const monthlyMultiple = new Date(getNextTaskRefreshAt('2026-08-14T08:00:00', 'monthly:10,20,28'));
   const monthEnd = new Date(getNextTaskRefreshAt('2026-08-31T08:00:00', 'monthly:31'));
   assert.equal(daily.getHours(), 0);
   assert.equal(alternate.getHours(), 0);
@@ -33,13 +34,19 @@ test('recurring due dates support day intervals weekdays and monthly dates', asy
   assert.equal(Math.round((weekly.getTime() - daily.getTime()) / 86_400_000), 6);
   assert.equal(weekdays.getDay(), 1);
   assert.equal(monthly.getDate(), 20);
+  assert.equal(monthlyMultiple.getDate(), 20);
   assert.equal(monthEnd.getMonth(), 8);
   assert.equal(monthEnd.getDate(), 30);
+  assert.equal(buildMonthlyRecurrence([28, 1, 15, 15]), 'monthly:1,15,28');
+  assert.deepEqual(getMonthlyRecurrenceDays('monthly:1,15,28'), [1, 15, 28]);
 
   const addTodo = await readFile(new URL('../src/components/TodoList/AddTodo.tsx', import.meta.url), 'utf8');
+  const monthlyCalendar = await readFile(new URL('../src/components/TodoList/MonthlyRecurrenceCalendar.tsx', import.meta.url), 'utf8');
   assert.match(addTodo, /value="everyTwoDays"/);
   assert.match(addTodo, /weekdayOptions/);
-  assert.match(addTodo, /length: 31/);
+  assert.match(addTodo, /MonthlyRecurrenceCalendar/);
+  assert.match(monthlyCalendar, /length: 31/);
+  assert.match(monthlyCalendar, /可多选/);
 });
 
 test('only completions before the current month are archived', () => {

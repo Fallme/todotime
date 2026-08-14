@@ -25,21 +25,28 @@ export function buildWeeklyRecurrence(days: number[]): TaskRecurrence {
   return `weekly:${normalized.length > 0 ? normalized.join(',') : 1}`;
 }
 
-export function getMonthlyRecurrenceDay(recurrence: TaskRecurrence): number {
-  if (!recurrence.startsWith('monthly:')) return 1;
-  const day = Number(recurrence.slice(8));
-  return Number.isInteger(day) ? Math.min(31, Math.max(1, day)) : 1;
+export function getMonthlyRecurrenceDays(recurrence: TaskRecurrence): number[] {
+  if (!recurrence.startsWith('monthly:')) return [];
+  return [...new Set(recurrence.slice(8).split(',').map(Number)
+    .filter(day => Number.isInteger(day) && day >= 1 && day <= 31))].sort((a, b) => a - b);
 }
 
-export function buildMonthlyRecurrence(day: number): TaskRecurrence {
-  return `monthly:${Math.min(31, Math.max(1, Math.round(day)))}`;
+export function getMonthlyRecurrenceDay(recurrence: TaskRecurrence): number {
+  return getMonthlyRecurrenceDays(recurrence)[0] ?? 1;
+}
+
+export function buildMonthlyRecurrence(days: number | number[]): TaskRecurrence {
+  const values = Array.isArray(days) ? days : [days];
+  const normalized = [...new Set(values.map(Math.round)
+    .filter(day => Number.isInteger(day) && day >= 1 && day <= 31))].sort((a, b) => a - b);
+  return `monthly:${normalized.length > 0 ? normalized.join(',') : 1}`;
 }
 
 export function normalizeTaskRecurrence(value: unknown): TaskRecurrence {
   if (value === 'daily' || value === 'everyOtherDay' || value === 'everyTwoDays' || value === 'weekly') return value;
   if (typeof value !== 'string') return 'none';
   if (value.startsWith('weekly:')) return buildWeeklyRecurrence(getWeeklyRecurrenceDays(value as TaskRecurrence));
-  if (/^monthly:\d{1,2}$/.test(value)) return buildMonthlyRecurrence(Number(value.slice(8)));
+  if (/^monthly:\d{1,2}(,\d{1,2})*$/.test(value)) return buildMonthlyRecurrence(getMonthlyRecurrenceDays(value as TaskRecurrence));
   return 'none';
 }
 
@@ -66,16 +73,19 @@ export function getNextTaskRefreshAt(completedAt: string, recurrence: TaskRecurr
   }
 
   if (normalized.startsWith('monthly:')) {
-    const targetDay = getMonthlyRecurrenceDay(normalized);
-    const makeCandidate = (year: number, month: number) => {
+    const selectedDays = getMonthlyRecurrenceDays(normalized);
+    const makeCandidate = (year: number, month: number, targetDay: number) => {
       const lastDay = new Date(year, month + 1, 0).getDate();
       return new Date(year, month, Math.min(targetDay, lastDay), 0, 0, 0, 0);
     };
-    let candidate = makeCandidate(completed.getFullYear(), completed.getMonth());
-    if (candidate.getTime() <= completed.getTime()) {
-      candidate = makeCandidate(completed.getFullYear(), completed.getMonth() + 1);
-    }
-    return candidate.toISOString();
+    const candidates = selectedDays.map(targetDay => {
+      let candidate = makeCandidate(completed.getFullYear(), completed.getMonth(), targetDay);
+      if (candidate.getTime() <= completed.getTime()) {
+        candidate = makeCandidate(completed.getFullYear(), completed.getMonth() + 1, targetDay);
+      }
+      return candidate;
+    });
+    return candidates.sort((a, b) => a.getTime() - b.getTime())[0]?.toISOString() ?? '';
   }
 
   return '';
@@ -94,8 +104,8 @@ export function getTaskRecurrenceLabel(recurrence: TaskRecurrence, language: 'zh
     const labels = days.map(day => WEEKDAY_LABELS[language][day]);
     return language === 'zh-CN' ? `每周${labels.join('、')}` : `Weekly · ${labels.join(', ')}`;
   }
-  const day = getMonthlyRecurrenceDay(normalized);
-  return language === 'zh-CN' ? `每月${day}号` : `Monthly · day ${day}`;
+  const days = getMonthlyRecurrenceDays(normalized);
+  return language === 'zh-CN' ? `每月${days.join('、')}号` : `Monthly · days ${days.join(', ')}`;
 }
 
 export function getLocalMonthKey(value: string | Date): string {

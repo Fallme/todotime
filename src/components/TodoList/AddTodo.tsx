@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Plus, Repeat2 } from 'lucide-react';
 import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { buildMonthlyRecurrence, buildWeeklyRecurrence, getMonthlyRecurrenceDay, getTaskRecurrenceKind, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import { MonthlyRecurrenceCalendar } from './MonthlyRecurrenceCalendar';
 
 interface AddTodoProps {
   onAdd: (title: string, priority: Priority, category: Category, recurrence: TaskRecurrence) => void;
@@ -138,13 +139,10 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
       )}
 
       {recurrenceKind === 'monthly' && (
-        <label className="recurrence-detail monthly-selector">
-          <span>{msg('每月', 'Day')}</span>
-          <select value={getMonthlyRecurrenceDay(recurrence)} onChange={event => setRecurrence(buildMonthlyRecurrence(Number(event.target.value)))}>
-            {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
-          </select>
-          <span>{msg('号刷新', 'of each month')}</span>
-        </label>
+        <div className="recurrence-detail monthly-selector">
+          <span>{msg('每月', 'Monthly')}</span>
+          <MonthlyRecurrenceCalendar recurrence={recurrence} onChange={setRecurrence} />
+        </div>
       )}
 
       {showCatPicker && (

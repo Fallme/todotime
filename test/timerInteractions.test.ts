@@ -19,6 +19,7 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   const assignment = await readFile(new URL('../src/components/Timer/TaskAssignModal.tsx', import.meta.url), 'utf8');
   const todoHook = await readFile(new URL('../src/hooks/useTodos.ts', import.meta.url), 'utf8');
   const manualFocus = await readFile(new URL('../src/components/Timer/ManualFocusModal.tsx', import.meta.url), 'utf8');
+  const sound = await readFile(new URL('../src/utils/sound.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(controls, /onFinishRound/);
   assert.match(app, /className="cycle-skip-btn"/);
   assert.match(app, /className="cycle-dots"/);
@@ -41,4 +42,12 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(todoHook, /const addCompletedTodo = useCallback/);
   assert.match(todoHook, /completeTodo\(baseTodo, completionTime/);
   assert.match(manualFocus, /新任务名称（保存后自动完成）/);
+  assert.match(styles, /data-theme="tomato"[^}]*timer-ring-container\[data-mode="work"\]::after[\s\S]*?right: -5px[\s\S]*?width: 78px/);
+  assert.match(sound, /export function playPause/);
+  assert.match(sound, /export function playResume/);
+  assert.match(sound, /export function playEnd/);
+  assert.match(hook, /playSound\(isResume \? playResume : playStart\)/);
+  assert.match(hook, /playSound\(playPause\)/);
+  assert.match(hook, /playSound\(playEnd\)/);
+  assert.match(hook, /const skipRound = useCallback\([\s\S]*?playSound\(playCycleComplete\)/);
 });

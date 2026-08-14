@@ -3,8 +3,9 @@ import { Check, Trash2, Play, RotateCcw, Plus, Repeat2 } from 'lucide-react';
 import type { Todo, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { getCategoryColor } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { buildMonthlyRecurrence, buildWeeklyRecurrence, getMonthlyRecurrenceDay, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
 import type { TaskRecurrenceKind } from '../../utils/taskRecurrence';
+import { MonthlyRecurrenceCalendar } from './MonthlyRecurrenceCalendar';
 
 function formatIsoTime(iso: string): string {
   if (!iso) return '';
@@ -174,13 +175,10 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             </div>
           )}
           {recurrenceKind === 'monthly' && (
-            <label className="recurrence-picker-detail monthly-selector">
-              <span>{msg('每月', 'Day')}</span>
-              <select value={getMonthlyRecurrenceDay(recurrence)} onChange={event => onChangeRecurrence(buildMonthlyRecurrence(Number(event.target.value)))}>
-                {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
-              </select>
-              <span>{msg('号', 'monthly')}</span>
-            </label>
+            <div className="recurrence-picker-detail monthly-selector">
+              <span>{msg('每月', 'Monthly')}</span>
+              <MonthlyRecurrenceCalendar recurrence={recurrence} onChange={onChangeRecurrence} compact />
+            </div>
           )}
         </div>
       )}

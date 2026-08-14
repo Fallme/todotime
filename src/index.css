@@ -1187,10 +1187,7 @@ html[data-theme="farmcraft"] body {
   background: var(--bg); color: var(--text-secondary); font: inherit; font-size: 10px; cursor: pointer;
 }
 .weekday-selector button.active { border-color: var(--accent); background: var(--accent); color: white; }
-.monthly-selector select {
-  min-width: 54px; padding: 4px 19px 4px 7px; border: 1px solid var(--border); border-radius: 7px;
-  background: var(--bg); color: var(--text-secondary); font-size: 11px; outline: none;
-}
+.monthly-selector { overflow: visible; }
 .add-todo-options {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
 }
@@ -1330,6 +1327,35 @@ html[data-theme="farmcraft"] body {
 .todo-recurrence-picker .recurrence-picker-detail button { min-width: 27px; padding-inline: 5px; }
 .todo-recurrence-picker .recurrence-picker-detail button.active { background: var(--accent); color: white; }
 .recurrence-picker-detail.monthly-selector { color: var(--text-muted); font-size: 10px; }
+.monthly-calendar { position: relative; min-width: 0; }
+.monthly-calendar-trigger,
+.todo-recurrence-picker .monthly-calendar-trigger {
+  min-width: 112px; max-width: 220px; height: 30px; display: flex; align-items: center; gap: 5px;
+  padding: 0 8px; border: 1px solid var(--border); border-radius: 8px;
+  background: var(--bg); color: var(--text-secondary); font-size: 11px; cursor: pointer;
+}
+.monthly-calendar-trigger span { min-width: 0; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: left; }
+.monthly-calendar-trigger svg:last-child { flex: 0 0 auto; color: var(--text-muted); }
+.monthly-calendar-popover {
+  position: absolute; z-index: 35; top: calc(100% + 6px); right: 0; width: min(270px, calc(100vw - 42px));
+  padding: 11px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--bg-card); color: var(--text); box-shadow: var(--shadow-lg);
+}
+.monthly-calendar-heading { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 9px; }
+.monthly-calendar-heading strong { font-size: 12px; }
+.monthly-calendar-heading small { color: var(--accent); font-size: 9px; font-weight: 700; }
+.monthly-calendar-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.monthly-calendar-grid button,
+.todo-recurrence-picker .monthly-calendar-grid button {
+  min-width: 0; width: 100%; aspect-ratio: 1; height: auto; padding: 0; display: grid; place-items: center;
+  border: 1px solid transparent; border-radius: 7px; background: var(--bg-hover); color: var(--text-secondary);
+  font-size: 10px; cursor: pointer;
+}
+.monthly-calendar-grid button:hover { border-color: var(--accent); color: var(--accent); }
+.monthly-calendar-grid button.active,
+.todo-recurrence-picker .monthly-calendar-grid button.active { border-color: var(--accent); background: var(--accent); color: white; }
+.monthly-calendar-popover p { margin: 9px 1px 0; color: var(--text-muted); font-size: 9px; line-height: 1.4; }
+.monthly-calendar.compact .monthly-calendar-trigger { min-width: 106px; height: 27px; }
 
 /* Subtasks */
 .todo-card-subs { padding: 0 10px 4px 50px; }
@@ -1828,6 +1854,8 @@ html[data-theme="farmcraft"] body {
 :root:not([data-theme="tomato"]) .sync-gate-tabs button,
 :root:not([data-theme="tomato"]) .settings-language-switch button,
 :root:not([data-theme="tomato"]) .weekday-selector button,
+:root:not([data-theme="tomato"]) .monthly-calendar-trigger,
+:root:not([data-theme="tomato"]) .monthly-calendar-grid button,
 :root:not([data-theme="tomato"]) .todo-recurrence-picker button,
 :root:not([data-theme="tomato"]) input,
 :root:not([data-theme="tomato"]) select {
@@ -1869,8 +1897,8 @@ html[data-theme="farmcraft"] body {
 :root[data-theme="farmcraft"] { --timer-ring-width: 12px; --timer-ring-filter: drop-shadow(4px 4px 0 rgba(91,70,41,.3)); --timer-inner-bg: linear-gradient(90deg, rgba(79,143,84,.04) 2px, transparent 2px), linear-gradient(rgba(91,70,41,.035) 2px, transparent 2px); --timer-time-spacing: 1px; --timer-time-shadow: 2px 2px 0 var(--accent-bg); }
 
 :root[data-theme="tomato"] .timer-ring-container[data-mode="work"]::after {
-  content: ''; position: absolute; z-index: 0; top: -21px; left: 50%; width: 54px; height: 27px;
-  transform: translateX(-50%) rotate(-4deg);
+  content: ''; position: absolute; z-index: 2; top: -8px; right: -5px; left: auto; width: 78px; height: 46px;
+  transform: rotate(20deg);
   background: linear-gradient(145deg, #4caf50, #258b45);
   clip-path: polygon(50% 0, 58% 35%, 88% 17%, 70% 48%, 100% 58%, 65% 63%, 74% 100%, 50% 74%, 27% 100%, 35% 63%, 0 58%, 31% 48%, 12% 17%, 42% 35%);
   filter: drop-shadow(0 3px 2px rgba(23,98,46,.22));

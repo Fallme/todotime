@@ -3,7 +3,7 @@ import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatDate, generateId } from '../utils/dateUtils';
 import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
 import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
-import { initAudio, playStart, playEnterBreak, playCycleComplete } from '../utils/sound';
+import { initAudio, playStart, playEnterBreak, playCycleComplete, playPause, playResume, playEnd } from '../utils/sound';
 
 export interface PendingAssignment {
   id: string;
@@ -407,6 +407,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   // End now: settle completed pomodoros, update cycle
   const endNow = useCallback(() => {
     clearTimer();
+    playSound(playEnd);
     resumeAfterSettleRef.current = false;
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = completedMinutes(elapsedSeconds);
@@ -458,7 +459,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         return prev;
       }
     });
-  }, [clearTimer, recordPomodoro, showToast]);
+  }, [clearTimer, recordPomodoro, showToast, playSound]);
 
   const resetCycle = useCallback(() => {
     cycleCountRef.current = 0; setCycleCount(0); setGroupPhase('working'); setPendingAssignments([]);
@@ -471,9 +472,10 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, []);
 
   const start = useCallback(() => {
+    const isResume = timeLeftRef.current < totalTimeRef.current;
     setGroupPhase('working');
     setIsRunning(true);
-    playSound(playStart);
+    playSound(isResume ? playResume : playStart);
   }, [playSound]);
 
   const startWork = useCallback(() => {
@@ -496,7 +498,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setRunningMinutes(Math.floor(elapsed / 60));
     }
     setIsRunning(false); clearTimer();
-  }, [clearTimer]);
+    playSound(playPause);
+  }, [clearTimer, playSound]);
   const reset = useCallback(() => { endNow(); }, [endNow]);
 
   // Skip: quickly complete current phase and move to next (keeps running)
@@ -550,6 +553,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
   const skipRound = useCallback(() => {
     clearTimer();
+    playSound(playCycleComplete);
     const wasWork = modeRef.current === 'work';
     const elapsedSeconds = wasWork ? totalTimeRef.current - timeLeftRef.current : 0;
     const elapsed = completedMinutes(elapsedSeconds);
@@ -610,7 +614,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       setTimeout(() => showToast(message), 0);
       return next;
     });
-  }, [clearTimer, recordPomodoro, showToast]);
+  }, [clearTimer, recordPomodoro, showToast, playSound]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,

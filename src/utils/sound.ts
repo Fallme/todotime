@@ -77,6 +77,17 @@ export function initAudio(): void {
   const cycle3 = makeTone(784, 0.1, 0.2);
   const cycle4 = makeTone(1047, 0.2, 0.15);
 
+  // Pause: a soft, short downward cue.
+  const pause = makeTone(392, 0.2, 0.13, 'triangle');
+
+  // Resume: a compact rising pair, calmer than a fresh start.
+  const resume1 = makeTone(440, 0.11, 0.15);
+  const resume2 = makeTone(659, 0.18, 0.13);
+
+  // End: a resolved descending pair.
+  const end1 = makeTone(587, 0.14, 0.14, 'triangle');
+  const end2 = makeChord([294, 392], 0.32, 0.12);
+
   const mk = (url: string) => {
     const audio = new Audio(url);
     audio.preload = 'auto';
@@ -90,6 +101,7 @@ export function initAudio(): void {
     mk(focus1), mk(focus2),
     mk(break1), mk(break2), mk(break3),
     mk(cycle1), mk(cycle2), mk(cycle3), mk(cycle4),
+    mk(pause), mk(resume1), mk(resume2), mk(end1), mk(end2),
   ];
 }
 
@@ -98,6 +110,9 @@ function p(i: number): void { if (ready && players[i]) players[i](); }
 export function playStart(): void { p(0); setTimeout(() => p(1), 130); }
 export function playEnterBreak(): void { p(2); setTimeout(() => p(3), 160); setTimeout(() => p(4), 330); }
 export function playCycleComplete(): void { p(5); setTimeout(() => p(6), 90); setTimeout(() => p(7), 180); setTimeout(() => p(8), 270); }
+export function playPause(): void { p(9); }
+export function playResume(): void { p(10); setTimeout(() => p(11), 100); }
+export function playEnd(): void { p(12); setTimeout(() => p(13), 125); }
 export function playWorkComplete(): void { playStart(); }
 export function playBreakComplete(): void { playEnterBreak(); }
 export function playTick(): void {}
