@@ -1,5 +1,6 @@
 import type { DayData, ConfigData } from '../types';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { mergeTodosById } from '../utils/todoMerge';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '')
   || '/api';
@@ -118,16 +119,14 @@ export async function saveConfig(token: string, data: ConfigData): Promise<void>
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const existing = await getFile(token, CONFIG_PATH);
     const remote = existing ? JSON.parse(existing.content) as ConfigData : null;
-    const todoMap = new Map((remote?.todos ?? []).map(todo => [todo.id, todo]));
-    for (const todo of data.todos) {
-      const current = todoMap.get(todo.id);
-      const currentTime = current?.updatedAt || current?.createdAt || '';
-      const nextTime = todo.updatedAt || todo.createdAt || '';
-      if (!current || nextTime >= currentTime) todoMap.set(todo.id, todo);
-    }
+    const remoteIsNewer = Boolean(remote && remote.updatedAt > data.updatedAt);
+    const preferredSettings = remoteIsNewer ? remote!.settings : data.settings;
+    const otherSettings = remoteIsNewer ? data.settings : remote?.settings;
+    const categoryMap = new Map((otherSettings?.categories ?? []).map(category => [category.name, category]));
+    for (const category of preferredSettings.categories) categoryMap.set(category.name, category);
     const merged: ConfigData = {
-      settings: remote && remote.updatedAt > data.updatedAt ? remote.settings : data.settings,
-      todos: [...todoMap.values()],
+      settings: { ...preferredSettings, categories: [...categoryMap.values()] },
+      todos: mergeTodosById(data.todos, remote?.todos ?? []),
       updatedAt: new Date().toISOString(),
     };
     try {

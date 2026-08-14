@@ -782,6 +782,15 @@ html[data-theme="midnight"] body {
 .todo-header-stats { margin-left: auto; display: flex; gap: 10px; font-size: 14px; font-weight: 500; }
 .todo-stat-done { color: var(--text-secondary); }
 .todo-stat-pom { color: var(--accent); display: flex; align-items: center; gap: 3px; }
+.manual-focus-open {
+  width: 100%; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 7px;
+  margin: 2px 0 12px; padding: 9px 11px; border: 1px dashed color-mix(in srgb, var(--accent) 48%, var(--border));
+  border-radius: 10px; background: var(--accent-bg); color: var(--accent); cursor: pointer; text-align: left;
+  transition: border-color .18s, background-color .18s, transform .18s;
+}
+.manual-focus-open:hover { border-color: var(--accent); background: color-mix(in srgb, var(--accent-bg) 72%, var(--bg-card)); transform: translateY(-1px); }
+.manual-focus-open span { font-size: 13px; font-weight: 650; }
+.manual-focus-open small { color: var(--text-muted); font-size: 10px; }
 
 /* Add todo */
 .add-todo { margin-bottom: 12px; }
@@ -1402,6 +1411,33 @@ html[data-theme="midnight"] body {
   max-width: 420px; width: 100%; box-shadow: var(--shadow-lg);
   max-height: 80vh; overflow-y: auto;
 }
+.manual-focus-modal { max-width: 480px; }
+.manual-focus-heading { display: flex; align-items: flex-start; gap: 11px; }
+.manual-focus-heading > span { width: 36px; height: 36px; flex: 0 0 36px; display: grid; place-items: center; border-radius: 11px; color: var(--accent); background: var(--accent-bg); }
+.manual-focus-heading .modal-desc { margin: 3px 0 18px; }
+.manual-focus-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 13px 10px; }
+.manual-focus-grid label { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.manual-focus-grid label > span { color: var(--text-secondary); font-size: 12px; font-weight: 600; }
+.manual-focus-grid input,
+.manual-focus-grid select {
+  width: 100%; min-width: 0; height: 40px; border: 1px solid var(--border); border-radius: 9px;
+  padding: 0 10px; background: var(--bg); color: var(--text); font: inherit; font-size: 13px; outline: none;
+}
+.manual-focus-grid input:focus,
+.manual-focus-grid select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.manual-focus-wide { grid-column: 1 / -1; }
+.manual-duration-field { display: flex; align-items: center; overflow: hidden; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); }
+.manual-duration-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.manual-duration-field input { border: 0; box-shadow: none !important; }
+.manual-duration-field em { padding-right: 10px; color: var(--text-muted); font-size: 11px; font-style: normal; }
+.manual-new-task-field { display: flex; align-items: center; gap: 7px; padding-left: 10px; border: 1px solid var(--border); border-radius: 9px; background: var(--bg); color: var(--accent); }
+.manual-new-task-field:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
+.manual-new-task-field input { border: 0; padding-left: 0; box-shadow: none !important; }
+.manual-pomodoro-rule { display: flex; align-items: center; gap: 9px; margin: 15px 0 12px; padding: 10px 11px; border-radius: 10px; background: var(--bg-hover); color: var(--text-secondary); }
+.manual-pomodoro-rule.counts { background: var(--accent-bg); color: var(--accent); }
+.manual-pomodoro-rule > span { font-size: 18px; }
+.manual-pomodoro-rule p { font-size: 11px; line-height: 1.45; }
+.manual-focus-error { margin: -4px 0 10px; color: #e74c3c; font-size: 12px; }
 .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
 
@@ -1477,6 +1513,10 @@ html[data-theme="midnight"] body {
   .pie-chart-header .metric-btn { flex: 1; justify-content: center; }
   .theme-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .theme-preview { height: 54px; }
+  .manual-focus-open { grid-template-columns: auto 1fr; }
+  .manual-focus-open small { display: none; }
+  .manual-focus-grid { grid-template-columns: 1fr; }
+  .manual-focus-wide { grid-column: auto; }
 }
 @media (max-width: 350px) {
   .theme-gallery { grid-template-columns: 1fr; }

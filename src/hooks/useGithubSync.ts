@@ -5,6 +5,7 @@ import { formatDate } from '../utils/dateUtils';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
 import { profileStorageKey } from '../utils/syncIdentity';
 import { mergeDayData, mergeDayDataMaps, samePomodoroRecords } from '../utils/syncMerge';
+import { mergeTodosById } from '../utils/todoMerge';
 
 type RemoteSettings = Omit<AppSettings, 'syncCode'>;
 
@@ -59,21 +60,16 @@ function settingsSubset(settings: AppSettings): RemoteSettings {
 }
 
 function mergeTodos(localTodos: Todo[], remoteTodos: Todo[]): Todo[] {
-  const merged = new Map(localTodos.map(todo => [todo.id, todo]));
-  for (const remoteTodo of remoteTodos) {
-    const localTodo = merged.get(remoteTodo.id);
-    const localTime = localTodo?.updatedAt || localTodo?.createdAt || '';
-    const remoteTime = remoteTodo.updatedAt || remoteTodo.createdAt || '';
-    if (!localTodo || remoteTime > localTime) merged.set(remoteTodo.id, remoteTodo);
-  }
-  return [...merged.values()];
+  return mergeTodosById(localTodos, remoteTodos);
 }
 
 function mergeSettings(local: RemoteSettings, remote: RemoteSettings): RemoteSettings {
+  const categoryMap = new Map(local.categories.map(category => [category.name, category]));
+  for (const category of remote.categories ?? []) categoryMap.set(category.name, category);
   return {
     ...local,
     ...remote,
-    categories: remote.categories?.length ? remote.categories : local.categories,
+    categories: [...categoryMap.values()],
   };
 }
 

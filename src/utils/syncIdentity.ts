@@ -1,4 +1,5 @@
 const ACTIVE_CODE_KEY = 'todotime_active_sync_code';
+const DEVICE_ID_KEY = 'todotime_device_id';
 const CODE_PATTERN = /^[A-Z0-9_-]{12,64}$/;
 const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
@@ -41,6 +42,16 @@ export function setActiveSyncCode(value: string): string {
 
 export function clearActiveSyncCode(): void {
   localStorage.removeItem(ACTIVE_CODE_KEY);
+}
+
+export function getDeviceId(): string {
+  const existing = localStorage.getItem(DEVICE_ID_KEY);
+  if (existing) return existing;
+  const generated = typeof crypto.randomUUID === 'function'
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+  localStorage.setItem(DEVICE_ID_KEY, generated);
+  return generated;
 }
 
 export function getProfileId(syncCode: string): string {

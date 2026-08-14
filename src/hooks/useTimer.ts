@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { formatDate, generateId } from '../utils/dateUtils';
-import { profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
+import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
 import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
 import { initAudio, playStart, playEnterBreak, playCycleComplete } from '../utils/sound';
 
@@ -40,6 +40,7 @@ interface UseTimerReturn {
   endNow: () => void;
   resetCycle: () => void;
   addTestPomodoros: (records: PomodoroRecord[]) => void;
+  addManualPomodoro: (record: PomodoroRecord) => void;
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
 
@@ -92,6 +93,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const isLongBreakRef = useRef(false);
   const profileIdRef = useRef(profileId);
   const lastCheckpointMinuteRef = useRef(0);
+  const deviceIdRef = useRef(getDeviceId());
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
 
@@ -134,6 +136,21 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       onCompleteRef.current?.(normalized);
     }
   }, [onRecorded]);
+
+  const addManualPomodoro = useCallback((record: PomodoroRecord) => {
+    const normalized = {
+      ...record,
+      id: record.id || `manual-${deviceIdRef.current}-${generateId()}`,
+      manual: true,
+      completed: true,
+      countsAsPomodoro: countsAsPomodoro(record.duration),
+    };
+    recordPomodoro(normalized);
+    if (normalized.countsAsPomodoro) setTotalPomodoros(count => count + 1);
+    showToast(normalized.countsAsPomodoro
+      ? `已补录 ${normalized.duration} 分钟 · 1 个番茄`
+      : `已补录 ${normalized.duration} 分钟；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
+  }, [recordPomodoro, showToast]);
 
   // Persist todayPomodoros to localStorage
   useEffect(() => {
@@ -233,7 +250,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const elapsed = completedMinutes(elapsedSeconds);
     const startTime = startTimeRef.current || new Date().toISOString();
     const endTime = new Date().toISOString();
-    const recordId = `focus-${startTime}`;
+    const recordId = `focus-${deviceIdRef.current}-${startTime}`;
     startTimeRef.current = '';
     lastCheckpointMinuteRef.current = 0;
 
@@ -291,7 +308,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
         startTimeRef.current = checkpointStart;
         const task = currentTaskRef.current;
         recordPomodoro({
-          id: `focus-${checkpointStart}`,
+          id: `focus-${deviceIdRef.current}-${checkpointStart}`,
           start: checkpointStart,
           end: new Date().toISOString(),
           date: formatDate(new Date(checkpointStart)),
@@ -370,7 +387,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     const elapsed = completedMinutes(elapsedSeconds);
     const startTime = startTimeRef.current || new Date().toISOString();
     const endTime = new Date().toISOString();
-    const recordId = `focus-${startTime}`;
+    const recordId = `focus-${deviceIdRef.current}-${startTime}`;
     startTimeRef.current = '';
     lastCheckpointMinuteRef.current = 0;
 
@@ -510,6 +527,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
     start, startWork, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, setOnComplete,
+    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, addManualPomodoro, setOnComplete,
   };
 }

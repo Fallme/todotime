@@ -31,6 +31,8 @@ export interface SubTask {
   done: boolean;
   abandoned: boolean;
   completedPomodoros: number;
+  pomodoroRecordIds?: string[];
+  legacyPomodoroCount?: number;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -43,6 +45,8 @@ export interface Todo {
   category: Category;
   estimatedPomodoros: number;
   completedPomodoros: number;
+  pomodoroRecordIds?: string[];
+  legacyPomodoroCount?: number;
   done: boolean;
   abandoned: boolean;
   createdAt: string;
@@ -64,6 +68,7 @@ export interface PomodoroRecord {
   taskTitle: string;
   category: Category;
   completed: boolean;
+  manual?: boolean;
   createdAt: string;
 }
 

@@ -1,17 +1,21 @@
-import { useState, useCallback, useEffect } from 'react';
-import type { Todo, Priority, Category } from '../types';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import type { Todo, Priority, Category, PomodoroRecord } from '../types';
 import { generateId } from '../utils/dateUtils';
-import { readProfileStorage, profileStorageKey } from '../utils/syncIdentity';
+import { getDeviceId, readProfileStorage, profileStorageKey } from '../utils/syncIdentity';
+import { addPomodoroRecord, mergeTodosById, normalizePomodoroCounter, normalizeTodo } from '../utils/todoMerge';
+import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { pomodoroRecordKey } from '../utils/syncMerge';
 
 interface UseTodosReturn {
   todos: Todo[];
-  addTodo: (title: string, priority: Priority, category: Category) => void;
+  addTodo: (title: string, priority: Priority, category: Category) => Todo;
   toggleTodo: (id: string) => void;
   abandonTodo: (id: string) => void;
   restoreTodo: (id: string) => void;
   deleteTodo: (id: string) => void;
-  updateTodoPomodoros: (id: string) => void;
-  updateSubtaskPomodoros: (subId: string) => void;
+  updateTodoPomodoros: (id: string, recordId: string) => void;
+  updateSubtaskPomodoros: (subId: string, recordId: string) => void;
+  reconcilePomodoroRecords: (records: PomodoroRecord[]) => void;
   addSubtask: (todoId: string, title: string) => void;
   toggleSubtask: (todoId: string, subId: string) => void;
   abandonSubtask: (todoId: string, subId: string) => void;
@@ -28,25 +32,28 @@ interface UseTodosReturn {
 const now = () => new Date().toISOString();
 
 export function useTodos(profileId: string): UseTodosReturn {
+  const deviceIdRef = useRef(getDeviceId());
   const [todos, setTodos] = useState<Todo[]>(() => {
     try {
       const stored = readProfileStorage('todotime_todos', profileId);
       if (stored) {
         const parsed = JSON.parse(stored);
-        return parsed.map((t: Record<string, unknown>) => ({
+        return parsed.map((t: Record<string, unknown>) => normalizeTodo({
           id: t.id as string,
           title: t.title as string,
           priority: (t.priority as Priority) || 'medium',
           category: (t.category as Category) || '数学',
           estimatedPomodoros: (t.estimatedPomodoros as number) || 0,
           completedPomodoros: (t.completedPomodoros as number) || 0,
+          pomodoroRecordIds: Array.isArray(t.pomodoroRecordIds) ? t.pomodoroRecordIds as string[] : undefined,
+          legacyPomodoroCount: typeof t.legacyPomodoroCount === 'number' ? t.legacyPomodoroCount : undefined,
           done: (t.done as boolean) || false,
           abandoned: (t.abandoned as boolean) || false,
           createdAt: (t.createdAt as string) || '',
           updatedAt: (t.updatedAt as string) || (t.createdAt as string) || '',
           completedAt: (t.completedAt as string) || '',
           abandonedAt: (t.abandonedAt as string) || '',
-          subtasks: Array.isArray(t.subtasks) ? t.subtasks : [],
+          subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(subtask => normalizePomodoroCounter(subtask)) : [],
           deletedAt: (t.deletedAt as string) || '',
         }));
       }
@@ -60,12 +67,15 @@ export function useTodos(profileId: string): UseTodosReturn {
 
   const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
     const ts = now();
-    setTodos(prev => [{
-      id: generateId(), title, priority, category,
+    const todo: Todo = {
+      id: `task-${deviceIdRef.current}-${generateId()}`, title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
+      pomodoroRecordIds: [], legacyPomodoroCount: 0,
       done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
       subtasks: [], deletedAt: '',
-    }, ...prev]);
+    };
+    setTodos(prev => [todo, ...prev]);
+    return todo;
   }, []);
 
   const toggleTodo = useCallback((id: string) => {
@@ -94,24 +104,46 @@ export function useTodos(profileId: string): UseTodosReturn {
     setSelectedTodoId(prev => prev === id ? null : prev);
   }, []);
 
-  const updateTodoPomodoros = useCallback((id: string) => {
-    const ts = now();
-    setTodos(prev => prev.map(t => t.id === id ? { ...t, completedPomodoros: t.completedPomodoros + 1, updatedAt: ts } : t));
+  const updateTodoPomodoros = useCallback((id: string, recordId: string) => {
+    setTodos(prev => prev.map(t => t.id === id ? addPomodoroRecord(t, recordId) : t));
   }, []);
 
-  const updateSubtaskPomodoros = useCallback((subId: string) => {
-    const ts = now();
+  const updateSubtaskPomodoros = useCallback((subId: string, recordId: string) => {
     setTodos(prev => prev.map(t => t.subtasks.some(s => s.id === subId) ? ({
-      ...t, updatedAt: ts,
-      subtasks: t.subtasks.map(s => s.id === subId ? { ...s, completedPomodoros: s.completedPomodoros + 1, updatedAt: ts } : s),
+      ...t,
+      subtasks: t.subtasks.map(s => s.id === subId ? addPomodoroRecord(s, recordId) : s),
     }) : t));
+  }, []);
+
+  const reconcilePomodoroRecords = useCallback((records: PomodoroRecord[]) => {
+    const completedRecords = records.filter(record => record.completed && record.taskId && isPomodoroRecord(record));
+    if (completedRecords.length === 0) return;
+    setTodos(previous => {
+      const next = previous.map(todo => {
+        let updatedTodo = todo;
+        for (const record of completedRecords) {
+          if (record.taskId === todo.id) updatedTodo = addPomodoroRecord(updatedTodo, pomodoroRecordKey(record));
+        }
+        const subtasks = updatedTodo.subtasks.map(subtask => {
+          let updatedSubtask = subtask;
+          for (const record of completedRecords) {
+            if (record.taskId === subtask.id) updatedSubtask = addPomodoroRecord(updatedSubtask, pomodoroRecordKey(record));
+          }
+          return updatedSubtask;
+        });
+        return subtasks.some((subtask, index) => subtask !== updatedTodo.subtasks[index])
+          ? { ...updatedTodo, subtasks }
+          : updatedTodo;
+      });
+      return next.some((todo, index) => todo !== previous[index]) ? next : previous;
+    });
   }, []);
 
   const addSubtask = useCallback((todoId: string, title: string) => {
     const ts = now();
     setTodos(prev => prev.map(t => t.id === todoId ? {
       ...t, updatedAt: ts,
-      subtasks: [...t.subtasks, { id: generateId(), title, done: false, abandoned: false, completedPomodoros: 0, createdAt: ts, updatedAt: ts }],
+      subtasks: [...t.subtasks, { id: `subtask-${deviceIdRef.current}-${generateId()}`, title, done: false, abandoned: false, completedPomodoros: 0, pomodoroRecordIds: [], legacyPomodoroCount: 0, createdAt: ts, updatedAt: ts }],
     } : t));
   }, []);
 
@@ -159,47 +191,11 @@ export function useTodos(profileId: string): UseTodosReturn {
     setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName, updatedAt: ts } : t));
   }, []);
 
-  // Bidirectional merge: per-todo updatedAt comparison, latest wins
+  // Metadata uses latest-write-wins while additive pomodoro event IDs are unioned.
   const mergeTodos = useCallback((gitTodos: Todo[]) => {
     setTodos(prev => {
-      const localMap = new Map(prev.map(t => [t.id, t]));
-      const gitMap = new Map(gitTodos.map(t => [t.id, t]));
-      const result: Todo[] = [];
-      let changed = false;
-
-      // Process all todos that exist in either local or git
-      const allIds = new Set([...localMap.keys(), ...gitMap.keys()]);
-      for (const id of allIds) {
-        const local = localMap.get(id);
-        const git = gitMap.get(id);
-
-        if (local && !git) {
-          // Local only → keep (will be pushed to git)
-          result.push(local);
-        } else if (!local && git) {
-          // Git only → add
-          result.push(git);
-          changed = true;
-        } else if (local && git) {
-          // Both exist → compare updatedAt, latest wins
-          const localTime = local.updatedAt || local.createdAt || '';
-          const gitTime = git.updatedAt || git.createdAt || '';
-          if (gitTime > localTime) {
-            // Git is newer → use git version
-            result.push(git);
-            if (git.done !== local.done || git.abandoned !== local.abandoned
-              || git.completedPomodoros !== local.completedPomodoros
-              || git.title !== local.title || git.category !== local.category) {
-              changed = true;
-            }
-          } else {
-            // Local is newer or equal → keep local
-            result.push(local);
-          }
-        }
-      }
-
-      return changed ? result : prev;
+      const result = mergeTodosById(prev, gitTodos);
+      return JSON.stringify(result) === JSON.stringify(prev) ? prev : result;
     });
   }, []);
 
@@ -210,7 +206,7 @@ export function useTodos(profileId: string): UseTodosReturn {
 
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, updateSubtaskPomodoros, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
+    updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo, replaceTodos,
   };
 }

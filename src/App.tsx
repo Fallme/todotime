@@ -9,6 +9,8 @@ import { TabNav } from './components/Layout/TabNav';
 import { TimerRing } from './components/Timer/TimerRing';
 import { TimerControls } from './components/Timer/TimerControls';
 import { TaskAssignModal } from './components/Timer/TaskAssignModal';
+import { ManualFocusModal } from './components/Timer/ManualFocusModal';
+import type { ManualFocusInput } from './components/Timer/ManualFocusModal';
 import { TodoList } from './components/TodoList/TodoList';
 import { StatsOverview } from './components/Stats/StatsOverview';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
@@ -20,6 +22,8 @@ import { useGithubSync } from './hooks/useGithubSync';
 import { loadConfig } from './services/github';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 import { isPomodoroRecord } from './utils/pomodoroRules';
+import { pomodoroRecordKey } from './utils/syncMerge';
+import { createManualFocusRecord } from './utils/manualFocus';
 import { useLanguage } from './i18n/LanguageContext';
 
 type TabId = 'timer' | 'stats' | 'settings';
@@ -70,6 +74,7 @@ export default function App() {
   const [tab, setTab] = useState<TabId>('timer');
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const [showManualFocus, setShowManualFocus] = useState(false);
   const today = formatDate(new Date());
 
   useEffect(() => {
@@ -89,7 +94,7 @@ export default function App() {
   const todosHook = useTodos(profileId);
   const {
     todos, selectedTodoId, updateTodoPomodoros, updateSubtaskPomodoros,
-    mergeTodos, replaceTodos,
+    mergeTodos, replaceTodos, reconcilePomodoroRecords,
   } = todosHook;
   const currentTodo = todos.find(t => !t.deletedAt && !t.done && !t.abandoned && t.id === currentTaskId);
   const currentSubtask = todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned).flatMap(todo => todo.subtasks.filter(subtask => !subtask.deletedAt && !subtask.done && !subtask.abandoned).map(subtask => ({ ...subtask, category: todo.category })))
@@ -111,9 +116,10 @@ export default function App() {
   // Focus duration is always saved after one minute; task tomato counts start at 15 minutes.
   const handlePomodoroRecorded = useCallback((record: PomodoroRecord) => {
     if (record.completed && record.taskId && isPomodoroRecord(record)) {
-      // Use functional updates to avoid stale closure issues
-      updateTodoPomodoros(record.taskId);
-      updateSubtaskPomodoros(record.taskId);
+      const recordId = pomodoroRecordKey(record);
+      // Event IDs are additive, so simultaneous devices can union their results.
+      updateTodoPomodoros(record.taskId, recordId);
+      updateSubtaskPomodoros(record.taskId, recordId);
     }
   }, [updateTodoPomodoros, updateSubtaskPomodoros]);
 
@@ -135,6 +141,14 @@ export default function App() {
   useEffect(() => {
     setTimerOnComplete(handlePomodoroRecorded);
   }, [setTimerOnComplete, handlePomodoroRecorded]);
+
+  useEffect(() => {
+    const records = [
+      ...[...dayDataMap.values()].flatMap(day => day.pomodoros),
+      ...timer.todayPomodoros,
+    ];
+    reconcilePomodoroRecords(records);
+  }, [dayDataMap, timer.todayPomodoros, reconcilePomodoroRecords]);
 
   // --- App open: load chart data, then resolve config by sync timestamp ---
   useEffect(() => {
@@ -289,6 +303,32 @@ export default function App() {
     if (!timer.isRunning || timer.mode !== 'work') timer.startWork();
   };
 
+  const handleManualFocus = (input: ManualFocusInput) => {
+    let taskId = input.taskId;
+    let taskTitle = language === 'zh-CN' ? '未分配' : 'Unassigned';
+    if (input.newTaskTitle) {
+      const created = todosHook.addTodo(input.newTaskTitle, 'medium', input.category);
+      taskId = created.id;
+      taskTitle = created.title;
+      setCurrentTaskId(created.id);
+      timer.setTaskInfo(created.id, created.title, created.category);
+    } else if (taskId) {
+      const existing = todos.find(todo => todo.id === taskId);
+      if (existing) {
+        taskTitle = existing.title;
+        if (existing.category !== input.category) todosHook.changeCategory(existing.id, input.category);
+      }
+    }
+    timer.addManualPomodoro(createManualFocusRecord({
+      duration: input.duration,
+      endAt: input.endAt,
+      taskId,
+      taskTitle,
+      category: input.category,
+    }));
+    setShowManualFocus(false);
+  };
+
   const handleAssignAll = (results: { taskId: string | null; taskTitle: string; category: Category }[]) => {
     timer.assignAll(results);
   };
@@ -413,6 +453,7 @@ export default function App() {
               onChangeCategory={todosHook.changeCategory}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
+              onOpenManualFocus={() => setShowManualFocus(true)}
             />
           </div>
         )}
@@ -440,6 +481,15 @@ export default function App() {
 
       {/* Toast notification */}
       {timer.toast && <div className="toast-notification">{timer.toast}</div>}
+
+      {showManualFocus && (
+        <ManualFocusModal
+          todos={todos}
+          categories={settings.categories}
+          onSave={handleManualFocus}
+          onClose={() => setShowManualFocus(false)}
+        />
+      )}
 
       {/* Assignment modal */}
       {timer.groupPhase === 'settle' && timer.pendingAssignments.length > 0 && (

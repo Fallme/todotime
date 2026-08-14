@@ -4,7 +4,7 @@ import { getCategoryColor } from '../../types';
 import { formatDate } from '../../utils/dateUtils';
 import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
-import { ListTodo, ChevronDown, ChevronRight, Archive } from 'lucide-react';
+import { ListTodo, ChevronDown, ChevronRight, Archive, Clock3 } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
@@ -31,10 +31,12 @@ interface TodoListProps {
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
+  onOpenManualFocus: () => void;
 }
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
   const { language, t } = useLanguage();
+  const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const statusTabs: { id: StatusTab; label: ReturnType<typeof t> }[] = [
     { id: 'all', label: t('all') }, { id: 'active', label: t('active') }, { id: 'done', label: t('done') }, { id: 'abandoned', label: t('abandoned') },
   ];
@@ -112,6 +114,12 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
           <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
         </div>
       </div>
+
+      <button className="manual-focus-open" type="button" onClick={onOpenManualFocus}>
+        <Clock3 size={15} />
+        <span>{msg('手动补录专注', 'Add focus manually')}</span>
+        <small>{msg('按规则自动计算时长与番茄', 'Auto-count time and pomodoros')}</small>
+      </button>
 
       <div className="status-tabs">
         {statusTabs.map(tab => (
