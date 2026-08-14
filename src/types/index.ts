@@ -95,6 +95,9 @@ export const THEME_IDS = [
   'ink',
   'sunset',
   'midnight',
+  'monochrome',
+  'constructivist',
+  'toy3d',
 ] as const;
 
 export type ThemeId = typeof THEME_IDS[number];

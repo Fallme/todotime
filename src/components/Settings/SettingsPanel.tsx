@@ -22,6 +22,9 @@ const THEME_OPTIONS: Array<{
   description: [string, string];
   colors: [string, string, string];
 }> = [
+  { id: 'monochrome', name: ['黑白秩序', 'Monochrome'], description: ['纯黑白、高对比与网格秩序', 'Pure contrast and editorial grids'], colors: ['#111111', '#ffffff', '#dedede'] },
+  { id: 'constructivist', name: ['苏联色块', 'Soviet Blocks'], description: ['红黑米白的构成主义几何', 'Red, black and cream geometry'], colors: ['#d62828', '#171717', '#f1e3c6'] },
+  { id: 'toy3d', name: ['3D 潮玩', '3D Art Toy'], description: ['软糖配色、厚圆角与立体光影', 'Candy colors and sculpted depth'], colors: ['#7357ff', '#ff79b0', '#eff0ff'] },
   { id: 'tomato', name: ['默认番茄', 'Classic Tomato'], description: ['原有温暖清爽风格', 'The original warm, clean look'], colors: ['#ff6b6b', '#ffa07a', '#ffffff'] },
   { id: 'apple', name: ['苹果极简', 'Apple Minimal'], description: ['通透、克制的玻璃质感', 'Clean, calm frosted glass'], colors: ['#007aff', '#34c759', '#f5f5f7'] },
   { id: 'sketch', name: ['手绘纸张', 'Hand-drawn'], description: ['纸张纹理与自然线条', 'Paper texture and lively lines'], colors: ['#e05a47', '#2f766f', '#fffaf0'] },
