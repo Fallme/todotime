@@ -20,3 +20,11 @@ test('existing profiles keep the classic tomato theme', () => {
 test('known themes survive settings normalization', () => {
   for (const theme of THEME_IDS) assert.equal(normalizeTheme(theme), theme);
 });
+
+test('settings keeps theme selection in a secondary picker', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const source = await readFile(new URL('../src/components/Settings/SettingsPanel.tsx', import.meta.url), 'utf8');
+  assert.match(source, /className="theme-picker-trigger"/);
+  assert.match(source, /showThemePicker &&/);
+  assert.match(source, /className="modal-content theme-picker-modal"/);
+});

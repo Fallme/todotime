@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AppSettings, ThemeId } from '../../types';
-import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette } from 'lucide-react';
+import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -41,9 +41,12 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const [codeMessage, setCodeMessage] = useState('');
   const [isNewCode, setIsNewCode] = useState(false);
   const [codeVisible, setCodeVisible] = useState(false);
+  const [showThemePicker, setShowThemePicker] = useState(false);
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => onSave({ ...settings, [key]: value });
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
+  const copyIndex = language === 'zh-CN' ? 0 : 1;
+  const currentTheme = THEME_OPTIONS.find(option => option.id === settings.theme) ?? THEME_OPTIONS[0];
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -101,47 +104,16 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
             <button className={language === 'en' ? 'active' : ''} type="button" onClick={() => setLanguage('en')}>{t('english')}</button>
           </div>
         </div>
-      </section>
-
-      <section className="settings-section theme-settings-section">
-        <div className="theme-section-heading">
-          <span className="theme-heading-icon"><Palette size={16} /></span>
-          <div>
-            <h3>{msg('主题风格', 'Theme styles')}</h3>
-            <p>{msg('默认主题保持不变，选择会自动保存并同步到当前专属码。', 'The classic theme stays unchanged. Your choice is saved and synced to this profile.')}</p>
-          </div>
-        </div>
-        <div className="theme-gallery" role="list" aria-label={msg('主题风格', 'Theme styles')}>
-          {THEME_OPTIONS.map(option => {
-            const selected = settings.theme === option.id;
-            const copyIndex = language === 'zh-CN' ? 0 : 1;
-            return (
-              <button
-                className={`theme-option theme-preview-${option.id} ${selected ? 'selected' : ''}`}
-                type="button"
-                role="listitem"
-                aria-pressed={selected}
-                key={option.id}
-                onClick={() => update('theme', option.id)}
-              >
-                <span className="theme-preview" aria-hidden="true">
-                  <span className="theme-preview-sidebar" style={{ backgroundColor: option.colors[0] }} />
-                  <span className="theme-preview-content">
-                    <span className="theme-preview-line" />
-                    <span className="theme-preview-card">
-                      <span style={{ backgroundColor: option.colors[1] }} />
-                      <span style={{ backgroundColor: option.colors[0] }} />
-                    </span>
-                  </span>
-                  {selected && <span className="theme-selected-mark"><Check size={12} /></span>}
-                </span>
-                <span className="theme-option-copy">
-                  <strong>{option.name[copyIndex]}</strong>
-                  <small>{option.description[copyIndex]}</small>
-                </span>
-              </button>
-            );
-          })}
+        <div className="settings-row">
+          <label>{msg('主题风格', 'Theme style')}</label>
+          <button className="theme-picker-trigger" type="button" onClick={() => setShowThemePicker(true)}>
+            <span className="theme-trigger-palette" aria-hidden="true">
+              <i style={{ backgroundColor: currentTheme.colors[0] }} />
+              <i style={{ backgroundColor: currentTheme.colors[1] }} />
+            </span>
+            <strong>{currentTheme.name[copyIndex]}</strong>
+            <ChevronRight size={15} />
+          </button>
         </div>
       </section>
 
@@ -173,6 +145,51 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
           <div className="clear-confirm"><span>{t('clearConfirm')}</span><button className="btn danger small" onClick={() => { onClear(); setShowClearConfirm(false); }}>{t('confirm')}</button><button className="btn secondary small" onClick={() => setShowClearConfirm(false)}>{t('cancel')}</button></div>
         )}
       </div>
+
+      {showThemePicker && (
+        <div className="modal-overlay" onClick={() => setShowThemePicker(false)}>
+          <div className="modal-content theme-picker-modal" onClick={event => event.stopPropagation()}>
+            <div className="theme-picker-modal-header">
+              <span className="theme-heading-icon"><Palette size={17} /></span>
+              <div>
+                <h3 className="modal-title">{msg('选择主题风格', 'Choose a theme')}</h3>
+                <p className="modal-desc">{msg('选择后立即切换，并同步到当前专属码。', 'Your selection applies instantly and syncs to this profile.')}</p>
+              </div>
+              <button className="theme-picker-close" type="button" aria-label={msg('关闭', 'Close')} onClick={() => setShowThemePicker(false)}><X size={18} /></button>
+            </div>
+            <div className="theme-gallery" aria-label={msg('主题风格', 'Theme styles')}>
+              {THEME_OPTIONS.map(option => {
+                const selected = settings.theme === option.id;
+                return (
+                  <button
+                    className={`theme-option theme-preview-${option.id} ${selected ? 'selected' : ''}`}
+                    type="button"
+                    aria-pressed={selected}
+                    key={option.id}
+                    onClick={() => { update('theme', option.id); setShowThemePicker(false); }}
+                  >
+                    <span className="theme-preview" aria-hidden="true">
+                      <span className="theme-preview-sidebar" style={{ backgroundColor: option.colors[0] }} />
+                      <span className="theme-preview-content">
+                        <span className="theme-preview-line" />
+                        <span className="theme-preview-card">
+                          <span style={{ backgroundColor: option.colors[1] }} />
+                          <span style={{ backgroundColor: option.colors[0] }} />
+                        </span>
+                      </span>
+                      {selected && <span className="theme-selected-mark"><Check size={12} /></span>}
+                    </span>
+                    <span className="theme-option-copy">
+                      <strong>{option.name[copyIndex]}</strong>
+                      <small>{option.description[copyIndex]}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Clock3, Plus } from 'lucide-react';
 import type { Category, CategoryItem, Todo } from '../../types';
 import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
+import { resolveManualFocusCategory } from '../../utils/manualFocus';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 export interface ManualFocusInput {
@@ -28,20 +29,14 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
   const { language } = useLanguage();
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const activeTodos = useMemo(() => todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned), [todos]);
-  const [assignment, setAssignment] = useState(activeTodos[0]?.id ?? 'new');
+  const [assignment, setAssignment] = useState('none');
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [duration, setDuration] = useState(25);
   const [endAt, setEndAt] = useState(localDateTimeValue);
-  const initialCategory = activeTodos[0]?.category ?? categories[0]?.name ?? '其他';
-  const [category, setCategory] = useState<Category>(initialCategory);
+  const [category, setCategory] = useState<Category>(categories[0]?.name ?? '其他');
   const [error, setError] = useState('');
   const tomatoCount = duration >= MIN_POMODORO_MINUTES ? 1 : 0;
-
-  const changeAssignment = (value: string) => {
-    setAssignment(value);
-    const selected = activeTodos.find(todo => todo.id === value);
-    if (selected) setCategory(selected.category);
-  };
+  const selectedTodo = activeTodos.find(todo => todo.id === assignment);
 
   const submit = () => {
     const safeDuration = Math.floor(Number(duration));
@@ -62,7 +57,7 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
       endAt,
       taskId: assignment === 'new' || assignment === 'none' ? null : assignment,
       newTaskTitle: assignment === 'new' ? newTaskTitle.trim() : '',
-      category,
+      category: resolveManualFocusCategory(assignment, activeTodos, category),
     });
   };
 
@@ -88,24 +83,32 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
           </label>
           <label className="manual-focus-wide">
             <span>{msg('分配给', 'Assign to')}</span>
-            <select value={assignment} onChange={event => changeAssignment(event.target.value)}>
+            <select value={assignment} onChange={event => setAssignment(event.target.value)}>
+              <option value="none">{msg('不关联任务（默认）', 'No task (default)')}</option>
               {activeTodos.map(todo => <option key={todo.id} value={todo.id}>{todo.title}（{todo.category}）</option>)}
               <option value="new">＋ {msg('新建任务', 'Create a new task')}</option>
-              <option value="none">{msg('不关联任务', 'No task')}</option>
             </select>
           </label>
-          {assignment === 'new' && (
-            <label className="manual-focus-wide">
-              <span>{msg('新任务名称', 'New task name')}</span>
-              <div className="manual-new-task-field"><Plus size={16} /><input autoFocus maxLength={80} value={newTaskTitle} placeholder={msg('例如：整理复习笔记', 'For example: Review project notes')} onChange={event => setNewTaskTitle(event.target.value)} /></div>
-            </label>
+          {selectedTodo && (
+            <div className="manual-derived-category manual-focus-wide">
+              <span>{msg('自动使用任务类别', 'Task category selected automatically')}</span>
+              <strong>{selectedTodo.category}</strong>
+            </div>
           )}
-          <label className="manual-focus-wide">
-            <span>{msg('所属类别', 'Category')}</span>
-            <select value={category} onChange={event => setCategory(event.target.value)}>
-              {categories.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}
-            </select>
-          </label>
+          {assignment === 'new' && (
+            <>
+              <label className="manual-focus-wide">
+                <span>{msg('新任务名称', 'New task name')}</span>
+                <div className="manual-new-task-field"><Plus size={16} /><input autoFocus maxLength={80} value={newTaskTitle} placeholder={msg('例如：整理复习笔记', 'For example: Review project notes')} onChange={event => setNewTaskTitle(event.target.value)} /></div>
+              </label>
+              <label className="manual-focus-wide">
+                <span>{msg('新任务类别', 'New task category')}</span>
+                <select value={category} onChange={event => setCategory(event.target.value)}>
+                  {categories.map(item => <option key={item.name} value={item.name}>{item.name}</option>)}
+                </select>
+              </label>
+            </>
+          )}
         </div>
 
         <div className={`manual-pomodoro-rule ${tomatoCount ? 'counts' : ''}`}>

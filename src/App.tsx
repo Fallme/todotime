@@ -316,7 +316,6 @@ export default function App() {
       const existing = todos.find(todo => todo.id === taskId);
       if (existing) {
         taskTitle = existing.title;
-        if (existing.category !== input.category) todosHook.changeCategory(existing.id, input.category);
       }
     }
     timer.addManualPomodoro(createManualFocusRecord({

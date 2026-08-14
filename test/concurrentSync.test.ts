@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { Todo } from '../src/types/index.ts';
 import { addPomodoroRecord, mergeTodosById } from '../src/utils/todoMerge.ts';
-import { createManualFocusRecord } from '../src/utils/manualFocus.ts';
+import { createManualFocusRecord, resolveManualFocusCategory } from '../src/utils/manualFocus.ts';
 
 function task(overrides: Partial<Todo> = {}): Todo {
   return {
@@ -39,4 +39,11 @@ test('manual focus follows the existing one-minute and fifteen-minute rules', ()
   assert.equal(fourteen.countsAsPomodoro, false);
   assert.equal(fifteen.countsAsPomodoro, true);
   assert.equal(fifteen.manual, true);
+});
+
+test('manual assignment defaults to other, inherits existing category, and only new tasks use configured category', () => {
+  const todos = [{ id: 'existing', category: '英语' }];
+  assert.equal(resolveManualFocusCategory('none', todos, '数学'), '其他');
+  assert.equal(resolveManualFocusCategory('existing', todos, '数学'), '英语');
+  assert.equal(resolveManualFocusCategory('new', todos, '数学'), '数学');
 });
