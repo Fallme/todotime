@@ -98,7 +98,7 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
           {assignment === 'new' && (
             <>
               <label className="manual-focus-wide">
-                <span>{msg('新任务名称', 'New task name')}</span>
+                <span>{msg('新任务名称（保存后自动完成）', 'New task name (completed on save)')}</span>
                 <div className="manual-new-task-field"><Plus size={16} /><input autoFocus maxLength={80} value={newTaskTitle} placeholder={msg('例如：整理复习笔记', 'For example: Review project notes')} onChange={event => setNewTaskTitle(event.target.value)} /></div>
               </label>
               <label className="manual-focus-wide">

@@ -308,11 +308,9 @@ export default function App() {
     let taskId = input.taskId;
     let taskTitle = language === 'zh-CN' ? '未分配' : 'Unassigned';
     if (input.newTaskTitle) {
-      const created = todosHook.addTodo(input.newTaskTitle, 'medium', input.category);
+      const created = todosHook.addCompletedTodo(input.newTaskTitle, 'medium', input.category, input.endAt);
       taskId = created.id;
       taskTitle = created.title;
-      setCurrentTaskId(created.id);
-      timer.setTaskInfo(created.id, created.title, created.category);
     } else if (taskId) {
       const existing = todos.find(todo => todo.id === taskId);
       if (existing) {

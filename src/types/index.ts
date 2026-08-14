@@ -118,6 +118,14 @@ export const THEME_IDS = [
   'lineart',
   'crayon',
   'liquidglass',
+  'guohua',
+  'inkwash',
+  'woodcut',
+  'metallic',
+  'stainedglass',
+  'tarot',
+  'anime',
+  'farmcraft',
 ] as const;
 
 export type ThemeId = typeof THEME_IDS[number];

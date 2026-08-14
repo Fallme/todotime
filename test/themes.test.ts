@@ -2,14 +2,16 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { DEFAULT_SETTINGS, normalizeTheme, THEME_IDS } from '../src/types/index.ts';
 
-test('theme gallery exposes exactly seventeen distinct styles', () => {
-  assert.equal(THEME_IDS.length, 17);
-  assert.equal(new Set(THEME_IDS).size, 17);
+test('theme gallery exposes exactly twenty-five distinct styles', () => {
+  assert.equal(THEME_IDS.length, 25);
+  assert.equal(new Set(THEME_IDS).size, 25);
   assert.deepEqual(THEME_IDS, [
     'tomato', 'apple', 'sketch', 'pixel', 'cyber',
     'matcha', 'ocean', 'ink', 'midnight',
     'monochrome', 'constructivist', 'toy3d', 'oilpaint',
     'modernist', 'lineart', 'crayon', 'liquidglass',
+    'guohua', 'inkwash', 'woodcut', 'metallic',
+    'stainedglass', 'tarot', 'anime', 'farmcraft',
   ]);
 });
 

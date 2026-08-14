@@ -17,6 +17,8 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   const stats = await readFile(new URL('../src/components/Stats/StatsOverview.tsx', import.meta.url), 'utf8');
   const styles = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
   const assignment = await readFile(new URL('../src/components/Timer/TaskAssignModal.tsx', import.meta.url), 'utf8');
+  const todoHook = await readFile(new URL('../src/hooks/useTodos.ts', import.meta.url), 'utf8');
+  const manualFocus = await readFile(new URL('../src/components/Timer/ManualFocusModal.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(controls, /onFinishRound/);
   assert.match(app, /className="cycle-skip-btn"/);
   assert.match(app, /className="cycle-dots"/);
@@ -35,4 +37,8 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.doesNotMatch(stats, /type: 'line'/);
   assert.match(assignment, /onSkip/);
   assert.match(assignment, /跳过分配/);
+  assert.match(app, /addCompletedTodo\(input\.newTaskTitle, 'medium', input\.category, input\.endAt\)/);
+  assert.match(todoHook, /const addCompletedTodo = useCallback/);
+  assert.match(todoHook, /completeTodo\(baseTodo, completionTime/);
+  assert.match(manualFocus, /新任务名称（保存后自动完成）/);
 });

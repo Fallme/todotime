@@ -10,6 +10,7 @@ import { completeTodo, getNextTaskRefreshAt, refreshRecurringTodos, undoTodoComp
 interface UseTodosReturn {
   todos: Todo[];
   addTodo: (title: string, priority: Priority, category: Category, recurrence?: TaskRecurrence) => Todo;
+  addCompletedTodo: (title: string, priority: Priority, category: Category, completedAt: string) => Todo;
   toggleTodo: (id: string) => void;
   abandonTodo: (id: string) => void;
   restoreTodo: (id: string) => void;
@@ -91,6 +92,25 @@ export function useTodos(profileId: string): UseTodosReturn {
       done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
       recurrence, nextRefreshAt: '', completionHistory: [],
       subtasks: [], deletedAt: '',
+    };
+    setTodos(prev => [todo, ...prev]);
+    return todo;
+  }, []);
+
+  const addCompletedTodo = useCallback((title: string, priority: Priority, category: Category, completedAt: string) => {
+    const ts = now();
+    const completionTime = new Date(completedAt).toISOString();
+    const baseTodo: Todo = {
+      id: `task-${deviceIdRef.current}-${generateId()}`, title, priority, category,
+      estimatedPomodoros: 0, completedPomodoros: 0,
+      pomodoroRecordIds: [], legacyPomodoroCount: 0,
+      done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
+      recurrence: 'none', nextRefreshAt: '', completionHistory: [],
+      subtasks: [], deletedAt: '',
+    };
+    const todo = {
+      ...completeTodo(baseTodo, completionTime, `complete-${deviceIdRef.current}-${generateId()}`),
+      updatedAt: ts,
     };
     setTodos(prev => [todo, ...prev]);
     return todo;
@@ -231,7 +251,7 @@ export function useTodos(profileId: string): UseTodosReturn {
   }, []);
 
   return {
-    todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
+    todos, addTodo, addCompletedTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
     updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, changeRecurrence, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo, replaceTodos,
   };
