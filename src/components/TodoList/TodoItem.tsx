@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, Trash2, Play, RotateCcw, Plus } from 'lucide-react';
-import type { Todo, Category, CategoryItem } from '../../types';
+import { Check, Trash2, Play, RotateCcw, Plus, Repeat2 } from 'lucide-react';
+import type { Todo, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { getCategoryColor } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -33,16 +33,27 @@ interface TodoItemProps {
   onRestoreSubtask: (subId: string) => void;
   onDeleteSubtask: (subId: string) => void;
   onChangeCategory: (category: Category) => void;
+  onChangeRecurrence: (recurrence: TaskRecurrence) => void;
 }
 
-export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory }: TodoItemProps) {
-  const { t } = useLanguage();
+export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence }: TodoItemProps) {
+  const { language, t } = useLanguage();
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
+  const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
   const catPickerRef = useRef<HTMLDivElement>(null);
   const isActive = !todo.done && !todo.abandoned;
   const catColor = getCategoryColor(categories, todo.category);
+  const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
+  const recurrence = todo.recurrence ?? 'none';
+  const recurrenceOptions: Array<{ id: TaskRecurrence; label: string }> = [
+    { id: 'none', label: msg('不自动刷新', 'No repeat') },
+    { id: 'daily', label: msg('每日', 'Daily') },
+    { id: 'everyOtherDay', label: msg('隔日', 'Every other day') },
+    { id: 'weekly', label: msg('每周', 'Weekly') },
+  ];
+  const recurrenceLabel = recurrenceOptions.find(option => option.id === recurrence)?.label;
 
   // Click outside to close
   useEffect(() => {
@@ -87,6 +98,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             {todo.category}
           </span>
           <span className="todo-card-title">{todo.title}</span>
+          {recurrence !== 'none' && <span className="todo-recurrence-tag"><Repeat2 size={10} />{recurrenceLabel}</span>}
           {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
         </div>
 
@@ -104,6 +116,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         <div className="todo-card-actions">
           {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title={t('startPomodoro')}><Play size={14} /></button>}
           {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title={t('subtask')}><Plus size={14} /></button>}
+          <button className={`card-btn ${recurrence !== 'none' ? 'repeat-active' : ''}`} onClick={e => { e.stopPropagation(); setShowRecurrencePicker(!showRecurrencePicker); }} title={msg('设置刷新周期', 'Set repeat cycle')}><Repeat2 size={14} /></button>
           <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title={t('delete')}><Trash2 size={14} /></button>
         </div>
       </div>
@@ -116,6 +129,17 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
               style={{ borderColor: c.color, background: c.name === todo.category ? c.color : undefined, color: c.name === todo.category ? 'white' : undefined }}
               onClick={e => { e.stopPropagation(); onChangeCategory(c.name); setShowCatPicker(false); }}>
               {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {showRecurrencePicker && (
+        <div className="todo-recurrence-picker" onClick={event => event.stopPropagation()}>
+          {recurrenceOptions.map(option => (
+            <button key={option.id} className={recurrence === option.id ? 'active' : ''} type="button"
+              onClick={() => { onChangeRecurrence(option.id); setShowRecurrencePicker(false); }}>
+              {option.label}
             </button>
           ))}
         </div>

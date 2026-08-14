@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { DayData, PomodoroRecord, Todo } from '../types';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { getTodoCompletionRecords } from '../utils/taskRecurrence';
 
 export interface UseStatsReturn {
   todayPomodoros: number;
@@ -28,9 +29,8 @@ export function useStats(
       ? todayData.totalFocusMinutes + todayPomodoros.reduce((s, p) => s + p.duration, 0)
       : todayPomodoros.reduce((s, p) => s + p.duration, 0);
     const todayMinutes = todayCompletedMinutes + runningMinutes;
-    // Count tasks completed today from local todos (completedAt format: "MM-DD HH:mm")
-    const todayMd = todayDate.slice(5); // "06-03"
-    const todayTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(todayMd)).length;
+    const todayTasks = todos.filter(todo => !todo.deletedAt)
+      .reduce((sum, todo) => sum + getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(todayDate)).length, 0);
 
     // Weekly data
     const weekly: { date: string; minutes: number }[] = [];

@@ -32,9 +32,11 @@ interface UseTimerReturn {
   pause: () => void;
   reset: () => void;
   skip: () => void;
+  finishRound: () => void;
   setTotalTime: (seconds: number) => void;
   setTaskInfo: (id: string | null, title: string, category: Category) => void;
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
+  skipAssignments: () => void;
   startNextGroup: () => void;
   stop: () => void;
   endNow: () => void;
@@ -93,6 +95,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const isLongBreakRef = useRef(false);
   const profileIdRef = useRef(profileId);
   const lastCheckpointMinuteRef = useRef(0);
+  const resumeAfterSettleRef = useRef(false);
   const deviceIdRef = useRef(getDeviceId());
 
   const clearTimer = useCallback(() => { if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null; } }, []);
@@ -262,6 +265,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
 
     const assignment = { id: recordId, start: startTime, end: endTime, date: formatDate(new Date(startTime)), duration: Math.max(1, elapsed) };
     const task = currentTaskRef.current;
+    const requiresAssignment = !task?.id;
     if (task?.id) {
       recordPomodoro({
         ...assignment, id: recordId,
@@ -283,6 +287,11 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       showToast(`已记录 ${elapsed} 分钟；满 ${MIN_POMODORO_MINUTES} 分钟才计 1 个番茄`);
     }
     startBreak(advanceCycle());
+    if (requiresAssignment) {
+      resumeAfterSettleRef.current = true;
+      setIsRunning(false);
+      setGroupPhase('settle');
+    }
   }, [clearTimer, startBreak, advanceCycle, recordPomodoro, showToast]);
 
   // Work countdown — tracks running minutes
@@ -356,9 +365,23 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     });
     setPendingAssignments([]);
     setGroupPhase('working');
+    if (resumeAfterSettleRef.current) {
+      resumeAfterSettleRef.current = false;
+      setIsRunning(true);
+    }
     const tomatoes = pending.filter(item => countsAsPomodoro(item.duration)).length;
     showToast(`已分配 ${pending.length} 条记录${tomatoes > 0 ? `，其中 ${tomatoes} 个番茄` : ''}`);
   }, [recordPomodoro, showToast]);
+
+  const skipAssignments = useCallback(() => {
+    setPendingAssignments([]);
+    setGroupPhase('working');
+    showToast('已保留为未指派专注');
+    if (resumeAfterSettleRef.current) {
+      resumeAfterSettleRef.current = false;
+      setIsRunning(true);
+    }
+  }, [showToast]);
 
   // Start next group
   const startNextGroup = useCallback(() => {
@@ -375,6 +398,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setMode('work'); setTimeLeft(workMinutesRef.current * 60); setTotalTimeState(workMinutesRef.current * 60);
     cycleCountRef.current = 0; setCycleCount(0); startTimeRef.current = '';
     isLongBreakRef.current = false;
+    resumeAfterSettleRef.current = false;
     setPendingAssignments([]);
     setRunningMinutes(0);
     lastCheckpointMinuteRef.current = 0;
@@ -383,6 +407,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   // End now: settle completed pomodoros, update cycle
   const endNow = useCallback(() => {
     clearTimer();
+    resumeAfterSettleRef.current = false;
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
     const elapsed = completedMinutes(elapsedSeconds);
     const startTime = startTimeRef.current || new Date().toISOString();
@@ -523,10 +548,21 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, completeOne, startBreak, advanceCycle, playSound, showToast]);
 
+  const finishRound = useCallback(() => {
+    if (modeRef.current !== 'work') {
+      skip();
+      return;
+    }
+    clearTimer();
+    timeLeftRef.current = 0;
+    setTimeLeft(0);
+    completeOne();
+  }, [clearTimer, completeOne, skip]);
+
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
-    start, startWork, pause, reset, skip, setTotalTime, setTaskInfo,
-    assignAll, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, addManualPomodoro, setOnComplete,
+    start, startWork, pause, reset, skip, finishRound, setTotalTime, setTaskInfo,
+    assignAll, skipAssignments, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, addManualPomodoro, setOnComplete,
   };
 }

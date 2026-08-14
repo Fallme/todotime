@@ -1,5 +1,7 @@
-import { Timer, Sun, Moon, Languages } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { Timer, Sun, Moon, Languages, RefreshCw } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { MOTIVATION_QUOTES, nextQuoteIndex } from '../../utils/motivation';
 
 interface HeaderProps {
   darkMode: boolean;
@@ -10,6 +12,15 @@ interface HeaderProps {
 
 export function Header({ darkMode, onToggleTheme, syncing, syncError }: HeaderProps) {
   const { language, toggleLanguage, t } = useLanguage();
+  const [quoteIndex, setQuoteIndex] = useState(() => Math.floor(Math.random() * MOTIVATION_QUOTES['zh-CN'].length));
+  const refreshQuote = useCallback(() => {
+    setQuoteIndex(current => nextQuoteIndex(current, MOTIVATION_QUOTES[language].length));
+  }, [language]);
+
+  useEffect(() => {
+    const interval = window.setInterval(refreshQuote, 45_000);
+    return () => window.clearInterval(interval);
+  }, [language, refreshQuote]);
 
   return (
     <header className="header-wrapper">
@@ -29,7 +40,12 @@ export function Header({ darkMode, onToggleTheme, syncing, syncError }: HeaderPr
           </button>
         </div>
       </header>
-      <div className="header-quote">{t('quote')}</div>
+      <div className="header-quote">
+        <span>{MOTIVATION_QUOTES[language][quoteIndex]}</span>
+        <button type="button" onClick={refreshQuote} title={language === 'zh-CN' ? '换一句' : 'Another thought'} aria-label={language === 'zh-CN' ? '刷新激励语' : 'Refresh motivation'}>
+          <RefreshCw size={12} />
+        </button>
+      </div>
     </header>
   );
 }

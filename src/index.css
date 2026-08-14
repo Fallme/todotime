@@ -410,6 +410,12 @@ html[data-theme="toy3d"] body {
 .timer-page {
   display: flex; flex-direction: column; gap: clamp(14px, 2vw, 20px);
 }
+.header-quote { display: flex; align-items: center; justify-content: center; gap: 5px; }
+.header-quote button {
+  width: 22px; height: 22px; display: grid; place-items: center; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-muted); cursor: pointer; opacity: .68;
+}
+.header-quote button:hover { color: var(--accent); background: var(--accent-bg); opacity: 1; }
 .timer-section {
   display: flex; flex-direction: column; align-items: center;
   padding: 12px 0 8px; gap: 10px;
@@ -838,6 +844,11 @@ html[data-theme="toy3d"] body {
   border: 1px solid var(--border);
 }
 .ctrl-btn.secondary:hover { background: var(--bg-hover); color: var(--text); }
+.ctrl-btn.quick-finish {
+  min-height: 40px; padding: 0 12px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-bg); color: var(--accent); font-size: 12px;
+}
+.ctrl-btn.quick-finish:hover { transform: translateY(-1px); border-color: var(--accent); }
 .ctrl-btn.end-btn { gap: 4px; font-size: 13px; width: auto; padding: 0 12px; }
 .ctrl-btn.end-btn:hover { color: #e17055; border-color: #e17055; }
 .ctrl-btn-group { display: flex; gap: 8px; align-items: center; }
@@ -903,6 +914,15 @@ html[data-theme="toy3d"] body {
   display: flex; align-items: center; justify-content: center;
 }
 .add-todo-btn:disabled { opacity: 0.4; cursor: default; }
+.add-todo-recurrence {
+  width: fit-content; display: flex; align-items: center; gap: 5px; margin: 7px 0 0 auto;
+  color: var(--text-muted); font-size: 11px;
+}
+.add-todo-recurrence select {
+  min-width: 92px; padding: 4px 24px 4px 8px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--text-secondary); font-size: 11px; outline: none;
+}
+.add-todo-recurrence select:focus { border-color: var(--accent); }
 .add-todo-options {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
 }
@@ -927,6 +947,13 @@ html[data-theme="toy3d"] body {
 .archive-toggle span:first-of-type { font-weight: 600; color: var(--text); }
 .archive-count { margin-left: auto; font-size: 11px; color: var(--text-muted); }
 .archive-items { padding-left: 8px; margin-top: 4px; }
+.archive-history-row {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto auto; align-items: center; gap: 7px;
+  padding: 8px 10px; border-bottom: 1px dashed var(--border); color: var(--text-muted); font-size: 11px;
+}
+.archive-history-row > svg { color: var(--green); }
+.archive-history-title { overflow: hidden; color: var(--text-secondary); text-overflow: ellipsis; white-space: nowrap; }
+.archive-history-category { padding: 1px 5px; border-radius: 5px; background: var(--bg-hover); }
 
 .todo-empty {
   text-align: center; padding: 24px; color: var(--text-muted); font-size: 14px;
@@ -978,6 +1005,11 @@ html[data-theme="toy3d"] body {
 .todo-card-body {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
 }
+.todo-recurrence-tag {
+  display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
+  padding: 2px 6px; border-radius: 99px; background: var(--accent-bg); color: var(--accent);
+  font-size: 10px; font-weight: 600;
+}
 .todo-card-title {
   font-size: 16px; font-weight: 500; white-space: nowrap; overflow: hidden;
   text-overflow: ellipsis; color: var(--text);
@@ -1015,7 +1047,17 @@ html[data-theme="toy3d"] body {
   background: none; color: var(--text-muted); transition: all 0.15s; padding: 0;
 }
 .card-btn:hover { background: var(--bg-hover); }
+.card-btn.repeat-active { color: var(--accent); background: var(--accent-bg); }
 .card-btn.del:hover { color: #e74c3c; background: rgba(231,76,60,0.08); }
+.todo-recurrence-picker {
+  display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 10px 7px 50px; padding: 7px;
+  border: 1px solid var(--border); border-radius: 9px; background: var(--bg);
+}
+.todo-recurrence-picker button {
+  border: 1px solid var(--border); border-radius: 7px; padding: 4px 8px;
+  background: var(--bg-card); color: var(--text-secondary); font-size: 11px; cursor: pointer;
+}
+.todo-recurrence-picker button.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
 
 /* Subtasks */
 .todo-card-subs { padding: 0 10px 4px 50px; }
@@ -1678,6 +1720,10 @@ html[data-theme="toy3d"] body {
   .manual-focus-wide { grid-column: auto; }
 }
 @media (max-width: 350px) {
+  .timer-controls { gap: 7px; }
+  .ctrl-btn.primary { padding: 12px 18px; }
+  .ctrl-btn.quick-finish { width: 40px; padding: 0; }
+  .ctrl-btn.quick-finish span { display: none; }
   .theme-gallery { grid-template-columns: 1fr; }
   .theme-option { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; }
   .theme-preview { height: 50px; }

@@ -1,6 +1,6 @@
 import type { TimerMode, Category } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { getTimerEndpoint } from '../../utils/timerGeometry';
+import { getElapsedProgress, getTimerEndpoint } from '../../utils/timerGeometry';
 
 interface TimerRingProps {
   timeLeft: number;
@@ -22,7 +22,7 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
   const { t } = useLanguage();
   const R = 130, STROKE = 8, NR = R - STROKE / 2;
   const CIRC = NR * 2 * Math.PI;
-  const progress = totalTime > 0 ? Math.max(0, Math.min(1, timeLeft / totalTime)) : 0;
+  const progress = getElapsedProgress(timeLeft, totalTime);
   const offset = CIRC * (1 - progress);
   const color = MODE_COLORS[mode];
   const endpoint = getTimerEndpoint(progress, NR, R);

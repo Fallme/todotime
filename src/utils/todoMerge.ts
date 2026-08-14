@@ -1,4 +1,5 @@
 import type { SubTask, Todo } from '../types';
+import { getTodoCompletionRecords, normalizeTaskRecurrence } from './taskRecurrence.ts';
 
 type PomodoroCounter = {
   completedPomodoros: number;
@@ -70,6 +71,9 @@ function mergeSubtasks(local: SubTask[], remote: SubTask[]): SubTask[] {
 export function normalizeTodo(todo: Todo): Todo {
   return {
     ...normalizePomodoroCounter(todo),
+    recurrence: normalizeTaskRecurrence(todo.recurrence),
+    nextRefreshAt: typeof todo.nextRefreshAt === 'string' ? todo.nextRefreshAt : '',
+    completionHistory: getTodoCompletionRecords(todo),
     subtasks: (todo.subtasks ?? []).map(normalizePomodoroCounter),
   };
 }
@@ -81,6 +85,12 @@ export function mergeTodo(local: Todo, remote: Todo): Todo {
   const other = preferred === remote ? local : remote;
   return {
     ...mergeCounter(preferred, other),
+    recurrence: normalizeTaskRecurrence(preferred.recurrence),
+    nextRefreshAt: preferred.nextRefreshAt || '',
+    completionHistory: [...new Map([
+      ...getTodoCompletionRecords(local),
+      ...getTodoCompletionRecords(remote),
+    ].map(record => [record.id, record])).values()].sort((a, b) => a.completedAt.localeCompare(b.completedAt)),
     subtasks: mergeSubtasks(local.subtasks ?? [], remote.subtasks ?? []),
   };
 }

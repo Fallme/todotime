@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import type { Todo, Priority, Category, CategoryItem } from '../../types';
+import type { Todo, Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { getCategoryColor } from '../../types';
 import { formatDate } from '../../utils/dateUtils';
 import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
-import { ListTodo, ChevronDown, ChevronRight, Archive, Clock3 } from 'lucide-react';
+import { ListTodo, ChevronDown, ChevronRight, Archive, Clock3, Check } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
 
 type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
 
@@ -14,7 +15,7 @@ interface TodoListProps {
   selectedTodoId: string | null;
   todayPomodoros: number;
   categories: CategoryItem[];
-  onAdd: (title: string, priority: Priority, category: Category) => void;
+  onAdd: (title: string, priority: Priority, category: Category, recurrence: TaskRecurrence) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
   onAbandon: (id: string) => void;
@@ -28,13 +29,14 @@ interface TodoListProps {
   onRestoreSubtask: (todoId: string, subId: string) => void;
   onDeleteSubtask: (todoId: string, subId: string) => void;
   onChangeCategory: (todoId: string, category: Category) => void;
+  onChangeRecurrence: (todoId: string, recurrence: TaskRecurrence) => void;
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
   onOpenManualFocus: () => void;
 }
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
   const { language, t } = useLanguage();
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const statusTabs: { id: StatusTab; label: ReturnType<typeof t> }[] = [
@@ -52,50 +54,33 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
     });
   };
 
-  // Separate active tasks from old completed/abandoned tasks
+  let activeTasks = statusTab === 'active'
+    ? todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned)
+    : statusTab === 'done'
+      ? []
+      : statusTab === 'abandoned'
+        ? todos.filter(todo => !todo.deletedAt && todo.abandoned)
+        : todos.filter(todo => !todo.deletedAt && !todo.done);
 
-  let activeTasks: Todo[];
-  let archivedTasks: Todo[] = [];
-
-  if (statusTab === 'active') {
-    activeTasks = todos.filter(t => !t.deletedAt && !t.done && !t.abandoned);
-  } else if (statusTab === 'done') {
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const done3dCutoff = formatDate(threeDaysAgo);
-    activeTasks = todos.filter(t => !t.deletedAt && t.done && !t.abandoned && t.completedAt && t.completedAt >= done3dCutoff);
-    archivedTasks = todos.filter(t => !t.deletedAt && t.done && !t.abandoned && t.completedAt && t.completedAt < done3dCutoff);
-  } else if (statusTab === 'abandoned') {
-    activeTasks = todos.filter(t => !t.deletedAt && t.abandoned);
-  } else {
-    // 'all' tab
-    const threeDaysAgo = new Date();
-    threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
-    const done3dCutoff = formatDate(threeDaysAgo);
-    activeTasks = todos.filter(t => !t.deletedAt && (() => {
-      if (t.done && t.completedAt && t.completedAt < done3dCutoff) return false;
-      return true;
-    })());
-    archivedTasks = todos.filter(t => !t.deletedAt && (() => {
-      if (!t.done && !t.abandoned) return false;
-      if (t.done && t.completedAt && t.completedAt < done3dCutoff) return true;
-      if (t.abandoned && t.abandonedAt && t.abandonedAt < done3dCutoff) return true;
-      return false;
-    })());
-  }
+  let archiveEntries = (statusTab === 'all' || statusTab === 'done')
+    ? todos.filter(todo => !todo.deletedAt).flatMap(todo => getTodoCompletionRecords(todo).map(record => ({
+        key: `${todo.id}-${record.id}`,
+        todo,
+        completedAt: record.completedAt,
+        isCurrent: todo.done && todo.completedAt === record.completedAt,
+      })))
+    : [];
 
   if (filterCategory !== 'all') {
     activeTasks = activeTasks.filter(t => t.category === filterCategory);
-    archivedTasks = archivedTasks.filter(t => t.category === filterCategory);
+    archiveEntries = archiveEntries.filter(entry => entry.todo.category === filterCategory);
   }
 
-  // Group archived tasks by month
-  const archiveGroups = new Map<string, Todo[]>();
-  archivedTasks.forEach(t => {
-    const dateStr = t.completedAt || t.abandonedAt || '';
-    const monthKey = dateStr.slice(0, 7); // "YYYY-MM"
+  const archiveGroups = new Map<string, typeof archiveEntries>();
+  archiveEntries.forEach(entry => {
+    const monthKey = entry.completedAt.slice(0, 7);
     if (!archiveGroups.has(monthKey)) archiveGroups.set(monthKey, []);
-    archiveGroups.get(monthKey)!.push(t);
+    archiveGroups.get(monthKey)!.push(entry);
   });
 
   const sorted = [...activeTasks].sort((a, b) => {
@@ -110,7 +95,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
       <div className="todo-list-header">
         <ListTodo size={20} /><span>{t('taskList')}</span>
         <div className="todo-header-stats">
-          <span className="todo-stat-done">{todos.filter(t => !t.deletedAt && t.done).length}/{todos.filter(t => !t.deletedAt && !t.abandoned).length}</span>
+          <span className="todo-stat-done">{todos.filter(t => !t.deletedAt).reduce((sum, todo) => sum + getTodoCompletionRecords(todo).length, 0)}/{todos.filter(t => !t.deletedAt && !t.abandoned).length}</span>
           <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
         </div>
       </div>
@@ -154,10 +139,11 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                 onAddSubtask={(t) => onAddSubtask(todo.id, t)}
                 onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)} onRestoreSubtask={(s) => onRestoreSubtask(todo.id, s)}
                 onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
+                onChangeRecurrence={(recurrence) => onChangeRecurrence(todo.id, recurrence)}
               />
             ))}
             {/* Archive groups */}
-            {Array.from(archiveGroups.entries()).sort((a, b) => b[0].localeCompare(a[0])).map(([monthKey, tasks]) => {
+            {Array.from(archiveGroups.entries()).sort((a, b) => b[0].localeCompare(a[0])).map(([monthKey, entries]) => {
               const [year, month] = monthKey.split('-');
               const label = language === 'zh-CN' ? `${year}年${parseInt(month)}月` : new Date(Number(year), Number(month) - 1).toLocaleDateString('en', { month: 'long', year: 'numeric' });
               const isExpanded = expandedArchives.has(monthKey);
@@ -167,19 +153,28 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                     <Archive size={14} />
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                     <span>{label}</span>
-                    <span className="archive-count">{tasks.length} {t('tasksCount')}</span>
+                    <span className="archive-count">{entries.length} {msg('次完成', 'completions')}</span>
                   </button>
                   {isExpanded && (
                     <div className="archive-items">
-                      {tasks.map(todo => (
-                        <TodoItem key={todo.id} todo={todo} isSelected={todo.id === selectedTodoId} categories={categories}
-                          onToggle={() => onToggle(todo.id)} onDelete={() => onDelete(todo.id)} onAbandon={() => onAbandon(todo.id)}
-                          onRestore={() => onRestore(todo.id)} onSelect={() => onSelect(todo.id === selectedTodoId ? null : todo.id)}
-                          onQuickStart={() => onQuickStart(todo)} onQuickStartSubtask={onQuickStartSubtask}
-                          onAddSubtask={(t) => onAddSubtask(todo.id, t)}
-                          onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)} onRestoreSubtask={(s) => onRestoreSubtask(todo.id, s)}
-                          onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
+                      {entries.sort((a, b) => b.completedAt.localeCompare(a.completedAt)).map(entry => entry.isCurrent ? (
+                        <TodoItem key={entry.key} todo={entry.todo} isSelected={entry.todo.id === selectedTodoId} categories={categories}
+                          onToggle={() => onToggle(entry.todo.id)} onDelete={() => onDelete(entry.todo.id)} onAbandon={() => onAbandon(entry.todo.id)}
+                          onRestore={() => onRestore(entry.todo.id)} onSelect={() => onSelect(entry.todo.id === selectedTodoId ? null : entry.todo.id)}
+                          onQuickStart={() => onQuickStart(entry.todo)} onQuickStartSubtask={onQuickStartSubtask}
+                          onAddSubtask={(title) => onAddSubtask(entry.todo.id, title)}
+                          onToggleSubtask={(subId) => onToggleSubtask(entry.todo.id, subId)} onAbandonSubtask={(subId) => onAbandonSubtask(entry.todo.id, subId)} onRestoreSubtask={(subId) => onRestoreSubtask(entry.todo.id, subId)}
+                          onDeleteSubtask={(subId) => onDeleteSubtask(entry.todo.id, subId)} onChangeCategory={(category) => onChangeCategory(entry.todo.id, category)}
+                          onChangeRecurrence={(recurrence) => onChangeRecurrence(entry.todo.id, recurrence)}
                         />
+                      ) : (
+                        <div className="archive-history-row" key={entry.key}>
+                          <Check size={13} />
+                          <span className="archive-history-title">{entry.todo.title}</span>
+                          <span className="archive-history-category">{entry.todo.category}</span>
+                          <time>{formatDate(new Date(entry.completedAt))}</time>
+                          <span>🍅 {entry.todo.completedPomodoros}</span>
+                        </div>
                       ))}
                     </div>
                   )}

@@ -7,6 +7,7 @@ import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
 
 ChartJS.register(CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
 
@@ -60,9 +61,12 @@ function computePeriodData(
     const dayData = dayDataMap.get(date);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     // Count completed tasks from local todos by completedAt date (ISO format: 2026-06-03T...)
-    const doneToday = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(date));
+    const doneToday = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
+      getTodoCompletionRecords(todo)
+        .filter(record => record.completedAt.startsWith(date))
+        .map(record => ({ todo, record })));
     const tasksDone = doneToday.length;
-    const totalTasksDay = todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length || tasksDone;
+    const totalTasksDay = Math.max(todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length, tasksDone);
     if (date === today) {
       const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
       poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === date && !existing.has(p.id || `${p.start}-${p.end}`))];
@@ -83,8 +87,8 @@ function computePeriodData(
     if (liveMinutes > 0) {
       categoryMinutes[runningCategory] = (categoryMinutes[runningCategory] || 0) + liveMinutes;
     }
-    doneToday.forEach(t => {
-      categoryTasks[t.category] = (categoryTasks[t.category] || 0) + 1;
+    doneToday.forEach(({ todo }) => {
+      categoryTasks[todo.category] = (categoryTasks[todo.category] || 0) + 1;
     });
     return { date, minutes: mins, pomodoros: tomatoCount, tasksDone, totalTasks: totalTasksDay };
   });
@@ -124,7 +128,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
     poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
     const mins = poms.reduce((s, p) => s + p.duration, 0) + runningMinutes;
-    const tasksDone = todos.filter(t => !t.deletedAt && t.done && t.completedAt.startsWith(today)).length;
+    const tasksDone = todos.filter(todo => !todo.deletedAt)
+      .reduce((sum, todo) => sum + getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(today)).length, 0);
     return { pomodoros: poms.filter(isPomodoroRecord).length, minutes: mins, tasksDone };
   }, [dayDataMap, todayPomodoros, today, todos, runningMinutes]);
 
@@ -366,7 +371,10 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         // Completed tasks in period
         const periodStart = rd.daily[0]?.date ?? '';
         const periodEnd = rd.daily[rd.daily.length - 1]?.date ?? '';
-        const periodTasks = todos.filter(t => !t.deletedAt && t.done && t.completedAt && t.completedAt >= periodStart && t.completedAt <= periodEnd + 'T23:59:59');
+        const periodTasks = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
+          getTodoCompletionRecords(todo)
+            .filter(record => record.completedAt >= periodStart && record.completedAt <= periodEnd + 'T23:59:59')
+            .map(record => ({ todo, record })));
 
         const insights = generateReportInsights({
           language,
@@ -459,12 +467,12 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                 <div className="report-section-apple">
                   <h4>{t('completedTaskSection')} ({periodTasks.length})</h4>
                   <div className="report-task-list">
-                    {periodTasks.slice(0, 8).map(t => (
-                      <div key={t.id} className="report-task-row">
-                        <span className="report-task-dot" style={{ background: getCategoryColor(categories, t.category) }} />
-                        <span className="report-task-name">{t.title}</span>
-                        <span className="report-task-cat">{t.category}</span>
-                        <span className="report-task-pom">🍅 {t.completedPomodoros}</span>
+                    {periodTasks.slice(0, 8).map(({ todo, record }) => (
+                      <div key={`${todo.id}-${record.id}`} className="report-task-row">
+                        <span className="report-task-dot" style={{ background: getCategoryColor(categories, todo.category) }} />
+                        <span className="report-task-name">{todo.title}</span>
+                        <span className="report-task-cat">{todo.category}</span>
+                        <span className="report-task-pom">🍅 {todo.completedPomodoros}</span>
                       </div>
                     ))}
                     {periodTasks.length > 8 && <div className="report-task-more">{t('moreTasks', { count: periodTasks.length - 8 })}</div>}

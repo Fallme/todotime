@@ -433,7 +433,7 @@ export default function App() {
                 ))}
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />
+              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} onFinishRound={timer.finishRound} />
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
@@ -442,7 +442,7 @@ export default function App() {
                 ...timer.todayPomodoros.filter(record => (record.date || today) === today),
               ].filter(record => record.completed && isPomodoroRecord(record)).map(record => record.id || `${record.start}-${record.end}`)).size}
               categories={settings.categories}
-              onAdd={(t, p, c) => todosHook.addTodo(t, p, c)}
+              onAdd={(title, priority, category, recurrence) => todosHook.addTodo(title, priority, category, recurrence)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
               onAbandon={todosHook.abandonTodo} onRestore={todosHook.restoreTodo}
               onSelect={handleSelectTodo} onQuickStart={handleQuickStart}
@@ -450,6 +450,7 @@ export default function App() {
               onAddSubtask={todosHook.addSubtask} onToggleSubtask={todosHook.toggleSubtask}
               onAbandonSubtask={todosHook.abandonSubtask} onRestoreSubtask={todosHook.restoreSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
+              onChangeRecurrence={todosHook.changeRecurrence}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
               onOpenManualFocus={() => setShowManualFocus(true)}
@@ -495,9 +496,8 @@ export default function App() {
         <TaskAssignModal
           assignments={timer.pendingAssignments} todos={todos}
           currentTaskId={currentTaskId}
-          onAssignAll={handleAssignAll} onStartNextGroup={timer.startNextGroup}
-          onStop={timer.stop}
-          onSelectTask={(id, title, cat) => { setCurrentTaskId(id); timer.setTaskInfo(id, title, cat); }}
+          onAssignAll={handleAssignAll}
+          onSkip={timer.skipAssignments}
         />
       )}
 

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getTimerEndpoint } from '../src/utils/timerGeometry.ts';
+import { getElapsedProgress, getTimerEndpoint } from '../src/utils/timerGeometry.ts';
 
 const closeTo = (actual: number, expected: number) => {
   assert.ok(Math.abs(actual - expected) < 0.000001, `${actual} should be close to ${expected}`);
@@ -24,4 +24,10 @@ test('timer endpoint clamps invalid progress', () => {
   const full = getTimerEndpoint(1, 10, 20);
   closeTo(tooLarge.x, full.x);
   closeTo(tooLarge.y, full.y);
+});
+
+test('timer progress grows from zero to one as time elapses', () => {
+  assert.equal(getElapsedProgress(1500, 1500), 0);
+  assert.equal(getElapsedProgress(750, 1500), 0.5);
+  assert.equal(getElapsedProgress(0, 1500), 1);
 });

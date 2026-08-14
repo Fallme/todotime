@@ -1,14 +1,15 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
-import type { Todo, Priority, Category, PomodoroRecord } from '../types';
+import type { Todo, Priority, Category, PomodoroRecord, TaskRecurrence } from '../types';
 import { generateId } from '../utils/dateUtils';
 import { getDeviceId, readProfileStorage, profileStorageKey } from '../utils/syncIdentity';
 import { addPomodoroRecord, mergeTodosById, normalizePomodoroCounter, normalizeTodo } from '../utils/todoMerge';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
 import { pomodoroRecordKey } from '../utils/syncMerge';
+import { completeTodo, getNextTaskRefreshAt, refreshRecurringTodos, undoTodoCompletion } from '../utils/taskRecurrence';
 
 interface UseTodosReturn {
   todos: Todo[];
-  addTodo: (title: string, priority: Priority, category: Category) => Todo;
+  addTodo: (title: string, priority: Priority, category: Category, recurrence?: TaskRecurrence) => Todo;
   toggleTodo: (id: string) => void;
   abandonTodo: (id: string) => void;
   restoreTodo: (id: string) => void;
@@ -22,6 +23,7 @@ interface UseTodosReturn {
   restoreSubtask: (todoId: string, subId: string) => void;
   deleteSubtask: (todoId: string, subId: string) => void;
   changeCategory: (id: string, category: Category) => void;
+  changeRecurrence: (id: string, recurrence: TaskRecurrence) => void;
   renameTodosCategory: (oldName: string, newName: string) => void;
   mergeTodos: (gitTodos: Todo[]) => void;
   replaceTodos: (todos: Todo[]) => void;
@@ -52,6 +54,9 @@ export function useTodos(profileId: string): UseTodosReturn {
           createdAt: (t.createdAt as string) || '',
           updatedAt: (t.updatedAt as string) || (t.createdAt as string) || '',
           completedAt: (t.completedAt as string) || '',
+          recurrence: (t.recurrence as TaskRecurrence) || 'none',
+          nextRefreshAt: (t.nextRefreshAt as string) || '',
+          completionHistory: Array.isArray(t.completionHistory) ? t.completionHistory as Todo['completionHistory'] : undefined,
           abandonedAt: (t.abandonedAt as string) || '',
           subtasks: Array.isArray(t.subtasks) ? t.subtasks.map(subtask => normalizePomodoroCounter(subtask)) : [],
           deletedAt: (t.deletedAt as string) || '',
@@ -65,13 +70,26 @@ export function useTodos(profileId: string): UseTodosReturn {
 
   useEffect(() => { localStorage.setItem(profileStorageKey('todotime_todos', profileId), JSON.stringify(todos)); }, [todos, profileId]);
 
-  const addTodo = useCallback((title: string, priority: Priority, category: Category) => {
+  useEffect(() => {
+    const refresh = () => setTodos(previous => refreshRecurringTodos(previous, now()));
+    refresh();
+    const interval = window.setInterval(refresh, 60_000);
+    const handleVisibility = () => { if (document.visibilityState === 'visible') refresh(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [profileId]);
+
+  const addTodo = useCallback((title: string, priority: Priority, category: Category, recurrence: TaskRecurrence = 'none') => {
     const ts = now();
     const todo: Todo = {
       id: `task-${deviceIdRef.current}-${generateId()}`, title, priority, category,
       estimatedPomodoros: 0, completedPomodoros: 0,
       pomodoroRecordIds: [], legacyPomodoroCount: 0,
       done: false, abandoned: false, createdAt: ts, updatedAt: ts, completedAt: '', abandonedAt: '',
+      recurrence, nextRefreshAt: '', completionHistory: [],
       subtasks: [], deletedAt: '',
     };
     setTodos(prev => [todo, ...prev]);
@@ -80,12 +98,10 @@ export function useTodos(profileId: string): UseTodosReturn {
 
   const toggleTodo = useCallback((id: string) => {
     const ts = now();
-    setTodos(prev => prev.map(t => t.id === id ? {
-      ...t,
-      done: !t.done,
-      updatedAt: ts,
-      completedAt: !t.done ? ts : '',
-    } : t));
+    const completionId = `complete-${deviceIdRef.current}-${generateId()}`;
+    setTodos(prev => prev.map(t => t.id === id
+      ? (t.done ? undoTodoCompletion(t, ts) : completeTodo(t, ts, completionId))
+      : t));
   }, []);
 
   const abandonTodo = useCallback((id: string) => {
@@ -186,6 +202,16 @@ export function useTodos(profileId: string): UseTodosReturn {
     setTodos(prev => prev.map(t => t.id === id ? { ...t, category, updatedAt: ts } : t));
   }, []);
 
+  const changeRecurrence = useCallback((id: string, recurrence: TaskRecurrence) => {
+    const ts = now();
+    setTodos(prev => prev.map(todo => todo.id === id ? {
+      ...todo,
+      recurrence,
+      nextRefreshAt: todo.done ? getNextTaskRefreshAt(todo.completedAt, recurrence) : '',
+      updatedAt: ts,
+    } : todo));
+  }, []);
+
   const renameTodosCategory = useCallback((oldName: string, newName: string) => {
     const ts = now();
     setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName, updatedAt: ts } : t));
@@ -200,13 +226,13 @@ export function useTodos(profileId: string): UseTodosReturn {
   }, []);
 
   const replaceTodos = useCallback((nextTodos: Todo[]) => {
-    setTodos(nextTodos);
+    setTodos(nextTodos.map(normalizeTodo));
     setSelectedTodoId(null);
   }, []);
 
   return {
     todos, addTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, renameTodosCategory, mergeTodos,
+    updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, changeRecurrence, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo, replaceTodos,
   };
 }

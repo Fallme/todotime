@@ -3,6 +3,11 @@ export interface TimerEndpoint {
   y: number;
 }
 
+export function getElapsedProgress(timeLeft: number, totalTime: number): number {
+  if (totalTime <= 0) return 0;
+  return Math.max(0, Math.min(1, (totalTime - timeLeft) / totalTime));
+}
+
 /** Returns the clockwise end point of a progress ring whose origin is at 12 o'clock. */
 export function getTimerEndpoint(progress: number, radius: number, center: number): TimerEndpoint {
   const safeProgress = Math.max(0, Math.min(1, progress));

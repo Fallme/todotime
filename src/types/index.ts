@@ -1,4 +1,5 @@
 export type Priority = 'high' | 'medium' | 'low';
+export type TaskRecurrence = 'none' | 'daily' | 'everyOtherDay' | 'weekly';
 
 export type Category = string;
 
@@ -52,6 +53,9 @@ export interface Todo {
   createdAt: string;
   updatedAt: string;
   completedAt: string;
+  recurrence?: TaskRecurrence;
+  nextRefreshAt?: string;
+  completionHistory?: TaskCompletionRecord[];
   abandonedAt: string;
   subtasks: SubTask[];
   deletedAt?: string;
@@ -70,6 +74,11 @@ export interface PomodoroRecord {
   completed: boolean;
   manual?: boolean;
   createdAt: string;
+}
+
+export interface TaskCompletionRecord {
+  id: string;
+  completedAt: string;
 }
 
 export interface DayData {

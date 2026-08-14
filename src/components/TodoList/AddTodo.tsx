@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { Plus } from 'lucide-react';
-import type { Priority, Category, CategoryItem } from '../../types';
+import { Plus, Repeat2 } from 'lucide-react';
+import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface AddTodoProps {
-  onAdd: (title: string, priority: Priority, category: Category) => void;
+  onAdd: (title: string, priority: Priority, category: Category, recurrence: TaskRecurrence) => void;
   categories: CategoryItem[];
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
@@ -22,7 +22,7 @@ function getRandomHSL(): string {
 }
 
 export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, onRenameCategory }: AddTodoProps) {
-  const { t } = useLanguage();
+  const { language, t } = useLanguage();
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState<string>('数学');
   const [showCatPicker, setShowCatPicker] = useState(false);
@@ -33,6 +33,8 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const [newCatName, setNewCatName] = useState('');
   const [newCatColor, setNewCatColor] = useState(getRandomHSL());
   const [randomPreview, setRandomPreview] = useState(getRandomHSL);
+  const [recurrence, setRecurrence] = useState<TaskRecurrence>('none');
+  const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
 
   const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || '其他';
   const currentCat = categories.find(c => c.name === selectedCategory);
@@ -40,7 +42,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
-    onAdd(title.trim(), 'medium', selectedCategory);
+    onAdd(title.trim(), 'medium', selectedCategory, recurrence);
     setTitle('');
   };
 
@@ -93,6 +95,17 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
           <Plus size={18} />
         </button>
       </div>
+
+      <label className="add-todo-recurrence">
+        <Repeat2 size={13} />
+        <span>{msg('刷新周期', 'Repeat')}</span>
+        <select value={recurrence} onChange={event => setRecurrence(event.target.value as TaskRecurrence)}>
+          <option value="none">{msg('不自动刷新', 'No repeat')}</option>
+          <option value="daily">{msg('每日刷新', 'Daily')}</option>
+          <option value="everyOtherDay">{msg('隔日刷新', 'Every other day')}</option>
+          <option value="weekly">{msg('每周刷新', 'Weekly')}</option>
+        </select>
+      </label>
 
       {showCatPicker && (
         <div className="category-picker">
