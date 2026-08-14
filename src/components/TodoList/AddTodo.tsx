@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Plus, Repeat2 } from 'lucide-react';
 import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { buildMonthlyRecurrence, buildWeeklyRecurrence, getMonthlyRecurrenceDay, getTaskRecurrenceKind, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
 
 interface AddTodoProps {
   onAdd: (title: string, priority: Priority, category: Category, recurrence: TaskRecurrence) => void;
@@ -38,6 +39,24 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
 
   const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || '其他';
   const currentCat = categories.find(c => c.name === selectedCategory);
+  const recurrenceKind = getTaskRecurrenceKind(recurrence);
+  const weeklyDays = getWeeklyRecurrenceDays(recurrence);
+  const weekdayOptions = language === 'zh-CN'
+    ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
+    : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];
+
+  const changeRecurrenceKind = (kind: string) => {
+    if (kind === 'weekly') setRecurrence(recurrenceKind === 'weekly' ? recurrence : buildWeeklyRecurrence([1]));
+    else if (kind === 'monthly') setRecurrence(recurrenceKind === 'monthly' ? recurrence : buildMonthlyRecurrence(1));
+    else setRecurrence(kind as TaskRecurrence);
+  };
+
+  const toggleWeekday = (day: number) => {
+    const next = weeklyDays.includes(day)
+      ? weeklyDays.length > 1 ? weeklyDays.filter(value => value !== day) : weeklyDays
+      : [...weeklyDays, day];
+    setRecurrence(buildWeeklyRecurrence(next));
+  };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -96,16 +115,37 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
         </button>
       </div>
 
-      <label className="add-todo-recurrence">
+      <div className="add-todo-recurrence">
         <Repeat2 size={13} />
         <span>{msg('刷新周期', 'Repeat')}</span>
-        <select value={recurrence} onChange={event => setRecurrence(event.target.value as TaskRecurrence)}>
+        <select value={recurrenceKind} onChange={event => changeRecurrenceKind(event.target.value)}>
           <option value="none">{msg('不自动刷新', 'No repeat')}</option>
           <option value="daily">{msg('每日刷新', 'Daily')}</option>
           <option value="everyOtherDay">{msg('隔日刷新', 'Every other day')}</option>
-          <option value="weekly">{msg('每周刷新', 'Weekly')}</option>
+          <option value="everyTwoDays">{msg('隔二日刷新', 'Every three days')}</option>
+          <option value="weekly">{msg('指定星期', 'Selected weekdays')}</option>
+          <option value="monthly">{msg('每月指定日期', 'Monthly date')}</option>
         </select>
-      </label>
+      </div>
+
+      {recurrenceKind === 'weekly' && (
+        <div className="recurrence-detail weekday-selector" aria-label={msg('选择每周刷新日期', 'Choose weekly refresh days')}>
+          {weekdayOptions.map(option => (
+            <button key={option.day} type="button" className={weeklyDays.includes(option.day) ? 'active' : ''}
+              onClick={() => toggleWeekday(option.day)}>{option.label}</button>
+          ))}
+        </div>
+      )}
+
+      {recurrenceKind === 'monthly' && (
+        <label className="recurrence-detail monthly-selector">
+          <span>{msg('每月', 'Day')}</span>
+          <select value={getMonthlyRecurrenceDay(recurrence)} onChange={event => setRecurrence(buildMonthlyRecurrence(Number(event.target.value)))}>
+            {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
+          </select>
+          <span>{msg('号刷新', 'of each month')}</span>
+        </label>
+      )}
 
       {showCatPicker && (
         <div className="category-picker">

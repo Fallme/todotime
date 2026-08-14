@@ -844,19 +844,21 @@ html[data-theme="liquidglass"] body {
 @keyframes toastIn { from { opacity: 0; transform: translateX(-50%) translateY(10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
 /* Cycle dots */
-.cycle-indicator { display: flex; gap: 6px; align-items: center; min-height: 26px; }
+.cycle-indicator { width: 100%; min-height: 26px; display: flex; align-items: center; justify-content: center; }
+.cycle-dots { position: relative; display: flex; gap: 6px; align-items: center; }
 .cycle-dot {
   width: 10px; height: 10px; border-radius: 50%;
   background: var(--border); transition: all 0.3s;
 }
 .cycle-dot.filled { background: var(--accent); transform: scale(1.2); }
 .cycle-skip-btn {
-  width: 24px; height: 24px; display: inline-flex; align-items: center; justify-content: center; margin-left: 4px; padding: 0;
+  position: absolute; left: 100%; top: 50%; width: 24px; height: 24px;
+  display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; padding: 0;
   border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border)); border-radius: 999px;
   background: var(--accent-bg); color: var(--accent); cursor: pointer;
-  transition: transform .18s, border-color .18s, background-color .18s;
+  transform: translateY(-50%); transition: transform .18s, border-color .18s, background-color .18s;
 }
-.cycle-skip-btn:hover { transform: translateY(-1px); border-color: var(--accent); background: color-mix(in srgb, var(--accent-bg) 72%, var(--bg-card)); }
+.cycle-skip-btn:hover { transform: translateY(-54%); border-color: var(--accent); background: color-mix(in srgb, var(--accent-bg) 72%, var(--bg-card)); }
 
 /* Timer ring */
 .timer-ring-container {
@@ -1018,6 +1020,19 @@ html[data-theme="liquidglass"] body {
   background: var(--bg); color: var(--text-secondary); font-size: 11px; outline: none;
 }
 .add-todo-recurrence select:focus { border-color: var(--accent); }
+.recurrence-detail {
+  display: flex; align-items: center; justify-content: flex-end; gap: 5px;
+  margin: 6px 0 0 auto; color: var(--text-muted); font-size: 10px;
+}
+.weekday-selector button {
+  min-width: 25px; height: 25px; padding: 0 5px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--text-secondary); font: inherit; font-size: 10px; cursor: pointer;
+}
+.weekday-selector button.active { border-color: var(--accent); background: var(--accent); color: white; }
+.monthly-selector select {
+  min-width: 54px; padding: 4px 19px 4px 7px; border: 1px solid var(--border); border-radius: 7px;
+  background: var(--bg); color: var(--text-secondary); font-size: 11px; outline: none;
+}
 .add-todo-options {
   display: flex; align-items: center; gap: 8px; margin-top: 8px;
 }
@@ -1153,6 +1168,10 @@ html[data-theme="liquidglass"] body {
   background: var(--bg-card); color: var(--text-secondary); font-size: 11px; cursor: pointer;
 }
 .todo-recurrence-picker button.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); }
+.recurrence-picker-detail { flex: 1 0 100%; display: flex; align-items: center; gap: 5px; padding-top: 2px; }
+.todo-recurrence-picker .recurrence-picker-detail button { min-width: 27px; padding-inline: 5px; }
+.todo-recurrence-picker .recurrence-picker-detail button.active { background: var(--accent); color: white; }
+.recurrence-picker-detail.monthly-selector { color: var(--text-muted); font-size: 10px; }
 
 /* Subtasks */
 .todo-card-subs { padding: 0 10px 4px 50px; }
@@ -1624,6 +1643,7 @@ html[data-theme="liquidglass"] body {
 :root:not([data-theme="tomato"]) .header-quote button,
 :root:not([data-theme="tomato"]) .sync-gate-tabs button,
 :root:not([data-theme="tomato"]) .settings-language-switch button,
+:root:not([data-theme="tomato"]) .weekday-selector button,
 :root:not([data-theme="tomato"]) .todo-recurrence-picker button,
 :root:not([data-theme="tomato"]) input,
 :root:not([data-theme="tomato"]) select {

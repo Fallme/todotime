@@ -429,22 +429,24 @@ export default function App() {
             <CountdownTimer title={settings.countdownTitle} targetDate={settings.countdownDate} onUpdate={handleCountdownUpdate} />
             <div className="timer-section">
               <div className="cycle-indicator">
-                {Array.from({ length: settings.longBreakInterval }, (_, i) => (
-                  <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
-                ))}
-                <button
-                  className="cycle-skip-btn"
-                  type="button"
-                  aria-label={language === 'zh-CN' ? '跳过并结算整轮' : 'Skip and settle the whole cycle'}
-                  title={language === 'zh-CN' ? '跳过整轮：结算当前记录并将四组恢复初始' : 'Skip cycle: settle current records and reset all groups'}
-                  onClick={() => {
-                    timer.skipRound();
-                    setCurrentTaskId(null);
-                    timer.setTaskInfo(null, '', '其他');
-                  }}
-                >
-                  <FastForward size={13} />
-                </button>
+                <div className="cycle-dots">
+                  {Array.from({ length: settings.longBreakInterval }, (_, i) => (
+                    <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
+                  ))}
+                  <button
+                    className="cycle-skip-btn"
+                    type="button"
+                    aria-label={language === 'zh-CN' ? '跳过并结算整轮' : 'Skip and settle the whole cycle'}
+                    title={language === 'zh-CN' ? '跳过整轮：结算当前记录并将四组恢复初始' : 'Skip cycle: settle current records and reset all groups'}
+                    onClick={() => {
+                      timer.skipRound();
+                      setCurrentTaskId(null);
+                      timer.setTaskInfo(null, '', '其他');
+                    }}
+                  >
+                    <FastForward size={13} />
+                  </button>
+                </div>
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
               <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />

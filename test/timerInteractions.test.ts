@@ -19,6 +19,7 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   const assignment = await readFile(new URL('../src/components/Timer/TaskAssignModal.tsx', import.meta.url), 'utf8');
   assert.doesNotMatch(controls, /onFinishRound/);
   assert.match(app, /className="cycle-skip-btn"/);
+  assert.match(app, /className="cycle-dots"/);
   assert.match(app, /timer\.skipRound\(\)/);
   assert.match(app, /跳过并结算整轮/);
   assert.doesNotMatch(app, /timer\.mode === 'work'[\s\S]{0,200}cycle-skip-btn/);
@@ -28,6 +29,8 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(controls, /skipStage/);
   assert.match(controls, /aria-label={t\('skipStage'\)}/);
   assert.match(styles, /\.tab-nav\s*\{[\s\S]*?background: var\(--bg\);[\s\S]*?backdrop-filter: none/);
+  assert.match(styles, /\.cycle-dots\s*\{[^}]*position: relative/);
+  assert.match(styles, /\.cycle-skip-btn\s*\{[^}]*position: absolute/);
   assert.match(todos, /todo-list-header[\s\S]*manual-focus-open[\s\S]*todo-header-stats/);
   assert.doesNotMatch(stats, /type: 'line'/);
   assert.match(assignment, /onSkip/);

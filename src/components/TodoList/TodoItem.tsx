@@ -3,6 +3,8 @@ import { Check, Trash2, Play, RotateCcw, Plus, Repeat2 } from 'lucide-react';
 import type { Todo, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { getCategoryColor } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { buildMonthlyRecurrence, buildWeeklyRecurrence, getMonthlyRecurrenceDay, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import type { TaskRecurrenceKind } from '../../utils/taskRecurrence';
 
 function formatIsoTime(iso: string): string {
   if (!iso) return '';
@@ -47,13 +49,34 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const catColor = getCategoryColor(categories, todo.category);
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const recurrence = todo.recurrence ?? 'none';
-  const recurrenceOptions: Array<{ id: TaskRecurrence; label: string }> = [
+  const recurrenceKind = getTaskRecurrenceKind(recurrence);
+  const recurrenceOptions: Array<{ id: TaskRecurrenceKind; label: string }> = [
     { id: 'none', label: msg('不自动刷新', 'No repeat') },
     { id: 'daily', label: msg('每日', 'Daily') },
     { id: 'everyOtherDay', label: msg('隔日', 'Every other day') },
+    { id: 'everyTwoDays', label: msg('隔二日', 'Every three days') },
     { id: 'weekly', label: msg('每周', 'Weekly') },
+    { id: 'monthly', label: msg('每月', 'Monthly') },
   ];
-  const recurrenceLabel = recurrenceOptions.find(option => option.id === recurrence)?.label;
+  const recurrenceLabel = getTaskRecurrenceLabel(recurrence, language);
+  const weeklyDays = getWeeklyRecurrenceDays(recurrence);
+  const weekdayOptions = language === 'zh-CN'
+    ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
+    : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];
+
+  const chooseRecurrenceKind = (kind: TaskRecurrenceKind) => {
+    if (kind === 'weekly') onChangeRecurrence(recurrenceKind === 'weekly' ? recurrence : buildWeeklyRecurrence([1]));
+    else if (kind === 'monthly') onChangeRecurrence(recurrenceKind === 'monthly' ? recurrence : buildMonthlyRecurrence(1));
+    else onChangeRecurrence(kind);
+    if (kind !== 'weekly' && kind !== 'monthly') setShowRecurrencePicker(false);
+  };
+
+  const toggleWeekday = (day: number) => {
+    const next = weeklyDays.includes(day)
+      ? weeklyDays.length > 1 ? weeklyDays.filter(value => value !== day) : weeklyDays
+      : [...weeklyDays, day];
+    onChangeRecurrence(buildWeeklyRecurrence(next));
+  };
 
   // Click outside to close
   useEffect(() => {
@@ -137,11 +160,28 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       {showRecurrencePicker && (
         <div className="todo-recurrence-picker" onClick={event => event.stopPropagation()}>
           {recurrenceOptions.map(option => (
-            <button key={option.id} className={recurrence === option.id ? 'active' : ''} type="button"
-              onClick={() => { onChangeRecurrence(option.id); setShowRecurrencePicker(false); }}>
+            <button key={option.id} className={recurrenceKind === option.id ? 'active' : ''} type="button"
+              onClick={() => chooseRecurrenceKind(option.id)}>
               {option.label}
             </button>
           ))}
+          {recurrenceKind === 'weekly' && (
+            <div className="recurrence-picker-detail weekday-selector">
+              {weekdayOptions.map(option => (
+                <button key={option.day} type="button" className={weeklyDays.includes(option.day) ? 'active' : ''}
+                  onClick={() => toggleWeekday(option.day)}>{option.label}</button>
+              ))}
+            </div>
+          )}
+          {recurrenceKind === 'monthly' && (
+            <label className="recurrence-picker-detail monthly-selector">
+              <span>{msg('每月', 'Day')}</span>
+              <select value={getMonthlyRecurrenceDay(recurrence)} onChange={event => onChangeRecurrence(buildMonthlyRecurrence(Number(event.target.value)))}>
+                {Array.from({ length: 31 }, (_, index) => index + 1).map(day => <option key={day} value={day}>{day}</option>)}
+              </select>
+              <span>{msg('号', 'monthly')}</span>
+            </label>
+          )}
         </div>
       )}
 

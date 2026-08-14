@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import type { Todo } from '../src/types/index.ts';
-import { completeTodo, getNextTaskRefreshAt, getTodoCompletionRecords, refreshRecurringTodos } from '../src/utils/taskRecurrence.ts';
+import { completeTodo, getNextTaskRefreshAt, getTodoCompletionRecords, refreshRecurringTodos, shouldArchiveCompletion } from '../src/utils/taskRecurrence.ts';
 import { mergeTodo } from '../src/utils/todoMerge.ts';
 
 function task(overrides: Partial<Todo> = {}): Todo {
@@ -15,16 +16,37 @@ function task(overrides: Partial<Todo> = {}): Todo {
   };
 }
 
-test('recurring due dates use daily alternate and weekly intervals', () => {
+test('recurring due dates support day intervals weekdays and monthly dates', async () => {
   const at = '2026-08-14T08:00:00.000Z';
   const daily = new Date(getNextTaskRefreshAt(at, 'daily'));
   const alternate = new Date(getNextTaskRefreshAt(at, 'everyOtherDay'));
+  const everyTwoDays = new Date(getNextTaskRefreshAt(at, 'everyTwoDays'));
   const weekly = new Date(getNextTaskRefreshAt(at, 'weekly'));
+  const weekdays = new Date(getNextTaskRefreshAt('2026-08-14T08:00:00', 'weekly:1,3'));
+  const monthly = new Date(getNextTaskRefreshAt('2026-08-14T08:00:00', 'monthly:20'));
+  const monthEnd = new Date(getNextTaskRefreshAt('2026-08-31T08:00:00', 'monthly:31'));
   assert.equal(daily.getHours(), 0);
   assert.equal(alternate.getHours(), 0);
   assert.equal(weekly.getHours(), 0);
   assert.equal(Math.round((alternate.getTime() - daily.getTime()) / 86_400_000), 1);
+  assert.equal(Math.round((everyTwoDays.getTime() - daily.getTime()) / 86_400_000), 2);
   assert.equal(Math.round((weekly.getTime() - daily.getTime()) / 86_400_000), 6);
+  assert.equal(weekdays.getDay(), 1);
+  assert.equal(monthly.getDate(), 20);
+  assert.equal(monthEnd.getMonth(), 8);
+  assert.equal(monthEnd.getDate(), 30);
+
+  const addTodo = await readFile(new URL('../src/components/TodoList/AddTodo.tsx', import.meta.url), 'utf8');
+  assert.match(addTodo, /value="everyTwoDays"/);
+  assert.match(addTodo, /weekdayOptions/);
+  assert.match(addTodo, /length: 31/);
+});
+
+test('only completions before the current month are archived', () => {
+  const now = new Date('2026-08-20T12:00:00');
+  assert.equal(shouldArchiveCompletion('2026-08-01T08:00:00', now), false);
+  assert.equal(shouldArchiveCompletion('2026-07-31T23:59:59', now), true);
+  assert.equal(shouldArchiveCompletion('2025-12-20T08:00:00', now), true);
 });
 
 test('due recurring tasks reopen without losing counters or completion history', () => {

@@ -6,7 +6,7 @@ import { AddTodo } from './AddTodo';
 import { TodoItem } from './TodoItem';
 import { ListTodo, ChevronDown, ChevronRight, Archive, Clock3, Check } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
+import { getLocalMonthKey, getTodoCompletionRecords, shouldArchiveCompletion } from '../../utils/taskRecurrence';
 
 type StatusTab = 'all' | 'active' | 'done' | 'abandoned';
 
@@ -54,16 +54,21 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
     });
   };
 
+  const currentMonthKey = getLocalMonthKey(new Date());
+  const isCurrentMonthDone = (todo: Todo) => todo.done && (!todo.completedAt || getLocalMonthKey(todo.completedAt) === currentMonthKey);
+
   let activeTasks = statusTab === 'active'
     ? todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned)
     : statusTab === 'done'
-      ? []
+      ? todos.filter(todo => !todo.deletedAt && isCurrentMonthDone(todo))
       : statusTab === 'abandoned'
         ? todos.filter(todo => !todo.deletedAt && todo.abandoned)
-        : todos.filter(todo => !todo.deletedAt && !todo.done);
+        : todos.filter(todo => !todo.deletedAt && (!todo.done || isCurrentMonthDone(todo)));
 
   let archiveEntries = (statusTab === 'all' || statusTab === 'done')
-    ? todos.filter(todo => !todo.deletedAt).flatMap(todo => getTodoCompletionRecords(todo).map(record => ({
+    ? todos.filter(todo => !todo.deletedAt).flatMap(todo => getTodoCompletionRecords(todo)
+      .filter(record => shouldArchiveCompletion(record.completedAt))
+      .map(record => ({
         key: `${todo.id}-${record.id}`,
         todo,
         completedAt: record.completedAt,
@@ -78,14 +83,15 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
 
   const archiveGroups = new Map<string, typeof archiveEntries>();
   archiveEntries.forEach(entry => {
-    const monthKey = entry.completedAt.slice(0, 7);
+    const monthKey = getLocalMonthKey(entry.completedAt);
+    if (!monthKey) return;
     if (!archiveGroups.has(monthKey)) archiveGroups.set(monthKey, []);
     archiveGroups.get(monthKey)!.push(entry);
   });
 
   const sorted = [...activeTasks].sort((a, b) => {
-    const order = (t: Todo) => t.abandoned ? 2 : t.done ? 1 : 0;
-    return order(a) - order(b);
+    const order = (t: Todo) => t.done ? 2 : t.abandoned ? 1 : 0;
+    return order(a) - order(b) || (b.completedAt || b.updatedAt).localeCompare(a.completedAt || a.updatedAt);
   });
 
   const usedCategories = [...new Set(todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => t.category))];

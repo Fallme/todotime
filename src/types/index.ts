@@ -1,5 +1,12 @@
 export type Priority = 'high' | 'medium' | 'low';
-export type TaskRecurrence = 'none' | 'daily' | 'everyOtherDay' | 'weekly';
+export type TaskRecurrence =
+  | 'none'
+  | 'daily'
+  | 'everyOtherDay'
+  | 'everyTwoDays'
+  | 'weekly'
+  | `weekly:${string}`
+  | `monthly:${number}`;
 
 export type Category = string;
 
