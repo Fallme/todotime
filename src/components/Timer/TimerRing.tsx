@@ -1,6 +1,6 @@
 import type { TimerMode, Category } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { getElapsedProgress, getTimerEndpoint } from '../../utils/timerGeometry';
+import { getRemainingRingGeometry, getTimerEndpoint } from '../../utils/timerGeometry';
 
 interface TimerRingProps {
   timeLeft: number;
@@ -22,10 +22,9 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
   const { t } = useLanguage();
   const R = 130, STROKE = 8, NR = R - STROKE / 2;
   const CIRC = NR * 2 * Math.PI;
-  const progress = getElapsedProgress(timeLeft, totalTime);
-  const offset = CIRC * (1 - progress);
+  const ring = getRemainingRingGeometry(timeLeft, totalTime, CIRC);
   const color = MODE_COLORS[mode];
-  const endpoint = getTimerEndpoint(progress, NR, R);
+  const endpoint = getTimerEndpoint(ring.elapsedProgress, NR, R);
   const mm = String(Math.floor(Math.max(0, timeLeft) / 60)).padStart(2, '0');
   const ss = String(Math.max(0, timeLeft) % 60).padStart(2, '0');
 
@@ -41,9 +40,9 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
       <svg height={R * 2} width={R * 2} className="timer-ring-svg">
         <circle className="timer-ring-track" stroke="var(--ring-bg)" fill="transparent" strokeWidth={STROKE} r={NR} cx={R} cy={R} />
         <circle stroke={color} fill="transparent" strokeWidth={STROKE} strokeLinecap="round"
-          strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={offset}
+          strokeDasharray={`${ring.dashLength} ${CIRC}`} strokeDashoffset={ring.dashOffset}
           r={NR} cx={R} cy={R} className="timer-ring-progress"
-          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center', transition: 'stroke-dashoffset 0.3s ease' }} />
+          style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
         {isRunning && (
           <g className="timer-ring-endpoint-marker" aria-hidden="true">
             <circle className="timer-ring-endpoint-halo" cx={endpoint.x} cy={endpoint.y} r="10" fill={color} />

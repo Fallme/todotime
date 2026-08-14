@@ -25,6 +25,10 @@ const THEME_OPTIONS: Array<{
   { id: 'monochrome', name: ['黑白秩序', 'Monochrome'], description: ['纯黑白、高对比与网格秩序', 'Pure contrast and editorial grids'], colors: ['#111111', '#ffffff', '#dedede'] },
   { id: 'constructivist', name: ['苏联色块', 'Soviet Blocks'], description: ['红黑米白的构成主义几何', 'Red, black and cream geometry'], colors: ['#d62828', '#171717', '#f1e3c6'] },
   { id: 'toy3d', name: ['3D 潮玩', '3D Art Toy'], description: ['软糖配色、厚圆角与立体光影', 'Candy colors and sculpted depth'], colors: ['#7357ff', '#ff79b0', '#eff0ff'] },
+  { id: 'oilpaint', name: ['油画质感', 'Oil Painting'], description: ['厚涂笔触、画布纹理与古典色彩', 'Canvas texture and layered brushwork'], colors: ['#8f3d2f', '#d49a45', '#eee0c4'] },
+  { id: 'modernist', name: ['现代构成', 'Modern Composition'], description: ['红黄蓝几何与清晰留白', 'Bold geometry in red, yellow and blue'], colors: ['#e53935', '#174ea6', '#f6c945'] },
+  { id: 'lineart', name: ['简笔画', 'Line Art'], description: ['轻线条、留白与随手涂鸦感', 'Airy lines and playful doodles'], colors: ['#202020', '#4d7ea8', '#fffdf7'] },
+  { id: 'crayon', name: ['儿童蜡笔画', 'Kids Crayon'], description: ['纸张颗粒与明亮童趣蜡笔色', 'Bright crayon colors on textured paper'], colors: ['#ef5350', '#3569d4', '#ffd54f'] },
   { id: 'tomato', name: ['默认番茄', 'Classic Tomato'], description: ['原有温暖清爽风格', 'The original warm, clean look'], colors: ['#ff6b6b', '#ffa07a', '#ffffff'] },
   { id: 'apple', name: ['苹果极简', 'Apple Minimal'], description: ['通透、克制的玻璃质感', 'Clean, calm frosted glass'], colors: ['#007aff', '#34c759', '#f5f5f7'] },
   { id: 'sketch', name: ['手绘纸张', 'Hand-drawn'], description: ['纸张纹理与自然线条', 'Paper texture and lively lines'], colors: ['#e05a47', '#2f766f', '#fffaf0'] },
@@ -33,7 +37,6 @@ const THEME_OPTIONS: Array<{
   { id: 'matcha', name: ['抹茶自然', 'Matcha Calm'], description: ['柔和绿意与有机圆角', 'Soft greens and organic shapes'], colors: ['#6f8f52', '#b6cb87', '#f4f3e8'] },
   { id: 'ocean', name: ['海洋蓝调', 'Ocean Blue'], description: ['清澈蓝色与轻盈波浪', 'Fresh blues and airy waves'], colors: ['#087ea4', '#49b6c8', '#effaff'] },
   { id: 'ink', name: ['纸墨东方', 'Ink & Paper'], description: ['留白、纸色和朱砂点缀', 'Paper, ink and vermilion'], colors: ['#b83b2e', '#262521', '#f4efe3'] },
-  { id: 'sunset', name: ['日落暖橙', 'Sunset Glow'], description: ['蜜桃、暖橙与柔和渐变', 'Peach, amber and soft gradients'], colors: ['#f06c54', '#f4a261', '#fff2e7'] },
   { id: 'midnight', name: ['星夜深蓝', 'Midnight Stars'], description: ['静谧星空与蓝紫微光', 'Quiet starlight and indigo glow'], colors: ['#8b7cf6', '#4cc9f0', '#11162e'] },
 ];
 

@@ -433,7 +433,7 @@ export default function App() {
                 ))}
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} onFinishRound={timer.finishRound} />
+              <TimerControls mode={timer.mode} isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} onFinishRound={timer.finishRound} />
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}

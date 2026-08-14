@@ -1,7 +1,9 @@
 import { Play, Pause, SkipForward, RotateCcw, Zap } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type { TimerMode } from '../../types';
 
 interface TimerControlsProps {
+  mode: TimerMode;
   isRunning: boolean;
   onStart: () => void;
   onPause: () => void;
@@ -10,9 +12,10 @@ interface TimerControlsProps {
   onFinishRound: () => void;
 }
 
-export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip, onFinishRound }: TimerControlsProps) {
+export function TimerControls({ mode, isRunning, onStart, onPause, onNewRound, onSkip, onFinishRound }: TimerControlsProps) {
   const { language, t } = useLanguage();
-  const quickComplete = language === 'zh-CN' ? '快速完成' : 'Finish round';
+  const finishRound = language === 'zh-CN' ? '完成本轮' : 'Complete round';
+  const finishRoundTitle = language === 'zh-CN' ? '立即按本轮完整时长结算' : 'Settle the full planned round now';
   return (
     <div className="timer-controls">
       <button className="ctrl-btn secondary" onClick={onNewRound} title={t('endRound')}>
@@ -29,10 +32,12 @@ export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip,
           <span>{t('start')}</span>
         </button>
       )}
-      <button className="ctrl-btn quick-finish" onClick={onFinishRound} title={quickComplete}>
-        <Zap size={16} />
-        <span>{quickComplete}</span>
-      </button>
+      {mode === 'work' && (
+        <button className="ctrl-btn quick-finish" onClick={onFinishRound} title={finishRoundTitle}>
+          <Zap size={16} />
+          <span>{finishRound}</span>
+        </button>
+      )}
       <button className="ctrl-btn secondary" onClick={onSkip} title={t('skipStage')}>
         <SkipForward size={18} />
       </button>

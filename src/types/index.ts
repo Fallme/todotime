@@ -102,11 +102,14 @@ export const THEME_IDS = [
   'matcha',
   'ocean',
   'ink',
-  'sunset',
   'midnight',
   'monochrome',
   'constructivist',
   'toy3d',
+  'oilpaint',
+  'modernist',
+  'lineart',
+  'crayon',
 ] as const;
 
 export type ThemeId = typeof THEME_IDS[number];

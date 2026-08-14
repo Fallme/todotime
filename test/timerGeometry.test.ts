@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { getElapsedProgress, getTimerEndpoint } from '../src/utils/timerGeometry.ts';
+import { getElapsedProgress, getRemainingRingGeometry, getTimerEndpoint } from '../src/utils/timerGeometry.ts';
 
 const closeTo = (actual: number, expected: number) => {
   assert.ok(Math.abs(actual - expected) < 0.000001, `${actual} should be close to ${expected}`);
@@ -30,4 +30,20 @@ test('timer progress grows from zero to one as time elapses', () => {
   assert.equal(getElapsedProgress(1500, 1500), 0);
   assert.equal(getElapsedProgress(750, 1500), 0.5);
   assert.equal(getElapsedProgress(0, 1500), 1);
+});
+
+test('countdown ring starts full and empties clockwise', () => {
+  assert.deepEqual(getRemainingRingGeometry(100, 100, 200), {
+    elapsedProgress: 0,
+    remainingProgress: 1,
+    dashLength: 200,
+    dashOffset: 0,
+  });
+  assert.deepEqual(getRemainingRingGeometry(75, 100, 200), {
+    elapsedProgress: 0.25,
+    remainingProgress: 0.75,
+    dashLength: 150,
+    dashOffset: 50,
+  });
+  assert.equal(getRemainingRingGeometry(0, 100, 200).dashLength, 0);
 });

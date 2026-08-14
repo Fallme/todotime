@@ -549,15 +549,12 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [clearTimer, completeOne, startBreak, advanceCycle, playSound, showToast]);
 
   const finishRound = useCallback(() => {
-    if (modeRef.current !== 'work') {
-      skip();
-      return;
-    }
+    if (modeRef.current !== 'work') return;
     clearTimer();
     timeLeftRef.current = 0;
     setTimeLeft(0);
     completeOne();
-  }, [clearTimer, completeOne, skip]);
+  }, [clearTimer, completeOne]);
 
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
