@@ -398,6 +398,7 @@
   --green: #6b9b7a; --blue: #716bb5; --yellow: #d7b85f;
   --theme-card-radius: 16px; --theme-control-radius: 999px;
   --theme-border: 1px solid #8e713d; --theme-card-shadow: inset 0 0 0 1px rgba(218,184,100,.2), 0 14px 38px rgba(3,2,14,.4);
+  --theme-backdrop-overlay: rgba(7, 6, 24, .3);
   font-family: Georgia, "Noto Serif SC", serif;
 }
 
@@ -427,6 +428,7 @@
   --green: #4f8f54; --blue: #4c78a5; --yellow: #d9a441;
   --theme-card-radius: 2px; --theme-control-radius: 2px; --theme-border: 2px solid #5b4629;
   --theme-card-shadow: 4px 4px 0 #5b4629;
+  --theme-backdrop-overlay: rgba(238, 220, 163, .38);
   font-family: "Courier New", "Noto Sans SC", monospace;
 }
 :root.dark[data-theme="farmcraft"] {
@@ -434,6 +436,7 @@
   --text: #f0d99f; --text-secondary: #c8b682; --text-muted: #7f765a;
   --border: #caa967; --ring-bg: #465c45; --accent: #80bd69; --accent-light: #c7853c;
   --theme-border: 2px solid #caa967; --theme-card-shadow: 4px 4px 0 #0c140e;
+  --theme-backdrop-overlay: rgba(8, 17, 11, .72);
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -497,15 +500,19 @@ html[data-theme="stainedglass"] body {
   background-size: auto, 86px 86px;
 }
 html[data-theme="tarot"] body {
-  background-image: radial-gradient(circle at 18% 15%, rgba(185,147,74,.28) 0 1px, transparent 1.6px), radial-gradient(circle at 82% 28%, rgba(128,100,184,.3) 0 1px, transparent 1.6px), radial-gradient(circle at 55% 82%, rgba(255,255,255,.16) 0 1px, transparent 1.6px);
-  background-size: 110px 110px, 160px 160px, 210px 210px;
+  background-image: linear-gradient(var(--theme-backdrop-overlay), var(--theme-backdrop-overlay)), url('/themes/tarot_background.webp');
+  background-position: center, center;
+  background-size: auto, cover;
+  background-attachment: fixed;
 }
 html[data-theme="anime"] body {
   background-image: radial-gradient(circle at 10% 9%, rgba(240,95,139,.19), transparent 29%), radial-gradient(circle at 92% 24%, rgba(93,141,247,.2), transparent 31%), linear-gradient(125deg, transparent 0 72%, rgba(255,255,255,.35) 72% 74%, transparent 74%);
 }
 html[data-theme="farmcraft"] body {
-  background-image: linear-gradient(90deg, rgba(79,143,84,.08) 2px, transparent 2px), linear-gradient(rgba(91,70,41,.07) 2px, transparent 2px), radial-gradient(circle at 92% 10%, rgba(217,164,65,.26), transparent 22%);
-  background-size: 18px 18px, 18px 18px, auto;
+  background-image: linear-gradient(var(--theme-backdrop-overlay), var(--theme-backdrop-overlay)), url('/themes/farmcraft_background.webp');
+  background-position: center, center;
+  background-size: auto, cover;
+  background-attachment: fixed;
 }
 
 /* First-visit identity gate */
@@ -1784,15 +1791,16 @@ html[data-theme="farmcraft"] body {
 .theme-preview-stainedglass .theme-preview-content { background: rgba(18,27,51,.68); }
 .theme-preview-stainedglass .theme-preview-line { background: #d3b363; }
 .theme-preview-tarot { --theme-preview-bg: #14132c; }
-.theme-preview-tarot .theme-preview { border: 2px double #b9934a; border-radius: 10px; background-image: radial-gradient(circle at 22% 20%, #d9bd6c 0 1px, transparent 1.5px); background-size: 18px 18px; box-shadow: inset 0 0 0 1px #4a396c, 0 5px 12px rgba(4,3,16,.45); }
-.theme-preview-tarot .theme-preview-content { background: rgba(25,23,55,.76); }
+.theme-preview-tarot .theme-preview { border: 2px double #b9934a; border-radius: 10px; background-image: linear-gradient(rgba(12,10,36,.16), rgba(12,10,36,.16)), url('/themes/tarot_background.webp'); background-position: center; background-size: auto, cover; box-shadow: inset 0 0 0 1px #4a396c, 0 5px 12px rgba(4,3,16,.45); }
+.theme-preview-tarot .theme-preview-content { background: rgba(25,23,55,.58); }
 .theme-preview-tarot .theme-preview-line { background: #b9934a; }
 .theme-preview-anime { --theme-preview-bg: #f5f8ff; }
 .theme-preview-anime .theme-preview { border: 2px solid #9ab5ef; border-radius: 15px; background-image: radial-gradient(circle at 14% 12%, rgba(255,112,150,.34), transparent 37%), radial-gradient(circle at 88% 78%, rgba(93,141,247,.3), transparent 40%); box-shadow: inset 0 2px 0 #fff, 0 6px 13px rgba(75,104,173,.2); }
 .theme-preview-anime .theme-preview-card { border-radius: 11px; }
 .theme-preview-farmcraft { --theme-preview-bg: #f3d58a; }
 .theme-preview-farmcraft .theme-preview, .theme-preview-farmcraft .theme-preview-card, .theme-preview-farmcraft .theme-preview-line { border-radius: 1px; }
-.theme-preview-farmcraft .theme-preview { border: 2px solid #5b4629; box-shadow: 3px 3px 0 #5b4629; image-rendering: pixelated; background-image: linear-gradient(90deg, rgba(79,143,84,.14) 2px, transparent 2px), linear-gradient(rgba(91,70,41,.12) 2px, transparent 2px); background-size: 10px 10px; }
+.theme-preview-farmcraft .theme-preview { border: 2px solid #5b4629; box-shadow: 3px 3px 0 #5b4629; image-rendering: pixelated; background-image: linear-gradient(rgba(238,220,163,.18), rgba(238,220,163,.18)), url('/themes/farmcraft_background.webp'); background-position: center; background-size: auto, cover; }
+.theme-preview-farmcraft .theme-preview-content { background: rgba(243,213,138,.7); }
 .toggle-btn {
   padding: 4px 16px; border-radius: 20px; border: 1px solid var(--border);
   cursor: pointer; font-size: 13px; background: var(--bg);
@@ -2026,9 +2034,13 @@ html[data-theme="farmcraft"] body {
 :root[data-theme="stainedglass"] .timer-ring-endpoint { stroke: #f4dc92; stroke-width: 2px; }
 :root[data-theme="tarot"] .settings-section,
 :root[data-theme="tarot"] .todo-list-container,
-:root[data-theme="tarot"] .stats-card-full { background-image: radial-gradient(circle at 92% 10%, rgba(185,147,74,.28) 0 1px, transparent 1.5px); background-size: 32px 32px; }
-:root[data-theme="tarot"] .timer-ring-container::before { content: '☾'; position: absolute; top: 19px; left: 50%; transform: translateX(-50%); color: var(--yellow); font-size: 18px; opacity: .7; }
+:root[data-theme="tarot"] .stats-card-full { background-image: linear-gradient(145deg, transparent 76%, rgba(185,147,74,.08) 76%), radial-gradient(circle at 92% 10%, rgba(218,184,100,.3) 0 1px, transparent 1.5px); background-size: auto, 32px 32px; }
+:root[data-theme="tarot"] .header-wrapper,
+:root[data-theme="tarot"] .tab-nav { background-color: var(--bg); background-image: linear-gradient(90deg, transparent, rgba(185,147,74,.07), transparent); border-color: #8e713d; }
+:root[data-theme="tarot"] .timer-ring-container::before { content: '✦'; position: absolute; display: grid; place-items: start center; padding-top: 12px; border: 1px solid rgba(185,147,74,.2); color: var(--yellow); font-size: 14px; opacity: .82; box-shadow: inset 0 0 32px rgba(128,100,184,.08); }
 :root[data-theme="tarot"] .timer-ring-endpoint { stroke: #f0d687; stroke-width: 2px; }
+:root[data-theme="tarot"] .todo-card,
+:root[data-theme="tarot"] .stat-card { outline: 1px solid rgba(185,147,74,.12); outline-offset: -5px; }
 :root[data-theme="anime"] .settings-section,
 :root[data-theme="anime"] .todo-list-container,
 :root[data-theme="anime"] .stats-card-full { background-image: linear-gradient(135deg, rgba(255,255,255,.48), transparent 58%); }
@@ -2040,6 +2052,13 @@ html[data-theme="farmcraft"] body {
 :root[data-theme="farmcraft"] .theme-selected-mark { border-radius: 1px; }
 :root[data-theme="farmcraft"] .timer-ring-progress { stroke-linecap: butt; stroke-dasharray: 12 2; }
 :root[data-theme="farmcraft"] .timer-ring-svg { shape-rendering: crispEdges; }
+:root[data-theme="farmcraft"] .header-wrapper,
+:root[data-theme="farmcraft"] .tab-nav { background-color: var(--bg); background-image: repeating-linear-gradient(0deg, rgba(91,70,41,.055) 0 2px, transparent 2px 8px); }
+:root[data-theme="farmcraft"] .settings-section,
+:root[data-theme="farmcraft"] .todo-list-container,
+:root[data-theme="farmcraft"] .stats-card-full { background-image: linear-gradient(90deg, rgba(79,143,84,.055) 2px, transparent 2px), linear-gradient(rgba(91,70,41,.045) 2px, transparent 2px); background-size: 16px 16px; }
+:root[data-theme="farmcraft"] .timer-ring-container::after { content: ''; position: absolute; left: calc(50% - 102px); bottom: 32px; width: 7px; height: 7px; background: #6f9fbd; box-shadow: 7px -7px 0 #92c3d4, 14px 0 0 #6b65a8, 7px 7px 0 #4f6e91; }
+:root[data-theme="farmcraft"] .cycle-dot.filled { background: #72a84e; box-shadow: inset -2px -2px 0 #3d6c38, inset 2px 2px 0 #a9ca6b; }
 :root[data-theme="farmcraft"] .btn,
 :root[data-theme="farmcraft"] .ctrl-btn { box-shadow: 3px 3px 0 var(--border); }
 

@@ -49,3 +49,16 @@ test('new theme choices include matching picker entries and visual rules', async
   assert.doesNotMatch(picker, /id: 'sunset'/);
   assert.doesNotMatch(styles, /data-theme="sunset"|theme-preview-sunset/);
 });
+
+test('farmcraft and tarot themes ship dedicated background materials', async () => {
+  const { readFile, stat } = await import('node:fs/promises');
+  const styles = await readFile(new URL('../src/index.css', import.meta.url), 'utf8');
+
+  assert.match(styles, /url\('\/themes\/farmcraft_background\.webp'\)/);
+  assert.match(styles, /url\('\/themes\/tarot_background\.webp'\)/);
+
+  const farmcraftAsset = await stat(new URL('../public/themes/farmcraft_background.webp', import.meta.url));
+  const tarotAsset = await stat(new URL('../public/themes/tarot_background.webp', import.meta.url));
+  assert.ok(farmcraftAsset.size > 100_000);
+  assert.ok(tarotAsset.size > 100_000);
+});
