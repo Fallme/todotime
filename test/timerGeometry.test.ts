@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import { getElapsedProgress, getRemainingRingGeometry, getTimerEndpoint } from '../src/utils/timerGeometry.ts';
 
 const closeTo = (actual: number, expected: number) => {
@@ -32,7 +33,7 @@ test('timer progress grows from zero to one as time elapses', () => {
   assert.equal(getElapsedProgress(0, 1500), 1);
 });
 
-test('countdown ring starts full and empties clockwise', () => {
+test('countdown ring starts full and empties clockwise', async () => {
   assert.deepEqual(getRemainingRingGeometry(100, 100, 200), {
     elapsedProgress: 0,
     remainingProgress: 1,
@@ -46,4 +47,8 @@ test('countdown ring starts full and empties clockwise', () => {
     dashOffset: 50,
   });
   assert.equal(getRemainingRingGeometry(0, 100, 200).dashLength, 0);
+  assert.equal(getRemainingRingGeometry(0, 100, 200).dashOffset, 200);
+  const source = await readFile(new URL('../src/components/Timer/TimerRing.tsx', import.meta.url), 'utf8');
+  assert.match(source, /strokeDasharray={`\$\{CIRC\} \$\{CIRC\}`}/);
+  assert.match(source, /strokeDashoffset={ring\.dashOffset}/);
 });

@@ -11,11 +11,19 @@ test('motivation library offers varied Chinese and English copy', () => {
 
 test('timer exposes quick completion and unassigned skip actions', async () => {
   const controls = await readFile(new URL('../src/components/Timer/TimerControls.tsx', import.meta.url), 'utf8');
+  const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const hook = await readFile(new URL('../src/hooks/useTimer.ts', import.meta.url), 'utf8');
+  const todos = await readFile(new URL('../src/components/TodoList/TodoList.tsx', import.meta.url), 'utf8');
+  const stats = await readFile(new URL('../src/components/Stats/StatsOverview.tsx', import.meta.url), 'utf8');
   const assignment = await readFile(new URL('../src/components/Timer/TaskAssignModal.tsx', import.meta.url), 'utf8');
-  assert.match(controls, /onFinishRound/);
-  assert.match(controls, /mode === 'work'/);
-  assert.match(controls, /完成本轮/);
+  assert.doesNotMatch(controls, /onFinishRound/);
+  assert.match(app, /className="cycle-finish-btn"/);
+  assert.match(app, /timer\.mode === 'work'/);
+  assert.match(app, /完成本轮/);
+  assert.match(hook, /completeOne\('restart'\)/);
   assert.match(controls, /skipStage/);
+  assert.match(todos, /todo-list-header[\s\S]*manual-focus-open[\s\S]*todo-header-stats/);
+  assert.doesNotMatch(stats, /type: 'line'/);
   assert.match(assignment, /onSkip/);
   assert.match(assignment, /跳过分配/);
 });

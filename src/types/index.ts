@@ -110,6 +110,7 @@ export const THEME_IDS = [
   'modernist',
   'lineart',
   'crayon',
+  'liquidglass',
 ] as const;
 
 export type ThemeId = typeof THEME_IDS[number];

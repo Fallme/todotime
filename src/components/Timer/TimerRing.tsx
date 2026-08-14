@@ -40,7 +40,7 @@ export function TimerRing({ timeLeft, totalTime, mode, isRunning, currentTaskNam
       <svg height={R * 2} width={R * 2} className="timer-ring-svg">
         <circle className="timer-ring-track" stroke="var(--ring-bg)" fill="transparent" strokeWidth={STROKE} r={NR} cx={R} cy={R} />
         <circle stroke={color} fill="transparent" strokeWidth={STROKE} strokeLinecap="round"
-          strokeDasharray={`${ring.dashLength} ${CIRC}`} strokeDashoffset={ring.dashOffset}
+          strokeDasharray={`${CIRC} ${CIRC}`} strokeDashoffset={ring.dashOffset}
           r={NR} cx={R} cy={R} className="timer-ring-progress"
           style={{ transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
         {isRunning && (

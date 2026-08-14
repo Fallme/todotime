@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from 'react';
-import { Bar, Chart, Doughnut } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend } from 'chart.js';
+import { Bar, Doughnut } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
@@ -9,7 +9,7 @@ import { generateReportInsights, type ReportInsight } from '../../utils/reportIn
 import { useLanguage } from '../../i18n/LanguageContext';
 import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
 
-ChartJS.register(CategoryScale, LinearScale, BarController, LineController, BarElement, ArcElement, PointElement, LineElement, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend);
 
 type Period = 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
@@ -191,7 +191,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const dateRange = `${activeData.daily[0]?.date.slice(5)} ~ ${activeData.daily[activeData.daily.length - 1]?.date.slice(5)}`;
   const activeDays = activeData.daily.filter(d => d.minutes > 0 || d.tasksDone > 0).length;
 
-  // Duration is the background bar; tomato and task counts remain readable as two lines.
+  // All three metrics use grouped square bars so daily values can be compared directly.
   const trendData = {
     labels: activeData.daily.map(d => d.date.slice(5)),
     datasets: [
@@ -202,16 +202,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
-        type: 'line' as const,
+        type: 'bar' as const,
         label: t('pomodoroCount'), data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
-        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B33', pointBackgroundColor: '#FF6B6B',
-        pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, tension: 0.3, order: 1,
+        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B99', borderWidth: 1,
+        borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 1,
       },
       {
-        type: 'line' as const,
+        type: 'bar' as const,
         label: t('completedTasks'), data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
-        borderColor: '#27ae60', backgroundColor: '#27ae6033', pointBackgroundColor: '#27ae60',
-        pointRadius: isCompact ? 2 : 3.5, pointHoverRadius: 5, borderWidth: 2.5, borderDash: [5, 4], tension: 0.3, order: 2,
+        borderColor: '#27ae60', backgroundColor: '#27ae6099', borderWidth: 1,
+        borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 2,
       },
     ],
   };
@@ -320,7 +320,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
           <h4 className="chart-sub-title">{period === 'week' ? t('lastSevenDays') : t('lastMonth')} · {t('combinedTrend')}</h4>
           <span className="stats-period-range">{dateRange}</span>
         </div>
-        <div className="chart-wrapper-lg trend-chart"><Chart type="bar" data={trendData} options={trendOptions} /></div>
+        <div className="chart-wrapper-lg trend-chart"><Bar data={trendData} options={trendOptions} /></div>
       </div>
 
       {/* Pie chart */}

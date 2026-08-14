@@ -22,6 +22,8 @@ const THEME_OPTIONS: Array<{
   description: [string, string];
   colors: [string, string, string];
 }> = [
+  { id: 'tomato', name: ['默认番茄', 'Classic Tomato'], description: ['番茄造型与温暖清爽配色', 'Tomato details in a warm, clean look'], colors: ['#ff6b6b', '#4caf50', '#ffffff'] },
+  { id: 'liquidglass', name: ['液态玻璃', 'Liquid Glass'], description: ['流动高光、透明折射与柔和景深', 'Fluid highlights, refraction and depth'], colors: ['#7c5cff', '#5de1e6', '#eef4ff'] },
   { id: 'monochrome', name: ['黑白秩序', 'Monochrome'], description: ['纯黑白、高对比与网格秩序', 'Pure contrast and editorial grids'], colors: ['#111111', '#ffffff', '#dedede'] },
   { id: 'constructivist', name: ['苏联色块', 'Soviet Blocks'], description: ['红黑米白的构成主义几何', 'Red, black and cream geometry'], colors: ['#d62828', '#171717', '#f1e3c6'] },
   { id: 'toy3d', name: ['3D 潮玩', '3D Art Toy'], description: ['软糖配色、厚圆角与立体光影', 'Candy colors and sculpted depth'], colors: ['#7357ff', '#ff79b0', '#eff0ff'] },
@@ -29,7 +31,6 @@ const THEME_OPTIONS: Array<{
   { id: 'modernist', name: ['现代构成', 'Modern Composition'], description: ['红黄蓝几何与清晰留白', 'Bold geometry in red, yellow and blue'], colors: ['#e53935', '#174ea6', '#f6c945'] },
   { id: 'lineart', name: ['简笔画', 'Line Art'], description: ['轻线条、留白与随手涂鸦感', 'Airy lines and playful doodles'], colors: ['#202020', '#4d7ea8', '#fffdf7'] },
   { id: 'crayon', name: ['儿童蜡笔画', 'Kids Crayon'], description: ['纸张颗粒与明亮童趣蜡笔色', 'Bright crayon colors on textured paper'], colors: ['#ef5350', '#3569d4', '#ffd54f'] },
-  { id: 'tomato', name: ['默认番茄', 'Classic Tomato'], description: ['原有温暖清爽风格', 'The original warm, clean look'], colors: ['#ff6b6b', '#ffa07a', '#ffffff'] },
   { id: 'apple', name: ['苹果极简', 'Apple Minimal'], description: ['通透、克制的玻璃质感', 'Clean, calm frosted glass'], colors: ['#007aff', '#34c759', '#f5f5f7'] },
   { id: 'sketch', name: ['手绘纸张', 'Hand-drawn'], description: ['纸张纹理与自然线条', 'Paper texture and lively lines'], colors: ['#e05a47', '#2f766f', '#fffaf0'] },
   { id: 'pixel', name: ['像素游戏', 'Pixel Arcade'], description: ['方角、像素和游戏感', 'Blocky, playful arcade style'], colors: ['#ff4f69', '#5cd85a', '#fff4c2'] },

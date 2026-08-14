@@ -246,7 +246,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [breakDone]);
 
   // Complete one work pomodoro
-  const completeOne = useCallback(() => {
+  const completeOne = useCallback((nextStep: 'break' | 'restart' = 'break') => {
     clearTimer();
     setIsRunning(false);
     const elapsedSeconds = totalTimeRef.current - timeLeftRef.current;
@@ -286,9 +286,25 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       showToast(`已记录 ${elapsed} 分钟；满 ${MIN_POMODORO_MINUTES} 分钟才计 1 个番茄`);
     }
-    startBreak(advanceCycle());
+    const startsLongBreak = advanceCycle();
+    if (nextStep === 'restart') {
+      if (startsLongBreak) {
+        cycleCountRef.current = 0;
+        setCycleCount(0);
+      }
+      isLongBreakRef.current = false;
+      resumeAfterSettleRef.current = false;
+      setMode('work');
+      setTimeLeft(workMinutesRef.current * 60);
+      setTotalTimeState(workMinutesRef.current * 60);
+      setRunningMinutes(0);
+      setIsRunning(false);
+      showToast('本轮已结算，请选择任务后重新开始');
+    } else {
+      startBreak(startsLongBreak);
+    }
     if (requiresAssignment) {
-      resumeAfterSettleRef.current = true;
+      resumeAfterSettleRef.current = nextStep === 'break';
       setIsRunning(false);
       setGroupPhase('settle');
     }
@@ -553,7 +569,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     clearTimer();
     timeLeftRef.current = 0;
     setTimeLeft(0);
-    completeOne();
+    completeOne('restart');
   }, [clearTimer, completeOne]);
 
   return {

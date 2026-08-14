@@ -94,17 +94,15 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
     <div className="todo-list-container">
       <div className="todo-list-header">
         <ListTodo size={20} /><span>{t('taskList')}</span>
+        <button className="manual-focus-open" type="button" onClick={onOpenManualFocus} title={msg('手动补录专注', 'Add focus manually')}>
+          <Clock3 size={13} />
+          <span>{msg('补录', 'Add')}</span>
+        </button>
         <div className="todo-header-stats">
           <span className="todo-stat-done">{todos.filter(t => !t.deletedAt).reduce((sum, todo) => sum + getTodoCompletionRecords(todo).length, 0)}/{todos.filter(t => !t.deletedAt && !t.abandoned).length}</span>
           <span className="todo-stat-pom">🍅 {todayPomodoros}</span>
         </div>
       </div>
-
-      <button className="manual-focus-open" type="button" onClick={onOpenManualFocus}>
-        <Clock3 size={15} />
-        <span>{msg('手动补录专注', 'Add focus manually')}</span>
-        <small>{msg('按规则自动计算时长与番茄', 'Auto-count time and pomodoros')}</small>
-      </button>
 
       <div className="status-tabs">
         {statusTabs.map(tab => (
