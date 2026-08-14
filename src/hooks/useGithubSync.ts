@@ -51,6 +51,7 @@ function settingsSubset(settings: AppSettings): RemoteSettings {
     longBreakInterval: settings.longBreakInterval,
     soundEnabled: settings.soundEnabled,
     darkMode: settings.darkMode,
+    theme: settings.theme,
     countdownTitle: settings.countdownTitle,
     countdownDate: settings.countdownDate,
     categories: settings.categories,

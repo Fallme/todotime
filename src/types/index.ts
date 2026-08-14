@@ -79,6 +79,27 @@ export interface DayData {
 
 export type TimerMode = 'work' | 'shortBreak' | 'longBreak';
 
+export const THEME_IDS = [
+  'tomato',
+  'apple',
+  'sketch',
+  'pixel',
+  'cyber',
+  'matcha',
+  'ocean',
+  'ink',
+  'sunset',
+  'midnight',
+] as const;
+
+export type ThemeId = typeof THEME_IDS[number];
+
+export function normalizeTheme(value: unknown): ThemeId {
+  return typeof value === 'string' && (THEME_IDS as readonly string[]).includes(value)
+    ? value as ThemeId
+    : 'tomato';
+}
+
 export interface TimerSettings {
   workMinutes: number;
   shortBreakMinutes: number;
@@ -89,6 +110,7 @@ export interface TimerSettings {
 export interface AppSettings extends TimerSettings {
   soundEnabled: boolean;
   darkMode: boolean;
+  theme: ThemeId;
   syncCode: string;
   countdownTitle: string;
   countdownDate: string;
@@ -102,6 +124,7 @@ export const DEFAULT_SETTINGS: AppSettings = {
   longBreakInterval: 4,
   soundEnabled: true,
   darkMode: false,
+  theme: 'tomato',
   syncCode: '',
   countdownTitle: '2026考研',
   countdownDate: '2026-12-27',

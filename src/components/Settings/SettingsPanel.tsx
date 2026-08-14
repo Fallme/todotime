@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { AppSettings } from '../../types';
-import { Download, Upload, Trash2, Copy, RefreshCw } from 'lucide-react';
+import type { AppSettings, ThemeId } from '../../types';
+import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -15,6 +15,24 @@ interface SettingsPanelProps {
   syncing: boolean;
   lastSyncedAt: string;
 }
+
+const THEME_OPTIONS: Array<{
+  id: ThemeId;
+  name: [string, string];
+  description: [string, string];
+  colors: [string, string, string];
+}> = [
+  { id: 'tomato', name: ['默认番茄', 'Classic Tomato'], description: ['原有温暖清爽风格', 'The original warm, clean look'], colors: ['#ff6b6b', '#ffa07a', '#ffffff'] },
+  { id: 'apple', name: ['苹果极简', 'Apple Minimal'], description: ['通透、克制的玻璃质感', 'Clean, calm frosted glass'], colors: ['#007aff', '#34c759', '#f5f5f7'] },
+  { id: 'sketch', name: ['手绘纸张', 'Hand-drawn'], description: ['纸张纹理与自然线条', 'Paper texture and lively lines'], colors: ['#e05a47', '#2f766f', '#fffaf0'] },
+  { id: 'pixel', name: ['像素游戏', 'Pixel Arcade'], description: ['方角、像素和游戏感', 'Blocky, playful arcade style'], colors: ['#ff4f69', '#5cd85a', '#fff4c2'] },
+  { id: 'cyber', name: ['赛博霓虹', 'Cyber Neon'], description: ['深色网格与霓虹光效', 'Dark grids and neon glow'], colors: ['#00f5d4', '#ff2e88', '#101126'] },
+  { id: 'matcha', name: ['抹茶自然', 'Matcha Calm'], description: ['柔和绿意与有机圆角', 'Soft greens and organic shapes'], colors: ['#6f8f52', '#b6cb87', '#f4f3e8'] },
+  { id: 'ocean', name: ['海洋蓝调', 'Ocean Blue'], description: ['清澈蓝色与轻盈波浪', 'Fresh blues and airy waves'], colors: ['#087ea4', '#49b6c8', '#effaff'] },
+  { id: 'ink', name: ['纸墨东方', 'Ink & Paper'], description: ['留白、纸色和朱砂点缀', 'Paper, ink and vermilion'], colors: ['#b83b2e', '#262521', '#f4efe3'] },
+  { id: 'sunset', name: ['日落暖橙', 'Sunset Glow'], description: ['蜜桃、暖橙与柔和渐变', 'Peach, amber and soft gradients'], colors: ['#f06c54', '#f4a261', '#fff2e7'] },
+  { id: 'midnight', name: ['星夜深蓝', 'Midnight Stars'], description: ['静谧星空与蓝紫微光', 'Quiet starlight and indigo glow'], colors: ['#8b7cf6', '#4cc9f0', '#11162e'] },
+];
 
 export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, onActivateSyncCode, syncing, lastSyncedAt }: SettingsPanelProps) {
   const { language, setLanguage, t } = useLanguage();
@@ -82,6 +100,48 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
             <button className={language === 'zh-CN' ? 'active' : ''} type="button" onClick={() => setLanguage('zh-CN')}>{t('chinese')}</button>
             <button className={language === 'en' ? 'active' : ''} type="button" onClick={() => setLanguage('en')}>{t('english')}</button>
           </div>
+        </div>
+      </section>
+
+      <section className="settings-section theme-settings-section">
+        <div className="theme-section-heading">
+          <span className="theme-heading-icon"><Palette size={16} /></span>
+          <div>
+            <h3>{msg('主题风格', 'Theme styles')}</h3>
+            <p>{msg('默认主题保持不变，选择会自动保存并同步到当前专属码。', 'The classic theme stays unchanged. Your choice is saved and synced to this profile.')}</p>
+          </div>
+        </div>
+        <div className="theme-gallery" role="list" aria-label={msg('主题风格', 'Theme styles')}>
+          {THEME_OPTIONS.map(option => {
+            const selected = settings.theme === option.id;
+            const copyIndex = language === 'zh-CN' ? 0 : 1;
+            return (
+              <button
+                className={`theme-option theme-preview-${option.id} ${selected ? 'selected' : ''}`}
+                type="button"
+                role="listitem"
+                aria-pressed={selected}
+                key={option.id}
+                onClick={() => update('theme', option.id)}
+              >
+                <span className="theme-preview" aria-hidden="true">
+                  <span className="theme-preview-sidebar" style={{ backgroundColor: option.colors[0] }} />
+                  <span className="theme-preview-content">
+                    <span className="theme-preview-line" />
+                    <span className="theme-preview-card">
+                      <span style={{ backgroundColor: option.colors[1] }} />
+                      <span style={{ backgroundColor: option.colors[0] }} />
+                    </span>
+                  </span>
+                  {selected && <span className="theme-selected-mark"><Check size={12} /></span>}
+                </span>
+                <span className="theme-option-copy">
+                  <strong>{option.name[copyIndex]}</strong>
+                  <small>{option.description[copyIndex]}</small>
+                </span>
+              </button>
+            );
+          })}
         </div>
       </section>
 

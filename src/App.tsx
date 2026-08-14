@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { AppSettings, Category, PomodoroRecord, Todo } from './types';
-import { DEFAULT_SETTINGS } from './types';
+import { DEFAULT_SETTINGS, normalizeTheme } from './types';
 import { formatDate } from './utils/dateUtils';
 import { initAudio } from './utils/sound';
 import { Header } from './components/Layout/Header';
@@ -54,6 +54,7 @@ function clampInteger(value: unknown, min: number, max: number, fallback: number
 function normalizeSettings(settings: AppSettings): AppSettings {
   return {
     ...settings,
+    theme: normalizeTheme(settings.theme),
     workMinutes: clampInteger(settings.workMinutes, 1, 90, DEFAULT_SETTINGS.workMinutes),
     shortBreakMinutes: clampInteger(settings.shortBreakMinutes, 1, 30, DEFAULT_SETTINGS.shortBreakMinutes),
     longBreakMinutes: clampInteger(settings.longBreakMinutes, 1, 60, DEFAULT_SETTINGS.longBreakMinutes),
@@ -71,7 +72,10 @@ export default function App() {
   const [showTaskPicker, setShowTaskPicker] = useState(false);
   const today = formatDate(new Date());
 
-  useEffect(() => { document.documentElement.classList.toggle('dark', settings.darkMode); }, [settings.darkMode]);
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', settings.darkMode);
+    document.documentElement.dataset.theme = settings.theme;
+  }, [settings.darkMode, settings.theme]);
   useEffect(() => { localStorage.setItem(profileStorageKey('todotime_settings', profileId), JSON.stringify(settings)); }, [settings, profileId]);
 
   // Unlock audio on first user interaction
@@ -142,7 +146,7 @@ export default function App() {
       syncBidirectional(initialSettingsRef.current, initialTodosRef.current).then((syncResult) => {
         if (cancelled) return;
         if (syncResult) {
-          setSettings({ ...syncResult.settings, syncCode: activeSyncCode });
+          setSettings(normalizeSettings({ ...DEFAULT_SETTINGS, ...syncResult.settings, syncCode: activeSyncCode }));
           mergeTodos(syncResult.todos);
         }
         configLoadedRef.current = true;
@@ -153,7 +157,7 @@ export default function App() {
 
   const applyRemoteConfig = useCallback((result: Awaited<ReturnType<typeof syncBidirectional>>) => {
     if (!result) return;
-    setSettings({ ...result.settings, syncCode: activeSyncCode });
+    setSettings(normalizeSettings({ ...DEFAULT_SETTINGS, ...result.settings, syncCode: activeSyncCode }));
     mergeTodos(result.todos);
   }, [activeSyncCode, mergeTodos]);
   useEffect(() => {
