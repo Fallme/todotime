@@ -2223,6 +2223,12 @@ html[data-theme="farmcraft"] body {
   .theme-preview { height: 54px; }
   .manual-focus-grid { grid-template-columns: 1fr; }
   .manual-focus-wide { grid-column: auto; }
+  .todo-card-row { flex-wrap: wrap; row-gap: 4px; }
+  .todo-card-meta {
+    order: 10;
+    flex-basis: calc(100% - 46px);
+    margin-left: 46px;
+  }
 }
 @media (max-width: 350px) {
   .timer-controls { gap: 7px; }
