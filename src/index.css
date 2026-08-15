@@ -2223,12 +2223,23 @@ html[data-theme="farmcraft"] body {
   .theme-preview { height: 54px; }
   .manual-focus-grid { grid-template-columns: 1fr; }
   .manual-focus-wide { grid-column: auto; }
-  .todo-card-row { flex-wrap: wrap; row-gap: 4px; }
-  .todo-card-meta {
-    order: 10;
-    flex-basis: calc(100% - 46px);
-    margin-left: 46px;
+  .main-content { padding-left: 8px; padding-right: 8px; }
+  .todo-list-container { padding: 12px 10px; }
+  .todo-card-row {
+    display: grid;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-areas:
+      "status body   actions"
+      ".      meta   meta";
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 4px;
+    padding: 10px;
   }
+  .todo-card-status { grid-area: status; }
+  .todo-card-body { grid-area: body; }
+  .todo-card-meta { grid-area: meta; }
+  .todo-card-actions { grid-area: actions; }
 }
 @media (max-width: 350px) {
   .timer-controls { gap: 7px; }

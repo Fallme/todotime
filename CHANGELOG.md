@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-15 — 窄屏任务卡改用 Grid 两行布局 + 加宽内容区
+
+### 给人看（Human Summary）
+- **改了什么**：手机窄屏（≤480px）下，任务卡片改为两行网格布局——第一行是「状态点 + 标题 + 操作按钮」，第二行「时间 + 🍅数」缩进对齐到标题下方；同时收窄了内容区左右留白（主内容 12px→8px、清单容器 16px→10px、卡片内边距 12px→10px），卡片整体可用宽度变宽。
+- **为什么**：上一版 `flex-wrap` 方案在极窄屏上仍出现标题被挤压、辅助信息拥挤（视觉上重叠），且卡片可用宽度太窄，长标题几乎看不清。
+- **影响范围**：手机窄屏（≤480px）任务清单卡片布局。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/index.css` — `@media (max-width: 480px)` 内重写任务卡布局：`.todo-card-row` 由 `flex-wrap` 改为 `display: grid; grid-template-columns: 36px minmax(0, 1fr) auto; grid-template-areas: "status body actions" / ". meta meta";`，`.todo-card-status/body/meta/actions` 各自用 `grid-area` 定位；同时 `.main-content` 左右 padding 降到 8px、`.todo-list-container` padding 改 `12px 10px`、`.todo-card-row` padding 改 `10px`。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - `minmax(0, 1fr)` 而非 `1fr`：让标题列可收缩到内容以下，标题才能换行/两行截断。
+  - `grid-template-areas` 第二行用 `.` 空单元格占住第 1 列（状态列），使 `.todo-card-meta` 从第 2 列开始，自然对齐标题下方、缩进在状态列之后，不再需要之前脆弱的 `margin-left: 46px` 硬编码。
+  - grid 项会忽略 flex 相关属性，故 `.todo-card-body` 的 `flex: 1`、`.todo-card-meta` 的 `flex-shrink: 0` 在窄屏下不生效，由 grid 列宽接管。
+  - 操作按钮（播放/子任务/重复/删除）仍留在第一行右侧，未改动。
+- **验证方式**：`npm run build`（`tsc -b && vite build`）通过；DevTools 切 ≤480px 视口，确认卡片两行、标题最多两行、时间/🍅数缩进在下方、无重叠、内容区比之前更宽。
+- **后续待办 / 已知问题**：沿用上一条记录的 `endNow` / `skipRound` 副作用位置问题，本次未处理。
+
+---
+
 ## 2026-08-15 — 窄屏任务卡「辅助信息」下沉到第二行
 
 ### 给人看（Human Summary）
