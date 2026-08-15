@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
 import type { AppSettings, Category, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS, normalizeTheme } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -12,7 +12,6 @@ import { TaskAssignModal } from './components/Timer/TaskAssignModal';
 import { ManualFocusModal } from './components/Timer/ManualFocusModal';
 import type { ManualFocusInput } from './components/Timer/ManualFocusModal';
 import { TodoList } from './components/TodoList/TodoList';
-import { StatsOverview } from './components/Stats/StatsOverview';
 import { SettingsPanel } from './components/Settings/SettingsPanel';
 import { SyncCodeGate } from './components/Auth/SyncCodeGate';
 import type { SyncCodeMode } from './components/Auth/SyncCodeGate';
@@ -28,6 +27,9 @@ import { useLanguage } from './i18n/LanguageContext';
 import { FastForward } from 'lucide-react';
 
 type TabId = 'timer' | 'stats' | 'settings';
+
+const StatsOverview = lazy(() => import('./components/Stats/StatsOverview')
+  .then(module => ({ default: module.StatsOverview })));
 
 function loadSettings(profileId: string, syncCode: string): AppSettings {
   try {
@@ -334,7 +336,7 @@ export default function App() {
   const handleExport = () => {
     const safeSettings = { ...settings } as Partial<AppSettings>;
     delete safeSettings.syncCode;
-    const data = { settings: safeSettings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
+    const data = { schemaVersion: 2, settings: safeSettings, todos, todayPomodoros: timer.todayPomodoros, exportDate: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -351,7 +353,7 @@ export default function App() {
     const reader = new FileReader();
     reader.onload = (e) => {
       try {
-        const data = JSON.parse(e.target?.result as string) as { settings?: Partial<AppSettings>; todos?: Todo[] };
+        const data = JSON.parse(e.target?.result as string) as { settings?: Partial<AppSettings>; todos?: Todo[]; todayPomodoros?: unknown };
         if (data.settings) {
           const importedSettings = data.settings;
           setSettings(prev => normalizeSettings({
@@ -364,6 +366,7 @@ export default function App() {
           }));
         }
         if (Array.isArray(data.todos)) replaceTodos(data.todos);
+        if (data.todayPomodoros !== undefined) timer.importPomodoros(data.todayPomodoros);
       } catch {
         alert(language === 'zh-CN' ? '导入失败：文件格式无效' : 'Import failed: invalid file format.');
       }
@@ -473,17 +476,19 @@ export default function App() {
         )}
         {tab === 'stats' && (
           <div className="stats-page">
-            <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories} todos={todos}
-              runningMinutes={timer.mode === 'work' ? timer.runningMinutes : 0}
-              runningCategory={currentTask?.category ?? '其他'}
-              onRefresh={async () => {
-                // First refresh dayDataMap from git (daily pomodoro data)
-                await loadAll();
-                // Then bidirectional sync for config (settings + todos)
-                const result = await syncBidirectional(settings, todos);
-                applyRemoteConfig(result);
-              }}
-            />
+            <Suspense fallback={<div className="stats-loading" role="status">{t('loadingStats')}</div>}>
+              <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories} todos={todos}
+                runningMinutes={timer.mode === 'work' ? timer.runningMinutes : 0}
+                runningCategory={currentTask?.category ?? '其他'}
+                onRefresh={async () => {
+                  // First refresh dayDataMap from git (daily pomodoro data)
+                  await loadAll();
+                  // Then bidirectional sync for config (settings + todos)
+                  const result = await syncBidirectional(settings, todos);
+                  applyRemoteConfig(result);
+                }}
+              />
+            </Suspense>
           </div>
         )}
         {tab === 'settings' && (

@@ -52,4 +52,6 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(hook, /playSound\(playPause\)/);
   assert.match(hook, /playSound\(playEnd\)/);
   assert.match(hook, /const skipRound = useCallback\([\s\S]*?playSound\(playCycleComplete\)/);
+  assert.match(app, /lazy\(\(\) => import\('\.\/components\/Stats\/StatsOverview'\)/);
+  assert.match(app, /timer\.importPomodoros\(data\.todayPomodoros\)/);
 });

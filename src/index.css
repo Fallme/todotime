@@ -676,6 +676,7 @@ html[data-theme="farmcraft"] body {
 
 /* Stats overview */
 .stats-overview { display: flex; flex-direction: column; gap: 12px; width: 100%; }
+.stats-loading { min-height: 240px; display: grid; place-items: center; color: var(--text-muted); font-size: 13px; }
 .stats-top-row {
   display: flex; align-items: center; gap: 12px;
   background: var(--bg-card); border-radius: 14px; padding: 14px 16px;

@@ -4,6 +4,7 @@ import { formatDate, generateId } from '../utils/dateUtils';
 import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
 import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
 import { initAudio, playStart, playEnterBreak, playCycleComplete, playPause, playResume, playEnd } from '../utils/sound';
+import { mergeImportedPomodoros, normalizeImportedPomodoros } from '../utils/backup';
 
 export interface PendingAssignment {
   id: string;
@@ -41,7 +42,7 @@ interface UseTimerReturn {
   stop: () => void;
   endNow: () => void;
   resetCycle: () => void;
-  addTestPomodoros: (records: PomodoroRecord[]) => void;
+  importPomodoros: (records: unknown) => void;
   addManualPomodoro: (record: PomodoroRecord) => void;
   setOnComplete: (cb: (record: PomodoroRecord) => void) => void;
 }
@@ -60,11 +61,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       if (storedDate === today) {
         const stored = readProfileStorage('todotime_today_pomodoros', profileId);
         if (stored) {
-          return (JSON.parse(stored) as PomodoroRecord[]).map(record => record.completed ? record : ({
-            ...record,
-            completed: true,
-            countsAsPomodoro: countsAsPomodoro(record.duration),
-          }));
+          return normalizeImportedPomodoros(JSON.parse(stored));
         }
       }
     } catch { /* ignore */ }
@@ -466,9 +463,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     isLongBreakRef.current = false;
   }, []);
 
-  const addTestPomodoros = useCallback((records: PomodoroRecord[]) => {
-    setTodayPomodoros(prev => [...prev, ...records]);
-    setTotalPomodoros(p => p + records.filter(record => countsAsPomodoro(record.duration)).length);
+  const importPomodoros = useCallback((records: unknown) => {
+    setTodayPomodoros(current => mergeImportedPomodoros(current, records));
   }, []);
 
   const start = useCallback(() => {
@@ -620,6 +616,6 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
     start, startWork, pause, reset, skip, skipRound, setTotalTime, setTaskInfo,
-    assignAll, skipAssignments, startNextGroup, stop, endNow, resetCycle, addTestPomodoros, addManualPomodoro, setOnComplete,
+    assignAll, skipAssignments, startNextGroup, stop, endNow, resetCycle, importPomodoros, addManualPomodoro, setOnComplete,
   };
 }
