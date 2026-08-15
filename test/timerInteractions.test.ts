@@ -54,4 +54,7 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(hook, /const skipRound = useCallback\([\s\S]*?playSound\(playCycleComplete\)/);
   assert.match(app, /lazy\(\(\) => import\('\.\/components\/Stats\/StatsOverview'\)/);
   assert.match(app, /timer\.importPomodoros\(data\.todayPomodoros\)/);
+  // 已选任务时专注完成直接归到当前任务，不进入待分配结算弹窗
+  assert.match(hook, /const requiresAssignment = !task\?\.id/);
+  assert.match(hook, /if \(requiresAssignment\) \{[\s\S]*?setGroupPhase\('settle'\)/);
 });
