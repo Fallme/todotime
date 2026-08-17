@@ -12,6 +12,7 @@ import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
 ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend);
 
 type Period = 'week' | 'month';
+type PiePeriod = 'day' | 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
 
 interface StatsOverviewProps {
@@ -117,6 +118,7 @@ function diffText(current: number, previous: number): { text: string; cls: strin
 export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
   const { language, t } = useLanguage();
   const [period, setPeriod] = useState<Period>('week');
+  const [piePeriod, setPiePeriod] = useState<PiePeriod>('week');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -136,12 +138,14 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   // Current period data
   const weekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
   const monthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
+  const dayData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 1, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
 
   // Previous period data (for comparison)
   const prevWeekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 7, todos), [dayDataMap, todayPomodoros, today, todos]);
   const prevMonthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 30, todos), [dayDataMap, todayPomodoros, today, todos]);
 
   const activeData = period === 'week' ? weekData : monthData;
+  const activePieData = piePeriod === 'day' ? dayData : piePeriod === 'week' ? weekData : monthData;
   const isCompact = period === 'month';
 
   const handleRefresh = useCallback(async () => {
@@ -245,7 +249,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   };
 
   // Pie chart
-  const pieCategories = useMemo(() => getCategoryData(activeData, chartMetric, categories), [activeData, chartMetric, categories]);
+  const pieCategories = useMemo(() => getCategoryData(activePieData, chartMetric, categories), [activePieData, chartMetric, categories]);
   const pieTotal = pieCategories.reduce((s, c) => s + c.value, 0);
   const pieData = pieCategories.length > 0 ? {
     labels: pieCategories.map(c => c.label),
@@ -327,6 +331,11 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       <div className="stats-card-full">
         <div className="chart-header pie-chart-header">
           <h4 className="chart-sub-title">{t('categoryShare')} · {metricInfo.label}</h4>
+          <div className="stats-period-toggle" aria-label="板块占比时间范围">
+            <button className={`period-btn ${piePeriod === 'day' ? 'active' : ''}`} onClick={() => setPiePeriod('day')}>{t('today')}</button>
+            <button className={`period-btn ${piePeriod === 'week' ? 'active' : ''}`} onClick={() => setPiePeriod('week')}>{t('lastSevenDays')}</button>
+            <button className={`period-btn ${piePeriod === 'month' ? 'active' : ''}`} onClick={() => setPiePeriod('month')}>{t('lastMonth')}</button>
+          </div>
           <div className="stats-metric-toggle" aria-label="饼图分布指标">
             <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> {t('duration')}</button>
             <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 {t('pomodoros')}</button>

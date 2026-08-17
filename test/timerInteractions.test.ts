@@ -29,8 +29,8 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(hook, /const skipRound = useCallback/);
   assert.match(hook, /cycleCountRef\.current = 0/);
   assert.match(hook, /setCycleCount\(0\)/);
-  assert.match(controls, /skipStage/);
-  assert.match(controls, /aria-label={t\('skipStage'\)}/);
+  assert.match(controls, /onAddGroup/);
+  assert.doesNotMatch(controls, /onSkip/);
   assert.match(styles, /\.tab-nav\s*\{[\s\S]*?background: var\(--bg\);[\s\S]*?backdrop-filter: none/);
   assert.match(styles, /\.cycle-dots\s*\{[^}]*position: relative/);
   assert.match(styles, /\.cycle-skip-btn\s*\{[^}]*position: absolute/);

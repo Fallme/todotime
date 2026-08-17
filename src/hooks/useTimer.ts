@@ -52,7 +52,19 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   const [timeLeft, setTimeLeft] = useState(timerSettings.workMinutes * 60);
   const [totalTime, setTotalTimeState] = useState(timerSettings.workMinutes * 60);
   const [isRunning, setIsRunning] = useState(false);
-  const [cycleCount, setCycleCount] = useState(0);
+  const [cycleCount, setCycleCount] = useState(() => {
+    try {
+      const storedDate = readProfileStorage('todotime_today_date', profileId);
+      if (storedDate === formatDate(new Date())) {
+        const stored = readProfileStorage('todotime_today_cycle', profileId);
+        const parsed = Number(stored);
+        if (Number.isInteger(parsed) && parsed >= 0) {
+          return Math.min(parsed, timerSettings.longBreakInterval);
+        }
+      }
+    } catch { /* ignore */ }
+    return 0;
+  });
   const [totalPomodoros, setTotalPomodoros] = useState(0);
   const [todayPomodoros, setTodayPomodoros] = useState<PomodoroRecord[]>(() => {
     try {
@@ -158,6 +170,33 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     localStorage.setItem(profileStorageKey('todotime_today_date', profileIdRef.current), today);
     localStorage.setItem(profileStorageKey('todotime_today_pomodoros', profileIdRef.current), JSON.stringify(todayPomodoros));
   }, [todayPomodoros, profileId]);
+
+  // Persist cycle progress so unfinished groups carry over to the next day.
+  useEffect(() => {
+    localStorage.setItem(profileStorageKey('todotime_today_cycle', profileIdRef.current), String(cycleCount));
+  }, [cycleCount]);
+
+  // Date rollover: when the local date changes, settle the previous day by
+  // dropping prior-day records (they are already synced to git day data) and
+  // keep only today's records. Unfinished cycle progress is preserved above.
+  useEffect(() => {
+    const settle = () => {
+      const currentDate = formatDate(new Date());
+      setTodayPomodoros(prev => {
+        if (prev.length === 0) return prev;
+        const next = prev.filter(record => (record.date || currentDate) === currentDate);
+        return next.length === prev.length ? prev : next;
+      });
+    };
+    settle();
+    const interval = window.setInterval(settle, 30_000);
+    const handleVisibility = () => { if (document.visibilityState === 'visible') settle(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   const playSound = useCallback((fn: () => void) => {
     if (soundEnabledRef.current) {

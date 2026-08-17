@@ -258,6 +258,10 @@ export default function App() {
     setSettings(normalized);
   };
 
+  const handleAddGroup = () => {
+    setSettings(s => normalizeSettings({ ...s, longBreakInterval: s.longBreakInterval + 1 }));
+  };
+
   const handleActivateSyncCode = async (code: string, mode: SyncCodeMode) => {
     await flush();
     const remoteProfile = await loadConfig(code);
@@ -450,7 +454,7 @@ export default function App() {
                 </div>
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />
+              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onAddGroup={handleAddGroup} />
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}

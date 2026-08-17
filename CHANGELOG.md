@@ -21,6 +21,40 @@
 
 ---
 
+## 2026-08-17 — 计时器「跳过」改「增加组数」+ 组次圆点修复 + 跨天结算 + 板块占比时间切换
+
+### 给人看（Human Summary）
+- **改了什么**：
+  1. 计时器控制栏删除了「跳过当前阶段」按钮，换成「增加组数」按钮（点一下本轮周期多一组、组次圆点相应多一个）。
+  2. 组次小圆点改成「未完成=空心圈、已完成=实心」，尺寸统一，不再有实心点被放大导致的底色错位感。
+  3. 跨天（过零点或次日打开 App）时自动把昨天的番茄记录结算归档，今日从零开始；未完成的组次顺延到今天。
+  4. 统计页「板块占比」新增「今天 / 近七天 / 近一个月」三个时间范围切换。
+- **为什么**：跳过按钮和「结束并记录本轮」功能重叠；圆点空心/实心区分不清；跨天后昨天的记录会混进今天；板块占比之前只能跟着顶部周/月切换、看不了当天分布。
+- **影响范围**：计时器控制栏、组次指示圆点、跨天数据结算、统计页板块占比图表。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Timer/TimerControls.tsx` — 图标 `SkipForward`→`Plus`，`onSkip` prop 换成 `onAddGroup`。
+  - `src/App.tsx` — 新增 `handleAddGroup`（`setSettings(s => normalizeSettings({ ...s, longBreakInterval: s.longBreakInterval + 1 }))`）；`TimerControls` 改传 `onAddGroup={handleAddGroup}` 取代 `onSkip={timer.skip}`。
+  - `src/i18n/LanguageContext.tsx` — 新增 `addGroup`（增加组数 / Add group）、`today`（今天 / Today）两个 key。
+  - `src/index.css` — `.cycle-dot` 改为 `background: transparent; border: 1.5px solid var(--border); box-sizing: border-box`；`.cycle-dot.filled` 改为 `background: var(--accent); border-color: transparent`（去掉 `transform: scale(1.2)`）；≤480px 内为 `.pie-chart-header .stats-period-toggle` / `.period-btn` 补 `width:100%` / `flex:1` 规则。
+  - `src/hooks/useTimer.ts` — `cycleCount` 初始值改为从 `todotime_today_cycle` 读取（同日才恢复，并 clamp 到 `longBreakInterval`）；新增 `cycleCount` 持久化 effect；新增日期切换结算 effect（每 30s + visibilitychange 时把 `todayPomodoros` 过滤为当日记录）。
+  - `src/components/Stats/StatsOverview.tsx` — 新增 `PiePeriod` 类型与 `piePeriod` state；`dayData = computePeriodData(dayDataMap, todayPomodoros, 1, today, 0, ...)`；`activePieData` 按 `piePeriod` 取 day/week/month；饼图 header 新增 `.stats-period-toggle`（今天/近七天/近一个月）。
+  - `test/timerInteractions.test.ts` — 原 `skipStage` 两条断言改为 `assert.match(controls, /onAddGroup/)` + `assert.doesNotMatch(controls, /onSkip/)`。
+- **接口 / 数据模型变化**：
+  - 新增 localStorage key `todotime_today_cycle`（存组次进度，供跨天顺延）。
+  - `TimerControlsProps`：`onSkip` → `onAddGroup`。
+  - i18n 新增 `addGroup`、`today`。
+- **关键实现细节 / 注意事项**：
+  - 「增加组数」走 `normalizeSettings`，`longBreakInterval` 被 clamp 到 [2,10]，到 10 后点击无效果（不会越界）。
+  - 组次圆点：`farmcraft` 主题有 `:root[data-theme="farmcraft"] .cycle-dot.filled { background:#72a84e; box-shadow:... }` 覆盖背景，base 的 `border-color: transparent` 仍生效，互不冲突。
+  - 跨天结算只过滤 `todayPomodoros`，**不删除** git 里的昨日数据（昨日记录早已由 `App.tsx` 的 `syncDayData` 按记录自身 `date` 归档）。`cycleCount` 持久化依赖 `todotime_today_date` 同日才恢复，避免跨天后沿用旧组次；结算 effect 在无变化时返回原引用避免无谓 re-render。
+  - `useTimer.ts` 的 `skip` 函数保留（仅 UI 按钮移除）；`skipRound`（跳过整轮）与 `TaskAssignModal` 的 `onSkip`（跳过分配）未改动。
+- **验证方式**：`npm run build`（`tsc -b && vite build`）、`npm run test:logic`（35/35 通过）、`npm run lint` 全部通过。手测：控制栏三按钮为「结束本轮 / 开始暂停 / 增加组数」，点「+」组次圆点多一个；统计页板块占比可切「今天 / 近七天 / 近一个月」。
+- **后续待办 / 已知问题**：沿用 `endNow`/`skipRound` 在 state updater 内调用其它 setState 的已知问题；跨天结算目前只覆盖 `useTimer` 的 `todayPomodoros`，`App.tsx` 的 `today` 变量在 App 常驻跨零点且无数据变化时可能滞后到下一次渲染才更新，建议后续补一个日期 tick 强制刷新。
+
+---
+
 ## 2026-08-15 — 窄屏任务卡改用 Grid 两行布局 + 加宽内容区
 
 ### 给人看（Human Summary）

@@ -1014,9 +1014,10 @@ html[data-theme="farmcraft"] body {
 .cycle-dots { position: relative; display: flex; gap: 6px; align-items: center; }
 .cycle-dot {
   width: 10px; height: 10px; border-radius: 50%;
-  background: var(--border); transition: all 0.3s;
+  background: transparent; border: 1.5px solid var(--border);
+  box-sizing: border-box; transition: all 0.3s;
 }
-.cycle-dot.filled { background: var(--accent); transform: scale(1.2); }
+.cycle-dot.filled { background: var(--accent); border-color: transparent; }
 .cycle-skip-btn {
   position: absolute; left: 100%; top: 50%; width: 24px; height: 24px;
   display: inline-flex; align-items: center; justify-content: center; margin-left: 8px; padding: 0;
@@ -2219,6 +2220,8 @@ html[data-theme="farmcraft"] body {
   .chart-wrapper-lg.trend-chart { height: 250px; }
   .pie-chart-header .stats-metric-toggle { width: 100%; margin-left: 0; }
   .pie-chart-header .metric-btn { flex: 1; justify-content: center; }
+  .pie-chart-header .stats-period-toggle { width: 100%; }
+  .pie-chart-header .period-btn { flex: 1; justify-content: center; }
   .theme-gallery { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   .theme-preview { height: 54px; }
   .manual-focus-grid { grid-template-columns: 1fr; }

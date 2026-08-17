@@ -1,4 +1,4 @@
-import { Play, Pause, SkipForward, RotateCcw } from 'lucide-react';
+import { Play, Pause, Plus, RotateCcw } from 'lucide-react';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface TimerControlsProps {
@@ -6,10 +6,10 @@ interface TimerControlsProps {
   onStart: () => void;
   onPause: () => void;
   onNewRound: () => void;
-  onSkip: () => void;
+  onAddGroup: () => void;
 }
 
-export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip }: TimerControlsProps) {
+export function TimerControls({ isRunning, onStart, onPause, onNewRound, onAddGroup }: TimerControlsProps) {
   const { t } = useLanguage();
   return (
     <div className="timer-controls">
@@ -27,8 +27,8 @@ export function TimerControls({ isRunning, onStart, onPause, onNewRound, onSkip 
           <span>{t('start')}</span>
         </button>
       )}
-      <button className="ctrl-btn secondary" onClick={onSkip} title={t('skipStage')} aria-label={t('skipStage')}>
-        <SkipForward size={18} />
+      <button className="ctrl-btn secondary" onClick={onAddGroup} title={t('addGroup')} aria-label={t('addGroup')}>
+        <Plus size={18} />
       </button>
     </div>
   );
