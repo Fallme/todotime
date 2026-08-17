@@ -21,6 +21,34 @@
 
 ---
 
+## 2026-08-17 — 修复 updater 内副作用反模式 + App 跨零点「今天」日期滞后
+
+### 给人看（Human Summary）
+- **改了什么**：修复两处此前在 CHANGELOG「已知问题」中记录的隐患：① 计时器结束/跳过/结束本轮/长休息结算时，曾在 React state updater 内部调用其它 setState，开发模式 StrictMode 下会导致番茄数双倍累加；② App 常驻跨零点时「今天」这个日期可能滞后，导致今日统计与日期结算用到过期的旧日期。
+- **为什么**：updater 内的副作用违反 React「state updater 须为纯函数」约定，StrictMode 会二次调用 updater 重复执行；跨零点后「今天」若不刷新，今天的番茄记录会错配到旧日期。
+- **影响范围**：计时结束（含长休息完成）、跳过、结束本轮时的番茄计数与待分配结算；跨天时 App 的今日日期及依赖它的统计。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/hooks/useTimer.ts` — 四处副作用移出 setState updater，全部改读 `pendingAssignRef.current` 取最新值、在 updater 外执行副作用：
+    1. `completeOne` 的长休息完成分支：原 `setPendingAssignments(prev => { ...setGroupPhase / setTimeout(showToast)... })` → 先算 `totalMinutes = pendingAssignRef.current.reduce(...)`，updater 外 `setGroupPhase('settle')` 或 `showToast('一轮完成！无记录')`。
+    2. `endNow`：原 updater 内 `setTotalPomodoros/setCycleCount/recordPomodoro/setGroupPhase/setPendingAssignments/showToast` 全部移出，读 `prevPending = pendingAssignRef.current`，按 `task?.id` 分支决定是否 `setPendingAssignments([...prevPending, assignment])`。
+    3. `skip` 的长休息分支：同第 1 处。
+    4. `skipRound`：原 `let next = prev` + updater 内 `recordPomodoro/setTotalPomodoros/setGroupPhase/setTimeout(showToast)` → 读 `prevPending`，updater 外执行全部副作用后 `setPendingAssignments(next)` + `setGroupPhase(next.length > 0 ? 'settle' : 'working')` + `showToast(message)`。
+  - `src/App.tsx` — `const today = formatDate(new Date())` 改为 `useState(() => formatDate(new Date()))` + 每 30s 与 `visibilitychange` 时 `setToday(prev => next === prev ? prev : next)` 的 tick effect。
+  - `AGENTS.md` — 「关键约定」中 updater 反模式条目更新为「已于 2026-08-17 修复」，说明修复方式（读 `pendingAssignRef.current`、副作用移出 updater）。
+- **接口 / 数据模型变化**：无（纯行为重构，无函数签名 / 数据结构变化）。
+- **关键实现细节 / 注意事项**：
+  - `endNow` 有任务分支原 `return prev` 不动 pending，重构后该分支不再调用 `setPendingAssignments`，等价。
+  - 长休息完成 / 长休息跳过分支原「无记录时 `return []` 清空 pending」在重构后不再显式清空：pending 的 `duration` 恒 `Math.max(1, elapsed)` ≥ 1，`totalMinutes === 0` 等价于空数组，清空是 no-op，行为不变。
+  - `skipRound` 原 `setTimeout(..., 0)` 是为了规避「在 updater 内同步调用 showToast」的手段，移出 updater 后改为同步 `showToast`。
+  - `setPendingAssignments(prev => [...prev, assignment])`（`completeOne` 自然结束路径）与两处 `setTodayPomodoros(prev => ...)`（`recordPomodoro`、日期结算）均为纯 updater，本次未改动。
+  - `today` tick 用 `next === prev ? prev : next` 返回原引用，日期不变时不触发多余渲染。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 全部通过。
+- **后续待办 / 已知问题**：无新增。此前「跨天结算只覆盖 `useTimer` 的 `todayPomodoros`、`App.tsx` 的 `today` 可能滞后」的问题，已由本次 `today` tick 一并解决。
+
+---
+
 ## 2026-08-17 — 计时器「跳过」改「增加组数」+ 组次圆点修复 + 跨天结算 + 板块占比时间切换
 
 ### 给人看（Human Summary）

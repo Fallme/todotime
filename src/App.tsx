@@ -78,7 +78,23 @@ export default function App() {
   const [currentTaskId, setCurrentTaskId] = useState<string | null>(null);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
   const [showManualFocus, setShowManualFocus] = useState(false);
-  const today = formatDate(new Date());
+  const [today, setToday] = useState(() => formatDate(new Date()));
+
+  // Keep `today` fresh when the app stays open across midnight (no interaction).
+  useEffect(() => {
+    const update = () => setToday(prev => {
+      const next = formatDate(new Date());
+      return next === prev ? prev : next;
+    });
+    update();
+    const interval = setInterval(update, 30_000);
+    const handleVisibility = () => { if (document.visibilityState === 'visible') update(); };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', settings.darkMode);

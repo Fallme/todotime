@@ -64,5 +64,5 @@ npm run electron:dev # 构建后启动 Electron
 - 日期统一用**本地时区**（`src/utils/dateUtils.ts` 的 `formatDate` 使用 `getFullYear/getMonth/getDate`），不要用 `toISOString()` 取日期（会产生 UTC 跨时区错误）。
 - 计时使用**绝对截止时间**（`deadlineRef = Date.now() + remaining*1000`）计算剩余秒数，不依赖「每秒减一」；后台切回时按真实经过时间校正。
 - 任务归属：`currentTaskRef.current` 有 `id` 时，专注结束直接记录到该任务；无任务时才进入待分配（`pendingAssignments`）并触发 `TaskAssignModal`（`groupPhase === 'settle'`）。
-- React state **updater 须为纯函数**：不要在 `setState(prev => ...)` 内部调用其它 setState。`useTimer.ts` 的 `endNow`/`skipRound` 目前存在该反模式（见 CHANGELOG 已知问题），新增代码不要效仿。
+- React state **updater 须为纯函数**：不要在 `setState(prev => ...)` 内部调用其它 setState。`useTimer.ts` 的 `endNow`/`skipRound` 曾在 updater 内调用 `recordPomodoro`/`setGroupPhase`/`showToast` 等副作用，已于 2026-08-17 修复（改为读取 `pendingAssignRef.current`，副作用全部移到 updater 之外）。新增代码不要效仿该反模式。
 - 前端用 `escHtml()` 或 React 默认转义防止 XSS；任务标题等用户输入不要直接拼 HTML。
