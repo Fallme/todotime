@@ -21,6 +21,32 @@
 
 ---
 
+## 2026-08-17 — 任务名可点击编辑 + 长标题完整显示
+
+### 给人看（Human Summary）
+- **改了什么**：任务清单里每条任务的标题现在可以点击直接编辑修改；长标题不再被省略号截断，完整换行显示所有文字。
+- **为什么**：之前标题最多显示两行、超出就省略号截断，长任务名看不全；且任务名没有编辑入口，改名字只能删了重建。
+- **影响范围**：任务清单卡片（含归档里的任务）；新增「点击标题改任务名」能力。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/hooks/useTodos.ts` — 新增 `updateTodoTitle(id, title)`（map 更新 `title` + `updatedAt`，`title` 相同则 no-op），加入 `UseTodosReturn` 接口与返回对象。
+  - `src/components/TodoList/TodoItem.tsx` — 新增 `onUpdateTitle` prop、`editingTitle` / `titleDraft` state、`startEditTitle` / `commitTitle`；标题从纯 `<span>` 改为「span 点击进入 input，Enter / blur 保存，Escape 取消」。
+  - `src/components/TodoList/TodoList.tsx` — `TodoListProps` 与解构新增 `onUpdateTitle`，两个 `TodoItem` 渲染点（当前列表 + 归档）都透传。
+  - `src/App.tsx` — `TodoList` 传 `onUpdateTitle={todosHook.updateTodoTitle}`。
+  - `src/index.css` — `.todo-card-title` 去掉 `-webkit-line-clamp: 2` 截断，改为完整换行（`word-break: break-word`）+ `cursor: text`；新增 `.todo-card-title-input` 编辑态样式（`flex: 1; min-width: 0`）。
+- **接口 / 数据模型变化**：`UseTodosReturn` 新增 `updateTodoTitle: (id: string, title: string) => void`；`TodoListProps` / `TodoItemProps` 新增 `onUpdateTitle`。
+- **关键实现细节 / 注意事项**：
+  - `commitTitle`：trim 后空标题不保存；`trimmed !== todo.title` 才调 `onUpdateTitle`。
+  - Escape 取消：先 `setTitleDraft(todo.title)` 再 `setEditingTitle(false)`，保证 input 卸载触发的 blur 里 `trimmed === todo.title`，不会误保存。
+  - `startEditTitle` 里 `e.stopPropagation()` 防止点击标题时触发卡片 `onSelect`（选中切换）。
+  - `updateTodoTitle` 带 `t.title !== title` 守卫，Enter 后 blur 的二次提交幂等。
+  - 标题完整显示后卡片高度随内容增长，窄屏 grid 布局不受影响。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：点击任务名 → 输入框 → 改内容 → Enter / 点别处保存；Escape 取消；长标题完整换行无省略号。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 删除「跳过整轮」按钮，保留「结束本轮结算重置」
 
 ### 给人看（Human Summary）

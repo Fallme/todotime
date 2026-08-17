@@ -37,14 +37,17 @@ interface TodoItemProps {
   onDeleteSubtask: (subId: string) => void;
   onChangeCategory: (category: Category) => void;
   onChangeRecurrence: (recurrence: TaskRecurrence) => void;
+  onUpdateTitle: (title: string) => void;
 }
 
-export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle }: TodoItemProps) {
   const { language, t } = useLanguage();
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
   const [showCatPicker, setShowCatPicker] = useState(false);
   const [showRecurrencePicker, setShowRecurrencePicker] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(todo.title);
   const catPickerRef = useRef<HTMLDivElement>(null);
   const isActive = !todo.done && !todo.abandoned;
   const catColor = getCategoryColor(categories, todo.category);
@@ -99,6 +102,18 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
     setSubTitle('');
   };
 
+  const startEditTitle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setTitleDraft(todo.title);
+    setEditingTitle(true);
+  };
+
+  const commitTitle = () => {
+    const trimmed = titleDraft.trim();
+    if (trimmed && trimmed !== todo.title) onUpdateTitle(trimmed);
+    setEditingTitle(false);
+  };
+
   return (
     <div className={`todo-card ${todo.done ? 'done' : ''} ${isSelected ? 'selected' : ''} ${todo.abandoned ? 'abandoned' : ''}`}>
       {/* Main row */}
@@ -121,7 +136,23 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             onClick={e => { e.stopPropagation(); setShowCatPicker(!showCatPicker); }}>
             {todo.category}
           </span>
-          <span className="todo-card-title">{todo.title}</span>
+          {editingTitle ? (
+            <input
+              className="todo-card-title-input"
+              value={titleDraft}
+              autoFocus
+              onClick={e => e.stopPropagation()}
+              onChange={e => setTitleDraft(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
+                else if (e.key === 'Escape') { setTitleDraft(todo.title); setEditingTitle(false); }
+              }}
+              aria-label={msg('编辑任务标题', 'Edit task title')}
+            />
+          ) : (
+            <span className="todo-card-title" onClick={startEditTitle} title={msg('点击编辑标题', 'Click to edit title')}>{todo.title}</span>
+          )}
           {recurrence !== 'none' && <span className="todo-recurrence-tag"><Repeat2 size={10} />{recurrenceLabel}</span>}
           {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
         </div>

@@ -474,6 +474,7 @@ export default function App() {
               onAbandonSubtask={todosHook.abandonSubtask} onRestoreSubtask={todosHook.restoreSubtask} onDeleteSubtask={todosHook.deleteSubtask}
               onChangeCategory={todosHook.changeCategory}
               onChangeRecurrence={todosHook.changeRecurrence}
+              onUpdateTitle={todosHook.updateTodoTitle}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
               onOpenManualFocus={() => setShowManualFocus(true)}

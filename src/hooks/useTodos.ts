@@ -25,6 +25,7 @@ interface UseTodosReturn {
   deleteSubtask: (todoId: string, subId: string) => void;
   changeCategory: (id: string, category: Category) => void;
   changeRecurrence: (id: string, recurrence: TaskRecurrence) => void;
+  updateTodoTitle: (id: string, title: string) => void;
   renameTodosCategory: (oldName: string, newName: string) => void;
   mergeTodos: (gitTodos: Todo[]) => void;
   replaceTodos: (todos: Todo[]) => void;
@@ -232,6 +233,11 @@ export function useTodos(profileId: string): UseTodosReturn {
     } : todo));
   }, []);
 
+  const updateTodoTitle = useCallback((id: string, title: string) => {
+    const ts = now();
+    setTodos(prev => prev.map(t => t.id === id && t.title !== title ? { ...t, title, updatedAt: ts } : t));
+  }, []);
+
   const renameTodosCategory = useCallback((oldName: string, newName: string) => {
     const ts = now();
     setTodos(prev => prev.map(t => t.category === oldName ? { ...t, category: newName, updatedAt: ts } : t));
@@ -252,7 +258,7 @@ export function useTodos(profileId: string): UseTodosReturn {
 
   return {
     todos, addTodo, addCompletedTodo, toggleTodo, abandonTodo, restoreTodo, deleteTodo,
-    updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, changeRecurrence, renameTodosCategory, mergeTodos,
+    updateTodoPomodoros, updateSubtaskPomodoros, reconcilePomodoroRecords, addSubtask, toggleSubtask, abandonSubtask, restoreSubtask, deleteSubtask, changeCategory, changeRecurrence, updateTodoTitle, renameTodosCategory, mergeTodos,
     selectedTodoId, selectTodo, replaceTodos,
   };
 }

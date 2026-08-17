@@ -30,13 +30,14 @@ interface TodoListProps {
   onDeleteSubtask: (todoId: string, subId: string) => void;
   onChangeCategory: (todoId: string, category: Category) => void;
   onChangeRecurrence: (todoId: string, recurrence: TaskRecurrence) => void;
+  onUpdateTitle: (todoId: string, title: string) => void;
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
   onOpenManualFocus: () => void;
 }
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
   const { language, t } = useLanguage();
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const statusTabs: { id: StatusTab; label: ReturnType<typeof t> }[] = [
@@ -144,6 +145,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                 onToggleSubtask={(s) => onToggleSubtask(todo.id, s)} onAbandonSubtask={(s) => onAbandonSubtask(todo.id, s)} onRestoreSubtask={(s) => onRestoreSubtask(todo.id, s)}
                 onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
                 onChangeRecurrence={(recurrence) => onChangeRecurrence(todo.id, recurrence)}
+                onUpdateTitle={(title) => onUpdateTitle(todo.id, title)}
               />
             ))}
             {/* Archive groups */}
@@ -170,6 +172,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                           onToggleSubtask={(subId) => onToggleSubtask(entry.todo.id, subId)} onAbandonSubtask={(subId) => onAbandonSubtask(entry.todo.id, subId)} onRestoreSubtask={(subId) => onRestoreSubtask(entry.todo.id, subId)}
                           onDeleteSubtask={(subId) => onDeleteSubtask(entry.todo.id, subId)} onChangeCategory={(category) => onChangeCategory(entry.todo.id, category)}
                           onChangeRecurrence={(recurrence) => onChangeRecurrence(entry.todo.id, recurrence)}
+                          onUpdateTitle={(title) => onUpdateTitle(entry.todo.id, title)}
                         />
                       ) : (
                         <div className="archive-history-row" key={entry.key}>
