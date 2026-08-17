@@ -1249,11 +1249,19 @@ html[data-theme="farmcraft"] body {
 .todo-card.abandoned .todo-card-cat { opacity: 0.4; }
 
 .todo-card-row {
-  display: flex; align-items: center; gap: 10px;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  grid-template-areas:
+    "status body   body"
+    ".      meta   actions";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
   padding: 10px 12px; min-height: 46px; cursor: pointer;
 }
 
 .todo-card-status {
+  grid-area: status;
   width: 36px; min-width: 36px; display: flex; align-items: center;
   justify-content: center; gap: 4px;
 }
@@ -1269,6 +1277,7 @@ html[data-theme="farmcraft"] body {
 .status-dot.restore { border-color: #00b894; color: #00b894; }
 
 .todo-card-body {
+  grid-area: body;
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
 }
 .todo-recurrence-tag {
@@ -1306,6 +1315,7 @@ html[data-theme="farmcraft"] body {
 }
 
 .todo-card-meta {
+  grid-area: meta; justify-self: start;
   display: flex; align-items: center; gap: 8px; flex-shrink: 0;
 }
 .todo-card-time {
@@ -1318,6 +1328,7 @@ html[data-theme="farmcraft"] body {
 }
 
 .todo-card-actions {
+  grid-area: actions; justify-self: end;
   display: flex; gap: 2px; flex-shrink: 0;
 }
 .card-btn {
@@ -2227,21 +2238,7 @@ html[data-theme="farmcraft"] body {
   .manual-focus-wide { grid-column: auto; }
   .main-content { padding-left: 8px; padding-right: 8px; }
   .todo-list-container { padding: 12px 10px; }
-  .todo-card-row {
-    display: grid;
-    grid-template-columns: 36px minmax(0, 1fr) auto;
-    grid-template-areas:
-      "status body   body"
-      ".      meta   actions";
-    align-items: center;
-    column-gap: 10px;
-    row-gap: 4px;
-    padding: 10px;
-  }
-  .todo-card-status { grid-area: status; }
-  .todo-card-body { grid-area: body; }
-  .todo-card-meta { grid-area: meta; justify-self: start; }
-  .todo-card-actions { grid-area: actions; justify-self: end; }
+  .todo-card-row { padding: 10px; }
 }
 @media (max-width: 350px) {
   .timer-controls { gap: 7px; }

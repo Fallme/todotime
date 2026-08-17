@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-17 — 任务卡统一两行布局：标题第一行、按钮状态第二行
+
+### 给人看（Human Summary）
+- **改了什么**：任务卡片改成统一的「两行布局」——第一行放状态点 + 标题（标题完整显示），第二行放时间/番茄数 + 操作按钮；不再出现「只有标题文字自己折成两行、按钮还挤在标题旁边」的混乱。
+- **为什么**：之前只有窄屏（≤480px）才用两行布局，稍宽一点的窗口里长标题会自己换行，但按钮/时间还悬在第一行右侧，视觉很乱。
+- **影响范围**：所有宽度下的任务清单卡片布局。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/index.css` — 把两行 grid 布局从 `@media (max-width: 480px)` 提升为默认 `.todo-card-row`；`.todo-card-status / body / meta / actions` 默认加上 `grid-area`（meta 靠左、actions 靠右）；删除媒体查询里的重复 grid 定义，仅保留 `padding: 10px` 窄屏覆盖。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - 默认 grid：`grid-template-columns: 36px minmax(0, 1fr) auto`，areas `"status body body" / ". meta actions"`。
+  - 第一行 `body` 横跨第 2、3 列，标题占满剩余宽度、长标题换行；第二行 `meta` 落在 `1fr` 列靠左、`actions` 落在 `auto` 列靠右。
+  - `.todo-card-status` 保留 `width: 36px` 占满第一列；`.todo-card-body` 的 `flex: 1` 在 grid 下失效但无害（内部仍是 flex 排列 cat / title / tag）。
+  - `≤480px` 媒体查询里不再重复定义 grid，只保留 `padding: 10px`（相对默认 `10px 12px` 收窄）。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：桌面把窗口调窄、任务名很长时，标题完整显示在第一行，时间/番茄/按钮整齐在第二行。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 任务名可点击编辑 + 长标题完整显示
 
 ### 给人看（Human Summary）
