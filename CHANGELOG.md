@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-17 — 窄屏任务卡操作按钮移到第二行
+
+### 给人看（Human Summary）
+- **改了什么**：很窄的手机屏（≤480px）下，任务卡片里的操作按钮（播放、子任务、重复、删除）从标题右侧移到第二行，和时间/番茄数排在同一行（时间靠左、按钮靠右）；标题独占第一行剩余宽度。
+- **为什么**：极窄屏下第一行仍塞着「状态点 + 标题 + 最多四个按钮」，按钮挤占标题空间，长标题还是看不清。
+- **影响范围**：手机窄屏（≤480px）任务清单卡片布局。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/index.css` — `@media (max-width: 480px)` 内 `.todo-card-row` 的 `grid-template-areas` 由 `"status body actions" / ". meta meta"` 改为 `"status body body" / ". meta actions"`；`.todo-card-meta` 加 `justify-self: start`，`.todo-card-actions` 加 `justify-self: end`。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - 第一行 `body` 横跨第二、三列（`"status body body"`），按钮移走后标题占满剩余宽度，不再被按钮列挤压。
+  - 第二行 `meta` 落在第二列（`minmax(0,1fr)`）靠左、`actions` 落在第三列（`auto`）靠右，两端对齐、中间留白，复用原有 `row-gap: 4px` 的两行间距。
+  - grid 列定义 `36px minmax(0,1fr) auto` 未改动，仅重排区域（`grid-area` 映射不变，只改 `grid-template-areas` 的摆放）。
+  - `todo-card-actions` 始终至少有「重复 + 删除」两个按钮，第二行右侧不会为空。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run lint` 通过。手测：DevTools 切 ≤480px 视口，确认操作按钮落到第二行、时间/番茄数靠左、按钮靠右、标题独占第一行、无重叠。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 修复 updater 内副作用反模式 + App 跨零点「今天」日期滞后
 
 ### 给人看（Human Summary）
