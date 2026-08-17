@@ -21,6 +21,29 @@
 
 ---
 
+## 2026-08-17 — 删除「跳过整轮」按钮，保留「结束本轮结算重置」
+
+### 给人看（Human Summary）
+- **改了什么**：删除计时器组次圆点右侧的「跳过整轮」按钮（快进图标），只保留「结束并记录本轮（结算重置）」按钮；同时移除对应的跳过整轮逻辑。
+- **为什么**：「跳过整轮」和「结束本轮结算重置」功能重叠，一个结算入口就够了，少一个按钮更清爽。
+- **影响范围**：计时器页面的组次指示区；跳过整轮功能被移除。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/App.tsx` — 删除 `.cycle-dots` 内的 `.cycle-skip-btn` 按钮（`FastForward` 图标 + `timer.skipRound()` 调用），删除 `import { FastForward } from 'lucide-react'`。
+  - `src/hooks/useTimer.ts` — 删除 `TimerApi.skipRound` 类型、`skipRound` useCallback 实现、返回对象里的 `skipRound` 字段。
+  - `src/index.css` — 删除 `.cycle-skip-btn` 与 `.cycle-skip-btn:hover` 规则，删除 `:root:not([data-theme="tomato"]) .cycle-skip-btn,` 选择器。
+  - `test/timerInteractions.test.ts` — `cycle-skip-btn` / `timer.skipRound()` / `跳过并结算整轮` / `const skipRound = useCallback` 等断言由 `assert.match` 改为 `assert.doesNotMatch`，删除两处 skipRound 专属断言。
+- **接口 / 数据模型变化**：`TimerApi` 移除 `skipRound: () => void`。
+- **关键实现细节 / 注意事项**：
+  - `endNow`（结束并记录本轮）保留，作为唯一「结算」入口；`skip`（跳过当前阶段，仅函数保留、UI 早已移除）与 `skipAssignments`（跳过分配）未改动。
+  - `playCycleComplete` 音效仍在 `completeOne` / `skip` 的长休息分支使用，import 未删。
+  - `cycleCountRef.current = 0` / `setCycleCount(0)` 仍存在于 reset / endNow 等路径，相关测试断言继续通过。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 窄屏任务卡操作按钮移到第二行
 
 ### 给人看（Human Summary）

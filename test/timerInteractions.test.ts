@@ -21,19 +21,18 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   const manualFocus = await readFile(new URL('../src/components/Timer/ManualFocusModal.tsx', import.meta.url), 'utf8');
   const sound = await readFile(new URL('../src/utils/sound.ts', import.meta.url), 'utf8');
   assert.doesNotMatch(controls, /onFinishRound/);
-  assert.match(app, /className="cycle-skip-btn"/);
+  assert.doesNotMatch(app, /cycle-skip-btn/);
   assert.match(app, /className="cycle-dots"/);
-  assert.match(app, /timer\.skipRound\(\)/);
-  assert.match(app, /跳过并结算整轮/);
-  assert.doesNotMatch(app, /timer\.mode === 'work'[\s\S]{0,200}cycle-skip-btn/);
-  assert.match(hook, /const skipRound = useCallback/);
+  assert.doesNotMatch(app, /timer\.skipRound\(\)/);
+  assert.doesNotMatch(app, /跳过并结算整轮/);
+  assert.doesNotMatch(hook, /const skipRound = useCallback/);
   assert.match(hook, /cycleCountRef\.current = 0/);
   assert.match(hook, /setCycleCount\(0\)/);
   assert.match(controls, /onAddGroup/);
   assert.doesNotMatch(controls, /onSkip/);
   assert.match(styles, /\.tab-nav\s*\{[\s\S]*?background: var\(--bg\);[\s\S]*?backdrop-filter: none/);
   assert.match(styles, /\.cycle-dots\s*\{[^}]*position: relative/);
-  assert.match(styles, /\.cycle-skip-btn\s*\{[^}]*position: absolute/);
+  assert.doesNotMatch(styles, /\.cycle-skip-btn/);
   assert.doesNotMatch(styles, /:root:not\(\[data-theme="tomato"\]\) \.status-tab,/);
   assert.doesNotMatch(styles, /:root:not\(\[data-theme="tomato"\]\) \.report-tab,/);
   assert.match(todos, /todo-list-header[\s\S]*manual-focus-open[\s\S]*todo-header-stats/);
@@ -51,7 +50,6 @@ test('timer separates whole-cycle settlement from stage skipping', async () => {
   assert.match(hook, /playSound\(isResume \? playResume : playStart\)/);
   assert.match(hook, /playSound\(playPause\)/);
   assert.match(hook, /playSound\(playEnd\)/);
-  assert.match(hook, /const skipRound = useCallback\([\s\S]*?playSound\(playCycleComplete\)/);
   assert.match(app, /lazy\(\(\) => import\('\.\/components\/Stats\/StatsOverview'\)/);
   assert.match(app, /timer\.importPomodoros\(data\.todayPomodoros\)/);
   // 已选任务时专注完成直接归到当前任务，不进入待分配结算弹窗

@@ -33,7 +33,6 @@ interface UseTimerReturn {
   pause: () => void;
   reset: () => void;
   skip: () => void;
-  skipRound: () => void;
   setTotalTime: (seconds: number) => void;
   setTaskInfo: (id: string | null, title: string, category: Category) => void;
   assignAll: (results: { taskId: string | null; taskTitle: string; category: Category }[]) => void;
@@ -577,74 +576,10 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     }
   }, [clearTimer, completeOne, startBreak, advanceCycle, playSound, showToast]);
 
-  const skipRound = useCallback(() => {
-    clearTimer();
-    playSound(playCycleComplete);
-    const wasWork = modeRef.current === 'work';
-    const elapsedSeconds = wasWork ? totalTimeRef.current - timeLeftRef.current : 0;
-    const elapsed = completedMinutes(elapsedSeconds);
-    const startTime = startTimeRef.current || new Date().toISOString();
-    const endTime = new Date().toISOString();
-    const recordId = `focus-${deviceIdRef.current}-${startTime}`;
-
-    const freshDuration = workMinutesRef.current * 60;
-    startTimeRef.current = '';
-    lastCheckpointMinuteRef.current = 0;
-    timeLeftRef.current = freshDuration;
-    totalTimeRef.current = freshDuration;
-    modeRef.current = 'work';
-    cycleCountRef.current = 0;
-    isLongBreakRef.current = false;
-    resumeAfterSettleRef.current = false;
-    setIsRunning(false);
-    setRunningMinutes(0);
-    setMode('work');
-    setTimeLeft(freshDuration);
-    setTotalTimeState(freshDuration);
-    setCycleCount(0);
-
-    const prevPending = pendingAssignRef.current;
-    let next = prevPending;
-    let message = wasWork
-      ? `本轮已结算；当前专注未满 ${MIN_FOCUS_RECORD_MINUTES} 分钟，不记录时长`
-      : '本轮已结算，组次已恢复初始状态';
-
-    if (wasWork && shouldRecordFocus(elapsedSeconds)) {
-      const isPomodoro = countsAsPomodoro(elapsed);
-      const assignment = {
-        id: recordId,
-        start: startTime,
-        end: endTime,
-        date: formatDate(new Date(startTime)),
-        duration: Math.max(1, elapsed),
-      };
-      const task = currentTaskRef.current;
-
-      recordPomodoro({
-        ...assignment,
-        taskId: task?.id ?? null,
-        taskTitle: task?.title || '未分配',
-        category: task?.category || '其他',
-        countsAsPomodoro: isPomodoro,
-        completed: true,
-        createdAt: endTime,
-      });
-      if (isPomodoro) setTotalPomodoros(count => count + 1);
-      if (!task?.id) next = [...prevPending, assignment];
-      message = isPomodoro
-        ? `本轮已结算：${elapsed} 分钟 · 1 个番茄，组次已归零`
-        : `本轮已结算：记录 ${elapsed} 分钟，组次已归零`;
-    }
-
-    setPendingAssignments(next);
-    setGroupPhase(next.length > 0 ? 'settle' : 'working');
-    showToast(message);
-  }, [clearTimer, recordPomodoro, showToast, playSound]);
-
   return {
     mode, timeLeft, totalTime, isRunning, cycleCount, totalPomodoros, todayPomodoros,
     pendingAssignments, groupPhase, toast, runningMinutes,
-    start, startWork, pause, reset, skip, skipRound, setTotalTime, setTaskInfo,
+    start, startWork, pause, reset, skip, setTotalTime, setTaskInfo,
     assignAll, skipAssignments, startNextGroup, stop, endNow, resetCycle, importPomodoros, addManualPomodoro, setOnComplete,
   };
 }

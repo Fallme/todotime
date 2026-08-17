@@ -24,7 +24,6 @@ import { isPomodoroRecord } from './utils/pomodoroRules';
 import { pomodoroRecordKey } from './utils/syncMerge';
 import { createManualFocusRecord } from './utils/manualFocus';
 import { useLanguage } from './i18n/LanguageContext';
-import { FastForward } from 'lucide-react';
 
 type TabId = 'timer' | 'stats' | 'settings';
 
@@ -454,19 +453,6 @@ export default function App() {
                   {Array.from({ length: settings.longBreakInterval }, (_, i) => (
                     <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                   ))}
-                  <button
-                    className="cycle-skip-btn"
-                    type="button"
-                    aria-label={language === 'zh-CN' ? '跳过并结算整轮' : 'Skip and settle the whole cycle'}
-                    title={language === 'zh-CN' ? '跳过整轮：结算当前记录并将四组恢复初始' : 'Skip cycle: settle current records and reset all groups'}
-                    onClick={() => {
-                      timer.skipRound();
-                      setCurrentTaskId(null);
-                      timer.setTaskInfo(null, '', '其他');
-                    }}
-                  >
-                    <FastForward size={13} />
-                  </button>
                 </div>
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
