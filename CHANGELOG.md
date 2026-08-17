@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-17 — 完成/放弃按钮改为左侧独立区域（变大、跨两行居中）
+
+### 给人看（Human Summary）
+- **改了什么**：任务卡片左侧的「完成 ✓」「放弃 ✕」按钮改成独立区域——按钮变大（20px → 28px），竖排在卡片左侧、跨两行垂直居中，不再挤在标题前面。
+- **为什么**：之前两个小圆点挤在标题左侧，太小不好点、位置也不清晰；独立区域更清楚、更好操作。
+- **影响范围**：任务清单卡片的完成/放弃按钮外观与位置（含已完成/已放弃任务的恢复按钮）。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/index.css` — `.todo-card-row` 的 grid 列宽 `36px → 42px`，areas 由 `"status body body" / ". meta actions"` 改为 `"status body body" / "status meta actions"`（status 跨两行）；`.todo-card-status` 去掉固定 `width`，改 `flex-direction: column` + `align-self: center` 竖排居中；`.status-dot` 由 `20px → 28px`、`font-size: 11px → 15px`。
+  - `src/components/TodoList/TodoItem.tsx` — 恢复按钮图标 `Check` / `RotateCcw` 的 size `15/14 → 16`。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - status 跨两行靠 grid areas 实现（第一、二行的第一列都是 `status`），容器 `align-items: center` + `align-self: center` 让它在跨行区域内垂直居中。
+  - 未完成态竖排两个按钮（✓ 完成在上、✕ 放弃在下）；完成/放弃态只有一个恢复按钮，`column` 布局下自然居中。
+  - `pixel` / `farmcraft` 主题对 `.status-dot` 只改 `border-radius`（方角/微圆角），不影响尺寸与布局。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：任务卡左侧两个大圆点竖排居中，点完成/放弃正常。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 任务卡统一两行布局：标题第一行、按钮状态第二行
 
 ### 给人看（Human Summary）

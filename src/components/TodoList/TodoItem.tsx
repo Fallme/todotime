@@ -120,9 +120,9 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
       <div className="todo-card-row" onClick={onSelect}>
         <div className="todo-card-status">
           {todo.done ? (
-            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><Check size={15} /></button>
+            <button className="status-dot done" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><Check size={16} /></button>
           ) : todo.abandoned ? (
-            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><RotateCcw size={14} /></button>
+            <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><RotateCcw size={16} /></button>
           ) : (
             <>
               <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('complete')} aria-label={`${t('complete')}: ${todo.title}`}>✓</button>
