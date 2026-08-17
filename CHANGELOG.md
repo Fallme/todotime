@@ -21,6 +21,31 @@
 
 ---
 
+## 2026-08-17 — 完成按钮独立突出、放弃并入操作行 + 任务卡显示累计用时
+
+### 给人看（Human Summary）
+- **改了什么**：任务卡左侧只保留一个「完成 ✓」大按钮（34px、绿色、悬停填充），更突出；「放弃 ✕」从左侧移到第二行的小按钮区，排在删除按钮左边；每张任务卡 🍅 番茄数旁边新增「累计用时」，显示该任务累计专注时长。
+- **为什么**：完成是高频操作、需要醒目；放弃与删除同属「结束性操作」，归到一起更清晰；用户想看每项任务到底投入了多少时间。
+- **影响范围**：任务清单卡片（含归档里的当前完成项）左侧状态区、第二行操作按钮、辅助信息行。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/App.tsx` — 新增 `focusMinutesByTask` useMemo（从 `dayDataMap` 各日 `pomodoros` + `timer.todayPomodoros` 汇总每个 `taskId` 的 completed 记录 `duration` 之和），传给 `TodoList`；react 导入加入 `useMemo`。
+  - `src/components/TodoList/TodoList.tsx` — `TodoListProps` 增 `focusMinutesByTask: Map<string, number>`，两个 `TodoItem` 渲染点透传 `focusMinutes={focusMinutesByTask.get(todo.id) ?? 0}`。
+  - `src/components/TodoList/TodoItem.tsx` — 新增 `focusMinutes` prop；lucide 导入加 `X`、`Clock3`；活动态状态区只渲染一个 `.status-dot.check` 大按钮（去掉 abandon）；操作行在 `Repeat2` 与删除之间插入 `card-btn abandon`（`X` 图标、仅 `isActive` 显示）；meta 区 🍅 后新增 `.todo-card-focus`（`Clock3` + `msg('累计','Total')` + `focusText`）。
+  - `src/index.css` — `.status-dot.check` 改为 34px/18px 绿色突出 + hover 填充；删除 `.status-dot.abandon:hover`；新增 `.card-btn.abandon:hover`（橙红）与 `.todo-card-focus` 样式。
+- **接口 / 数据模型变化**：`TodoListProps` / `TodoItemProps` 增 `focusMinutesByTask` / `focusMinutes`；无存储结构变化（累计用时为渲染期派生值，不入库、不参与同步）。
+- **关键实现细节 / 注意事项**：
+  - 累计用时 = 所有 `completed && taskId` 的 `PomodoroRecord.duration` 之和，**不**按 `isPomodoroRecord`（≥15min）过滤，因此「<15 分钟的专注」也计入用时；与 🍅 数（只计 ≥15min）口径不同、有意为之（用时=实际投入，番茄数=达标次数）。
+  - `focusMinutes` 只统计 `taskId === 父任务 id` 的记录，子任务记录（`taskId = subtask.id`）不计入父任务，与 🍅 `completedPomodoros` 口径一致。
+  - `legacyPomodoroCount`（无记录的老番茄）没有 duration 数据，不计入累计用时。
+  - 放弃按钮从状态区移到操作行：放弃/恢复仍走原 `onAbandon`/`onRestore`，语义不变；活动态状态区只剩完成大按钮，done/abandoned 态仍显示单个恢复按钮（28px，不放大）。
+  - `.status-dot.check` 放大到 34px 仍在 42px 的 status 列宽内；主题对 `.status-dot` 只改 `border-radius`，不冲突。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：活动任务左侧一个大绿勾、悬停填充为绿色；第二行按钮顺序为「播放/子任务/重复/放弃/删除」；🍅 旁显示「累计 X 分钟 / X 小时」。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 完成/放弃按钮改为左侧独立区域（变大、跨两行居中）
 
 ### 给人看（Human Summary）

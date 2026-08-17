@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Check, Trash2, Play, RotateCcw, Plus, Repeat2 } from 'lucide-react';
+import { Check, Trash2, Play, RotateCcw, Plus, Repeat2, X, Clock3 } from 'lucide-react';
 import type { Todo, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { getCategoryColor } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -38,9 +38,10 @@ interface TodoItemProps {
   onChangeCategory: (category: Category) => void;
   onChangeRecurrence: (recurrence: TaskRecurrence) => void;
   onUpdateTitle: (title: string) => void;
+  focusMinutes: number;
 }
 
-export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle }: TodoItemProps) {
+export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onSelect, onAbandon, onRestore, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle, focusMinutes }: TodoItemProps) {
   const { language, t } = useLanguage();
   const [showSubInput, setShowSubInput] = useState(false);
   const [subTitle, setSubTitle] = useState('');
@@ -64,6 +65,10 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   ];
   const recurrenceLabel = getTaskRecurrenceLabel(recurrence, language);
   const weeklyDays = getWeeklyRecurrenceDays(recurrence);
+  const totalFocus = Math.max(0, Math.round(focusMinutes));
+  const focusText = language === 'zh-CN'
+    ? (totalFocus < 60 ? `${totalFocus}分钟` : totalFocus % 60 ? `${Math.floor(totalFocus / 60)}小时${totalFocus % 60}分` : `${Math.floor(totalFocus / 60)}小时`)
+    : (totalFocus < 60 ? `${totalFocus}m` : totalFocus % 60 ? `${Math.floor(totalFocus / 60)}h ${totalFocus % 60}m` : `${Math.floor(totalFocus / 60)}h`);
   const weekdayOptions = language === 'zh-CN'
     ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
     : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];
@@ -124,10 +129,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           ) : todo.abandoned ? (
             <button className="status-dot restore" onClick={e => { e.stopPropagation(); onRestore(); }} title={t('restore')} aria-label={`${t('restore')}: ${todo.title}`}><RotateCcw size={16} /></button>
           ) : (
-            <>
-              <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('complete')} aria-label={`${t('complete')}: ${todo.title}`}>✓</button>
-              <button className="status-dot abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title={t('abandon')} aria-label={`${t('abandon')}: ${todo.title}`}>✕</button>
-            </>
+            <button className="status-dot check" onClick={e => { e.stopPropagation(); onToggle(); }} title={t('complete')} aria-label={`${t('complete')}: ${todo.title}`}>✓</button>
           )}
         </div>
 
@@ -166,12 +168,16 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             <span className="todo-card-time">{formatIsoTime(todo.createdAt)}</span>
           ) : null}
           <span className="todo-card-pom">🍅 {todo.completedPomodoros}</span>
+          <span className="todo-card-focus" title={msg('累计用时', 'Total focus time')}>
+            <Clock3 size={11} />{msg('累计', 'Total')} {focusText}
+          </span>
         </div>
 
         <div className="todo-card-actions">
           {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); onQuickStart(); }} title={t('startPomodoro')}><Play size={14} /></button>}
           {isActive && <button className="card-btn" onClick={e => { e.stopPropagation(); setShowSubInput(!showSubInput); }} title={t('subtask')}><Plus size={14} /></button>}
           <button className={`card-btn ${recurrence !== 'none' ? 'repeat-active' : ''}`} onClick={e => { e.stopPropagation(); setShowRecurrencePicker(!showRecurrencePicker); }} title={msg('设置刷新周期', 'Set repeat cycle')}><Repeat2 size={14} /></button>
+          {isActive && <button className="card-btn abandon" onClick={e => { e.stopPropagation(); onAbandon(); }} title={t('abandon')} aria-label={`${t('abandon')}: ${todo.title}`}><X size={14} /></button>}
           <button className="card-btn del" onClick={e => { e.stopPropagation(); onDelete(); }} title={t('delete')}><Trash2 size={14} /></button>
         </div>
       </div>

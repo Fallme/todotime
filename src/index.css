@@ -1273,8 +1273,12 @@ html[data-theme="farmcraft"] body {
   color: var(--text-muted); flex-shrink: 0;
 }
 .status-dot.done { border-color: var(--green); color: var(--green); background: rgba(0,184,148,0.08); }
-.status-dot.check:hover { border-color: var(--green); color: var(--green); }
-.status-dot.abandon:hover { border-color: #e17055; color: #e17055; }
+.status-dot.check {
+  width: 34px; height: 34px; font-size: 18px;
+  border-color: var(--green); color: var(--green);
+  background: rgba(0,184,148,0.08);
+}
+.status-dot.check:hover { background: var(--green); border-color: var(--green); color: #fff; }
 .status-dot.restore { border-color: #00b894; color: #00b894; }
 
 .todo-card-body {
@@ -1327,6 +1331,10 @@ html[data-theme="farmcraft"] body {
 .todo-card-pom {
   font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0; display: flex; align-items: center; gap: 2px;
 }
+.todo-card-focus {
+  font-size: 12px; color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+  display: flex; align-items: center; gap: 3px;
+}
 
 .todo-card-actions {
   grid-area: actions; justify-self: end;
@@ -1339,6 +1347,7 @@ html[data-theme="farmcraft"] body {
 }
 .card-btn:hover { background: var(--bg-hover); }
 .card-btn.repeat-active { color: var(--accent); background: var(--accent-bg); }
+.card-btn.abandon:hover { color: #e17055; background: rgba(225,112,85,0.08); }
 .card-btn.del:hover { color: #e74c3c; background: rgba(231,76,60,0.08); }
 .todo-recurrence-picker {
   display: flex; flex-wrap: wrap; gap: 6px; margin: 2px 10px 7px 50px; padding: 7px;

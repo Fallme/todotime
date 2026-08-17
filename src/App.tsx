@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState, useEffect, useRef, useCallback } from 'react';
+import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import type { AppSettings, Category, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS, normalizeTheme } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -167,6 +167,21 @@ export default function App() {
     ];
     reconcilePomodoroRecords(records);
   }, [dayDataMap, timer.todayPomodoros, reconcilePomodoroRecords]);
+
+  // Cumulative focus minutes per task, summed from all completed focus records.
+  const focusMinutesByTask = useMemo(() => {
+    const map = new Map<string, number>();
+    const records = [
+      ...[...dayDataMap.values()].flatMap(day => day.pomodoros),
+      ...timer.todayPomodoros,
+    ];
+    for (const record of records) {
+      if (record.completed && record.taskId) {
+        map.set(record.taskId, (map.get(record.taskId) ?? 0) + (record.duration || 0));
+      }
+    }
+    return map;
+  }, [dayDataMap, timer.todayPomodoros]);
 
   // --- App open: load chart data, then resolve config by sync timestamp ---
   useEffect(() => {
@@ -475,6 +490,7 @@ export default function App() {
               onChangeCategory={todosHook.changeCategory}
               onChangeRecurrence={todosHook.changeRecurrence}
               onUpdateTitle={todosHook.updateTodoTitle}
+              focusMinutesByTask={focusMinutesByTask}
               onAddCategory={handleAddCategory} onDeleteCategory={handleDeleteCategory}
               onRenameCategory={handleRenameCategory}
               onOpenManualFocus={() => setShowManualFocus(true)}

@@ -31,13 +31,14 @@ interface TodoListProps {
   onChangeCategory: (todoId: string, category: Category) => void;
   onChangeRecurrence: (todoId: string, recurrence: TaskRecurrence) => void;
   onUpdateTitle: (todoId: string, title: string) => void;
+  focusMinutesByTask: Map<string, number>;
   onAddCategory: (name: string, color: string) => void;
   onDeleteCategory: (name: string) => void;
   onRenameCategory: (oldName: string, newName: string, newColor: string) => void;
   onOpenManualFocus: () => void;
 }
 
-export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
+export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, onAdd, onToggle, onDelete, onAbandon, onRestore, onSelect, onQuickStart, onQuickStartSubtask, onAddSubtask, onToggleSubtask, onAbandonSubtask, onRestoreSubtask, onDeleteSubtask, onChangeCategory, onChangeRecurrence, onUpdateTitle, focusMinutesByTask, onAddCategory, onDeleteCategory, onRenameCategory, onOpenManualFocus }: TodoListProps) {
   const { language, t } = useLanguage();
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const statusTabs: { id: StatusTab; label: ReturnType<typeof t> }[] = [
@@ -146,6 +147,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                 onDeleteSubtask={(s) => onDeleteSubtask(todo.id, s)} onChangeCategory={(c) => onChangeCategory(todo.id, c)}
                 onChangeRecurrence={(recurrence) => onChangeRecurrence(todo.id, recurrence)}
                 onUpdateTitle={(title) => onUpdateTitle(todo.id, title)}
+                focusMinutes={focusMinutesByTask.get(todo.id) ?? 0}
               />
             ))}
             {/* Archive groups */}
@@ -173,6 +175,7 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
                           onDeleteSubtask={(subId) => onDeleteSubtask(entry.todo.id, subId)} onChangeCategory={(category) => onChangeCategory(entry.todo.id, category)}
                           onChangeRecurrence={(recurrence) => onChangeRecurrence(entry.todo.id, recurrence)}
                           onUpdateTitle={(title) => onUpdateTitle(entry.todo.id, title)}
+                          focusMinutes={focusMinutesByTask.get(entry.todo.id) ?? 0}
                         />
                       ) : (
                         <div className="archive-history-row" key={entry.key}>
