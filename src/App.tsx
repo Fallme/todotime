@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { AppSettings, Category, PomodoroRecord, Todo } from './types';
-import { DEFAULT_SETTINGS, normalizeTheme } from './types';
+import type { AppSettings, Category, CategoryItem, PomodoroRecord, Todo } from './types';
+import { DEFAULT_SETTINGS, normalizeTheme, OTHER_CATEGORY_COLOR, OTHER_CATEGORY_NAME } from './types';
 import { formatDate } from './utils/dateUtils';
 import { initAudio } from './utils/sound';
 import { Header } from './components/Layout/Header';
@@ -30,6 +30,14 @@ type TabId = 'timer' | 'stats' | 'settings';
 const StatsOverview = lazy(() => import('./components/Stats/StatsOverview')
   .then(module => ({ default: module.StatsOverview })));
 
+// 「其他」是未分配专注的兜底分类，必须始终存在于分类列表里，否则统计页会出现
+// 一个灰色、无法编辑的「其他」。
+function ensureOtherCategory(categories: CategoryItem[]): CategoryItem[] {
+  return categories.some(c => c.name === OTHER_CATEGORY_NAME)
+    ? categories
+    : [...categories, { name: OTHER_CATEGORY_NAME, color: OTHER_CATEGORY_COLOR }];
+}
+
 function loadSettings(profileId: string, syncCode: string): AppSettings {
   try {
     const stored = readProfileStorage('todotime_settings', profileId);
@@ -43,9 +51,9 @@ function loadSettings(profileId: string, syncCode: string): AppSettings {
         ...DEFAULT_SETTINGS,
         ...parsed,
         syncCode,
-        categories: Array.isArray(parsed.categories) && parsed.categories.length > 0
+        categories: ensureOtherCategory(Array.isArray(parsed.categories) && parsed.categories.length > 0
           ? parsed.categories
-          : [...DEFAULT_SETTINGS.categories],
+          : [...DEFAULT_SETTINGS.categories]),
       });
     }
     return { ...DEFAULT_SETTINGS, syncCode };
@@ -148,7 +156,7 @@ export default function App() {
     if (currentTaskId && !currentTask) {
       const id = setTimeout(() => {
         setCurrentTaskId(null);
-        setTimerTaskInfo(null, '', '其他');
+        setTimerTaskInfo(null, '', OTHER_CATEGORY_NAME);
       }, 0);
       return () => clearTimeout(id);
     }
@@ -323,7 +331,7 @@ export default function App() {
       }
     } else {
       setCurrentTaskId(null);
-      timer.setTaskInfo(null, '', '其他');
+      timer.setTaskInfo(null, '', OTHER_CATEGORY_NAME);
     }
   };
 
@@ -394,9 +402,9 @@ export default function App() {
             ...DEFAULT_SETTINGS,
             ...importedSettings,
             syncCode: prev.syncCode,
-            categories: Array.isArray(importedSettings.categories) && importedSettings.categories.length > 0
+            categories: ensureOtherCategory(Array.isArray(importedSettings.categories) && importedSettings.categories.length > 0
               ? importedSettings.categories
-              : prev.categories,
+              : prev.categories),
           }));
         }
         if (Array.isArray(data.todos)) replaceTodos(data.todos);
@@ -423,6 +431,7 @@ export default function App() {
     }
   };
   const handleDeleteCategory = (name: string) => {
+    if (name === OTHER_CATEGORY_NAME) return;
     const replacement = settings.categories.find(category => category.name !== name);
     if (!replacement) return;
     setSettings(s => ({ ...s, categories: s.categories.filter(c => c.name !== name) }));
@@ -502,7 +511,7 @@ export default function App() {
             <Suspense fallback={<div className="stats-loading" role="status">{t('loadingStats')}</div>}>
               <StatsOverview dayDataMap={dayDataMap} todayPomodoros={timer.todayPomodoros} categories={settings.categories} todos={todos}
                 runningMinutes={timer.mode === 'work' ? timer.runningMinutes : 0}
-                runningCategory={currentTask?.category ?? '其他'}
+                runningCategory={currentTask?.category ?? OTHER_CATEGORY_NAME}
                 onRefresh={async () => {
                   // First refresh dayDataMap from git (daily pomodoro data)
                   await loadAll();
@@ -549,18 +558,18 @@ export default function App() {
           <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 320 }}>
             <h3 className="modal-title">{t('switchTask')}</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 12, maxHeight: 300, overflowY: 'auto' }}>
-              <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: '#636e72', background: !currentTaskId ? '#636e72' : undefined, color: !currentTaskId ? 'white' : undefined }}
-                onClick={() => { setCurrentTaskId(null); timer.setTaskInfo(null, '', '其他'); setShowTaskPicker(false); }}>
+              <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: OTHER_CATEGORY_COLOR, background: !currentTaskId ? OTHER_CATEGORY_COLOR : undefined, color: !currentTaskId ? 'white' : undefined }}
+                onClick={() => { setCurrentTaskId(null); timer.setTaskInfo(null, '', OTHER_CATEGORY_NAME); setShowTaskPicker(false); }}>
                 {t('noTaskOther')}
               </button>
               {todos.filter(t => !t.deletedAt && !t.done && !t.abandoned).map(t => (
                 <div key={t.id} style={{ display: 'contents' }}>
-                  <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
+                  <button className="cat-pick-btn" style={{ width: '100%', justifyContent: 'center', padding: '8px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || OTHER_CATEGORY_COLOR, background: currentTaskId === t.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === t.id ? 'white' : undefined }}
                     onClick={() => { setCurrentTaskId(t.id); timer.setTaskInfo(t.id, t.title, t.category); setShowTaskPicker(false); }}>
                     {t.title}（{t.category}）
                   </button>
                   {t.subtasks.filter(subtask => !subtask.deletedAt && !subtask.done && !subtask.abandoned).map(subtask => (
-                    <button key={subtask.id} className="cat-pick-btn" style={{ width: '92%', alignSelf: 'flex-end', justifyContent: 'center', padding: '7px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || '#636e72', background: currentTaskId === subtask.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === subtask.id ? 'white' : undefined }}
+                    <button key={subtask.id} className="cat-pick-btn" style={{ width: '92%', alignSelf: 'flex-end', justifyContent: 'center', padding: '7px 12px', borderColor: settings.categories.find(c => c.name === t.category)?.color || OTHER_CATEGORY_COLOR, background: currentTaskId === subtask.id ? settings.categories.find(c => c.name === t.category)?.color : undefined, color: currentTaskId === subtask.id ? 'white' : undefined }}
                       onClick={() => { setCurrentTaskId(subtask.id); timer.setTaskInfo(subtask.id, subtask.title, t.category); setShowTaskPicker(false); }}>
                       ↳ {subtask.title}
                     </button>

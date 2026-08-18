@@ -1,7 +1,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
-import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
+import { getCategoryColor, OTHER_CATEGORY_NAME, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
@@ -44,7 +44,7 @@ function computePeriodData(
   offsetDays: number = 0,
   todos: Todo[] = [],
   runningMinutes: number = 0,
-  runningCategory: string = '其他',
+  runningCategory: string = OTHER_CATEGORY_NAME,
 ): PeriodResult {
   const now = new Date();
   const days: string[] = [];
@@ -187,7 +187,7 @@ function readCssColor(prop: string, fallback: string): string {
   return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : fallback;
 }
 
-export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
+export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = OTHER_CATEGORY_NAME, onRefresh }: StatsOverviewProps) {
   const { language, t } = useLanguage();
   const [period, setPeriod] = useState<Period>('day');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');

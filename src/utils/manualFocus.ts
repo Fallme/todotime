@@ -1,4 +1,5 @@
 import type { Category, PomodoroRecord, Todo } from '../types';
+import { OTHER_CATEGORY_NAME } from '../types/index.ts';
 import { formatDate } from './dateUtils.ts';
 import { countsAsPomodoro } from './pomodoroRules.ts';
 
@@ -18,7 +19,7 @@ export function resolveManualFocusCategory(
   newTaskCategory: Category,
 ): Category {
   if (assignment === 'new') return newTaskCategory;
-  return todos.find(todo => todo.id === assignment)?.category ?? '其他';
+  return todos.find(todo => todo.id === assignment)?.category ?? OTHER_CATEGORY_NAME;
 }
 
 export function createManualFocusRecord(input: ManualFocusRecordInput): PomodoroRecord {

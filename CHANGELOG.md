@@ -21,6 +21,32 @@
 
 ---
 
+## 2026-08-18 — 「其他」分类改为可编辑的暖色兜底分类，不再灰色
+
+### 给人看（Human Summary）
+- **改了什么**：未指定任务的专注记录所归入的「其他」分类，默认颜色从灰色改为暖棕色（`#b08968`）；「其他」被设为系统兜底分类——始终存在于分类列表里、可改名改色，但不能删除（删除按钮禁用）。
+- **为什么**：此前未分配专注都归到硬编码的「其他」，一旦该分类被删除或缺失，统计页就会出现一个灰色、无法编辑的「其他」；且默认灰色本身不美观。
+- **影响范围**：统计页饼图/柱状图中「其他」的颜色、任务选择器里「无任务（其他）」按钮颜色、添加任务分类面板里「其他」的删除按钮；数据模型与同步逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/types/index.ts` — 新增 `OTHER_CATEGORY_NAME = '其他'`、`OTHER_CATEGORY_COLOR = '#b08968'`；`DEFAULT_CATEGORIES` 中「其他」改为引用常量与暖色；`getCategoryColor` 兜底色由 `#636e72` 改为 `OTHER_CATEGORY_COLOR`。
+  - `src/App.tsx` — 新增 `ensureOtherCategory(categories)`（缺失时补上「其他」）；`loadSettings` 与 `handleImport` 的分类赋值走 `ensureOtherCategory`；`handleDeleteCategory` 对 `OTHER_CATEGORY_NAME` 直接 return；4 处硬编码 `'其他'` 改常量；任务选择器「无任务（其他）」按钮与分类兜底色 `#636e72` 改为 `OTHER_CATEGORY_COLOR`。
+  - `src/hooks/useTimer.ts` — 未分配专注记录 `category` 的 4 处 `'其他'` 改为 `OTHER_CATEGORY_NAME`（值导入用 `../types/index.ts`）。
+  - `src/utils/manualFocus.ts` / `src/utils/backup.ts` — 兜底分类 `'其他'` 改为常量（值导入用 `../types/index.ts`）。
+  - `src/components/Timer/ManualFocusModal.tsx`、`src/components/Timer/TaskAssignModal.tsx`、`src/components/Stats/StatsOverview.tsx`、`src/components/TodoList/AddTodo.tsx` — 兜底分类 `'其他'` / `t('other')` 改为 `OTHER_CATEGORY_NAME`；AddTodo 的「其他」删除按钮 `disabled`、`title` 用新 i18n `keepOtherCategory`；分类徽章兜底色改为 `OTHER_CATEGORY_COLOR`。
+  - `src/i18n/LanguageContext.tsx` — 新增 `keepOtherCategory`（zh「「其他」用于未分配任务的专注，不可删除」/ en「“Other” is used for unassigned focus and cannot be deleted」）。
+- **接口 / 数据模型变化**：`Category` / `CategoryItem` 结构不变；新增导出常量 `OTHER_CATEGORY_NAME` / `OTHER_CATEGORY_COLOR`；存储与同步无 schema 变化。
+- **关键实现细节 / 注意事项**：
+  - Node ESM 测试运行器不支持目录导入 `from '../types'`（报 `ERR_UNSUPPORTED_DIR_IMPORT`），值导入必须写 `from '../types/index.ts'`；`import type` 会被擦除、不受影响。因此 `manualFocus.ts` / `useTimer.ts` / `backup.ts` 的值导入均带 `index.ts` 后缀。
+  - 「其他」仍可改名：改名后本会话内未分配专注会短暂落回旧名「其他」，下次加载 `ensureOtherCategory` 会重新补回「其他」；如需彻底跟随改名，需给分类加稳定 id（暂不做）。
+  - 删除保护在两层：`handleDeleteCategory`（App 层守卫）+ AddTodo 删除按钮 `disabled`，双保险防止「其他」被删后统计页出现灰色幻影分类。
+  - `getCategoryColor` 兜底色改为暖色后，任何不在分类列表里的历史分类（如改名前的旧名）会显示暖棕而非灰，视觉更协调。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页未分配专注的「其他」显示暖棕；添加任务分类面板里「其他」的 × 为禁用态、可点 ✎ 改名改色；删除其他分类不受影响。
+- **后续待办 / 已知问题**：如需支持「其他」改名后未分配专注也跟随，需为分类引入稳定 id 并改造所有 `category` 字符串引用（涉及存储/同步迁移，暂不实施）。
+
+---
+
 ## 2026-08-18 — 统计柱状图配色改为跟随主题
 
 ### 给人看（Human Summary）

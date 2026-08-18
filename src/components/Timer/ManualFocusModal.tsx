@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Clock3, Plus } from 'lucide-react';
 import type { Category, CategoryItem, Todo } from '../../types';
+import { OTHER_CATEGORY_NAME } from '../../types';
 import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
 import { resolveManualFocusCategory } from '../../utils/manualFocus';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -33,7 +34,7 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [duration, setDuration] = useState(25);
   const [endAt, setEndAt] = useState(localDateTimeValue);
-  const [category, setCategory] = useState<Category>(categories[0]?.name ?? '其他');
+  const [category, setCategory] = useState<Category>(categories[0]?.name ?? OTHER_CATEGORY_NAME);
   const [error, setError] = useState('');
   const tomatoCount = duration >= MIN_POMODORO_MINUTES ? 1 : 0;
   const selectedTodo = activeTodos.find(todo => todo.id === assignment);

@@ -1,4 +1,5 @@
 import type { PomodoroRecord } from '../types/index.ts';
+import { OTHER_CATEGORY_NAME } from '../types/index.ts';
 import { formatDate } from './dateUtils.ts';
 import { countsAsPomodoro } from './pomodoroRules.ts';
 import { mergePomodoroRecords } from './syncMerge.ts';
@@ -33,7 +34,7 @@ export function normalizeImportedPomodoros(value: unknown): PomodoroRecord[] {
       duration,
       taskId,
       taskTitle: typeof item.taskTitle === 'string' && item.taskTitle ? item.taskTitle : '未分配',
-      category: typeof item.category === 'string' && item.category ? item.category : '其他',
+      category: typeof item.category === 'string' && item.category ? item.category : OTHER_CATEGORY_NAME,
       completed: true,
       countsAsPomodoro: item.completed === true && typeof item.countsAsPomodoro === 'boolean'
         ? item.countsAsPomodoro

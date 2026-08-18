@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Plus, Repeat2, Pencil } from 'lucide-react';
 import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
+import { OTHER_CATEGORY_COLOR, OTHER_CATEGORY_NAME } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
 import type { TaskRecurrenceKind } from '../../utils/taskRecurrence';
@@ -49,7 +50,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
     { id: 'monthly', label: msg('每月', 'Monthly') },
   ];
 
-  const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || '其他';
+  const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || OTHER_CATEGORY_NAME;
   const currentCat = categories.find(c => c.name === selectedCategory);
   const recurrenceKind = getTaskRecurrenceKind(recurrence);
   const weeklyDays = getWeeklyRecurrenceDays(recurrence);
@@ -116,7 +117,7 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
     <form className="add-todo" onSubmit={handleAddTask}>
       <div className="add-todo-row">
         <button type="button" className="category-badge-add"
-          style={{ color: 'var(--text)', borderColor: currentCat?.color || '#636e72', background: currentCat ? currentCat.color + '18' : 'transparent' }}
+          style={{ color: 'var(--text)', borderColor: currentCat?.color || OTHER_CATEGORY_COLOR, background: currentCat ? currentCat.color + '18' : 'transparent' }}
           onClick={() => { setShowCatPicker(!showCatPicker); setEditingCat(null); setShowCatAdd(false); }}>
           {category}
         </button>
@@ -202,8 +203,8 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                       onClick={(e) => { e.stopPropagation(); startEdit(cat); }} title={t('editCategory')}>
                       <Pencil size={11} />
                     </button>
-                    <button type="button" className="category-chip-del" disabled={categories.length <= 1}
-                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '其他'); }} title={categories.length <= 1 ? t('keepOneCategory') : t('deleteCategory')}>×</button>
+                    <button type="button" className="category-chip-del" disabled={categories.length <= 1 || cat.name === OTHER_CATEGORY_NAME}
+                      onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || OTHER_CATEGORY_NAME); }} title={categories.length <= 1 ? t('keepOneCategory') : cat.name === OTHER_CATEGORY_NAME ? t('keepOtherCategory') : t('deleteCategory')}>×</button>
                   </div>
                 ))}
                 <button type="button" className="category-chip add" onClick={() => { setShowCatAdd(!showCatAdd); }}>+</button>

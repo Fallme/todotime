@@ -15,17 +15,22 @@ export interface CategoryItem {
   color: string;
 }
 
+// 「其他」是系统兜底分类：未指定任务的专注都会归到它，因此它必须始终存在。
+// 名称固定为常量，颜色可改（默认用暖色，不再用灰色）。
+export const OTHER_CATEGORY_NAME = '其他';
+export const OTHER_CATEGORY_COLOR = '#b08968';
+
 export const DEFAULT_CATEGORIES: CategoryItem[] = [
   { name: '数学', color: '#0984e3' },
   { name: '专业课', color: '#6c5ce7' },
   { name: '英语', color: '#e84393' },
   { name: '政治', color: '#d63031' },
   { name: '运动', color: '#00cec9' },
-  { name: '其他', color: '#636e72' },
+  { name: OTHER_CATEGORY_NAME, color: OTHER_CATEGORY_COLOR },
 ];
 
 export function getCategoryColor(categories: CategoryItem[], name: string): string {
-  return categories.find(c => c.name === name)?.color || '#636e72';
+  return categories.find(c => c.name === name)?.color || OTHER_CATEGORY_COLOR;
 }
 
 export function getRandomColor(): string {

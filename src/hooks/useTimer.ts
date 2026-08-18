@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
+import { OTHER_CATEGORY_NAME } from '../types/index.ts';
 import { formatDate, generateId } from '../utils/dateUtils';
 import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
 import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
@@ -306,7 +307,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     } else {
       recordPomodoro({
         ...assignment,
-        taskId: null, taskTitle: '未分配', category: '其他',
+        taskId: null, taskTitle: '未分配', category: OTHER_CATEGORY_NAME,
         countsAsPomodoro: countsAsPomodoro(assignment.duration), completed: true, createdAt: endTime,
       });
       setPendingAssignments(prev => [...prev, assignment]);
@@ -355,7 +356,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           duration: completedMinute,
           taskId: task?.id ?? null,
           taskTitle: task?.title || '未分配',
-          category: task?.category || '其他',
+          category: task?.category || OTHER_CATEGORY_NAME,
           countsAsPomodoro: false,
           completed: false,
           createdAt: checkpointStart,
@@ -390,7 +391,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       const a = results[i] || results[results.length - 1];
       recordPomodoro({
         id: pa.id, start: pa.start, end: pa.end, date: pa.date, duration: pa.duration,
-        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || '其他',
+        taskId: a.taskId, taskTitle: a.taskTitle || '未分配', category: a.category || OTHER_CATEGORY_NAME,
         countsAsPomodoro: countsAsPomodoro(pa.duration), completed: true, createdAt: pa.end,
       });
     });
@@ -478,7 +479,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
       } else {
         recordPomodoro({
           id: recordId, start: startTime, end: endTime, date, duration: elapsed,
-          taskId: null, taskTitle: '未分配', category: '其他',
+          taskId: null, taskTitle: '未分配', category: OTHER_CATEGORY_NAME,
           countsAsPomodoro: isPomodoro, completed: true, createdAt: endTime,
         });
         setPendingAssignments([...prevPending, { id: recordId, start: startTime, end: endTime, date, duration: elapsed }]);

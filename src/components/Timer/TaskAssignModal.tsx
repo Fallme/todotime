@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Todo, Category } from '../../types';
+import { OTHER_CATEGORY_NAME } from '../../types';
 import type { PendingAssignment } from '../../hooks/useTimer';
 import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -29,7 +30,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll
     const result = {
       taskId: todo?.id ?? subtask?.id ?? null,
       taskTitle: todo?.title ?? subtask?.title ?? t('unassigned'),
-      category: (todo?.category ?? subtask?.category ?? t('other')) as Category,
+      category: (todo?.category ?? subtask?.category ?? OTHER_CATEGORY_NAME) as Category,
     };
     if (!result.taskId) return;
     onAssignAll(assignments.map(() => result));
