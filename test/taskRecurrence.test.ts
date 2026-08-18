@@ -42,7 +42,8 @@ test('recurring due dates support day intervals weekdays and monthly dates', asy
 
   const addTodo = await readFile(new URL('../src/components/TodoList/AddTodo.tsx', import.meta.url), 'utf8');
   const monthlyCalendar = await readFile(new URL('../src/components/TodoList/MonthlyRecurrenceCalendar.tsx', import.meta.url), 'utf8');
-  assert.match(addTodo, /value="everyTwoDays"/);
+  assert.match(addTodo, /'everyTwoDays'/);
+  assert.match(addTodo, /recurrence-modal-options/);
   assert.match(addTodo, /weekdayOptions/);
   assert.match(addTodo, /MonthlyRecurrenceCalendar/);
   assert.match(monthlyCalendar, /length: 31/);

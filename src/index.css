@@ -1170,19 +1170,24 @@ html[data-theme="farmcraft"] body {
   display: flex; align-items: center; justify-content: center;
 }
 .add-todo-btn:disabled { opacity: 0.4; cursor: default; }
-.add-todo-recurrence {
-  width: fit-content; display: flex; align-items: center; gap: 5px; margin: 7px 0 0 auto;
-  color: var(--text-muted); font-size: 11px;
+.add-todo-repeat-btn {
+  width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg); color: var(--text-muted); cursor: pointer; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; transition: all 0.15s;
 }
-.add-todo-recurrence select {
-  min-width: 92px; padding: 4px 24px 4px 8px; border: 1px solid var(--border); border-radius: 7px;
-  background: var(--bg); color: var(--text-secondary); font-size: 11px; outline: none;
+.add-todo-repeat-btn:hover { border-color: var(--accent); color: var(--accent); }
+.add-todo-repeat-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-bg); }
+.recurrence-modal { max-width: 400px; }
+.recurrence-modal-options { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.recurrence-modal-options button {
+  padding: 7px 13px; border: 1px solid var(--border); border-radius: 9px;
+  background: var(--bg); color: var(--text-secondary); font: inherit; font-size: 13px; cursor: pointer;
+  transition: all 0.15s;
 }
-.add-todo-recurrence select:focus { border-color: var(--accent); }
-.recurrence-detail {
-  display: flex; align-items: center; justify-content: flex-end; gap: 5px;
-  margin: 6px 0 0 auto; color: var(--text-muted); font-size: 10px;
-}
+.recurrence-modal-options button:hover { border-color: var(--accent); color: var(--accent); }
+.recurrence-modal-options button.active { border-color: var(--accent); background: var(--accent-bg); color: var(--accent); font-weight: 600; }
+.recurrence-modal-detail { display: flex; align-items: center; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.recurrence-modal-detail.weekday-selector button { min-width: 28px; height: 28px; font-size: 11px; }
 .weekday-selector button {
   min-width: 25px; height: 25px; padding: 0 5px; border: 1px solid var(--border); border-radius: 7px;
   background: var(--bg); color: var(--text-secondary); font: inherit; font-size: 10px; cursor: pointer;
@@ -1859,6 +1864,7 @@ html[data-theme="farmcraft"] body {
 :root:not([data-theme="tomato"]) .quick-adjust-btn,
 :root:not([data-theme="tomato"]) .modal-btn,
 :root:not([data-theme="tomato"]) .add-todo-btn,
+:root:not([data-theme="tomato"]) .add-todo-repeat-btn,
 :root:not([data-theme="tomato"]) .period-btn,
 :root:not([data-theme="tomato"]) .metric-btn,
 :root:not([data-theme="tomato"]) .theme-option,
@@ -1890,6 +1896,7 @@ html[data-theme="farmcraft"] body {
 :root:not([data-theme="tomato"]) .monthly-calendar-trigger,
 :root:not([data-theme="tomato"]) .monthly-calendar-grid button,
 :root:not([data-theme="tomato"]) .todo-recurrence-picker button,
+:root:not([data-theme="tomato"]) .recurrence-modal-options button,
 :root:not([data-theme="tomato"]) input,
 :root:not([data-theme="tomato"]) select {
   border-radius: var(--theme-control-radius);

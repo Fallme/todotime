@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Plus, Repeat2 } from 'lucide-react';
 import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
-import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
+import type { TaskRecurrenceKind } from '../../utils/taskRecurrence';
 import { MonthlyRecurrenceCalendar } from './MonthlyRecurrenceCalendar';
 
 interface AddTodoProps {
@@ -36,7 +37,17 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
   const [newCatColor, setNewCatColor] = useState(getRandomHSL());
   const [randomPreview, setRandomPreview] = useState(getRandomHSL);
   const [recurrence, setRecurrence] = useState<TaskRecurrence>('none');
+  const [showRecurrenceModal, setShowRecurrenceModal] = useState(false);
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
+
+  const recurrenceOptions: Array<{ id: TaskRecurrenceKind; label: string }> = [
+    { id: 'none', label: msg('不自动刷新', 'No repeat') },
+    { id: 'daily', label: msg('每日', 'Daily') },
+    { id: 'everyOtherDay', label: msg('隔日', 'Every other day') },
+    { id: 'everyTwoDays', label: msg('隔二日', 'Every three days') },
+    { id: 'weekly', label: msg('每周', 'Weekly') },
+    { id: 'monthly', label: msg('每月', 'Monthly') },
+  ];
 
   const selectedCategory = categories.some(c => c.name === category) ? category : categories[0]?.name || '其他';
   const currentCat = categories.find(c => c.name === selectedCategory);
@@ -46,10 +57,10 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
     ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
     : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];
 
-  const changeRecurrenceKind = (kind: string) => {
+  const changeRecurrenceKind = (kind: TaskRecurrenceKind) => {
     if (kind === 'weekly') setRecurrence(recurrenceKind === 'weekly' ? recurrence : buildWeeklyRecurrence([1]));
     else if (kind === 'monthly') setRecurrence(recurrenceKind === 'monthly' ? recurrence : buildMonthlyRecurrence(1));
-    else setRecurrence(kind as TaskRecurrence);
+    else setRecurrence(kind);
   };
 
   const toggleWeekday = (day: number) => {
@@ -111,37 +122,45 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
         </button>
         <input className="add-todo-input" placeholder={t('taskNamePlaceholder')}
           value={title} onChange={e => setTitle(e.target.value)} />
+        <button className={`add-todo-repeat-btn ${recurrence !== 'none' ? 'active' : ''}`} type="button"
+          onClick={() => setShowRecurrenceModal(true)}
+          title={msg('刷新周期', 'Repeat') + '：' + getTaskRecurrenceLabel(recurrence, language)}
+          aria-label={msg('设置刷新周期', 'Set repeat cycle')}>
+          <Repeat2 size={16} />
+        </button>
         <button className="add-todo-btn" type="submit" disabled={!title.trim()}>
           <Plus size={18} />
         </button>
       </div>
 
-      <div className="add-todo-recurrence">
-        <Repeat2 size={13} />
-        <span>{msg('刷新周期', 'Repeat')}</span>
-        <select value={recurrenceKind} onChange={event => changeRecurrenceKind(event.target.value)}>
-          <option value="none">{msg('不自动刷新', 'No repeat')}</option>
-          <option value="daily">{msg('每日刷新', 'Daily')}</option>
-          <option value="everyOtherDay">{msg('隔日刷新', 'Every other day')}</option>
-          <option value="everyTwoDays">{msg('隔二日刷新', 'Every three days')}</option>
-          <option value="weekly">{msg('指定星期', 'Selected weekdays')}</option>
-          <option value="monthly">{msg('每月指定日期', 'Monthly date')}</option>
-        </select>
-      </div>
-
-      {recurrenceKind === 'weekly' && (
-        <div className="recurrence-detail weekday-selector" aria-label={msg('选择每周刷新日期', 'Choose weekly refresh days')}>
-          {weekdayOptions.map(option => (
-            <button key={option.day} type="button" className={weeklyDays.includes(option.day) ? 'active' : ''}
-              onClick={() => toggleWeekday(option.day)}>{option.label}</button>
-          ))}
-        </div>
-      )}
-
-      {recurrenceKind === 'monthly' && (
-        <div className="recurrence-detail monthly-selector">
-          <span>{msg('每月', 'Monthly')}</span>
-          <MonthlyRecurrenceCalendar recurrence={recurrence} onChange={setRecurrence} />
+      {showRecurrenceModal && (
+        <div className="modal-overlay" onClick={() => setShowRecurrenceModal(false)}>
+          <div className="modal-content recurrence-modal" onClick={event => event.stopPropagation()}>
+            <h3 className="modal-title">{msg('刷新周期', 'Repeat cycle')}</h3>
+            <p className="modal-desc">{msg('新任务完成后，按此周期自动恢复为待办。', 'Completed tasks reopen automatically on this schedule.')}</p>
+            <div className="recurrence-modal-options">
+              {recurrenceOptions.map(option => (
+                <button key={option.id} type="button" className={recurrenceKind === option.id ? 'active' : ''}
+                  onClick={() => changeRecurrenceKind(option.id)}>{option.label}</button>
+              ))}
+            </div>
+            {recurrenceKind === 'weekly' && (
+              <div className="recurrence-modal-detail weekday-selector" aria-label={msg('选择每周刷新日期', 'Choose weekly refresh days')}>
+                {weekdayOptions.map(option => (
+                  <button key={option.day} type="button" className={weeklyDays.includes(option.day) ? 'active' : ''}
+                    onClick={() => toggleWeekday(option.day)}>{option.label}</button>
+                ))}
+              </div>
+            )}
+            {recurrenceKind === 'monthly' && (
+              <div className="recurrence-modal-detail">
+                <MonthlyRecurrenceCalendar recurrence={recurrence} onChange={setRecurrence} />
+              </div>
+            )}
+            <div className="modal-actions">
+              <button className="modal-btn primary" type="button" onClick={() => setShowRecurrenceModal(false)}>{msg('完成', 'Done')}</button>
+            </div>
+          </div>
         </div>
       )}
 

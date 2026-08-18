@@ -21,6 +21,29 @@
 
 ---
 
+## 2026-08-18 — 添加任务的刷新周期改为「加号前的按钮 + 弹窗」设置
+
+### 给人看（Human Summary）
+- **改了什么**：添加任务输入行里，刷新周期不再另起一行用下拉框设置；改为在「+」加号按钮前放一个「🔁 重复」按钮，点击后弹出弹窗，在弹窗里选择刷新周期（不自动刷新 / 每日 / 隔日 / 隔二日 / 每周 / 每月），每周/每月可继续在弹窗内展开选择具体日期。
+- **为什么**：原来的下拉框单独占一行，让添加任务区域显得臃肿；收进一个按钮 + 弹窗后，添加行更简洁，与项目其他弹窗（如主题、设置）交互一致。
+- **影响范围**：添加任务表单（TodoList 顶部输入行）与刷新周期设置方式；不影响任务数据模型与刷新逻辑。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/TodoList/AddTodo.tsx` — 删除内联 `.add-todo-recurrence` 下拉框及每周/每月内联详情块；新增 `showRecurrenceModal` state、`recurrenceOptions`（`TaskRecurrenceKind` + 中英文 label 数组）；`changeRecurrenceKind(kind: TaskRecurrenceKind)` 签名改为接收 kind（weekly→`buildWeeklyRecurrence([1])`、monthly→`buildMonthlyRecurrence(1)` 的默认构造逻辑保持不变）；主输入行在「+」前新增 `.add-todo-repeat-btn`（`Repeat2` 图标，激活态显示 `active` class，`title` 用 `getTaskRecurrenceLabel`）；新增 `.modal-overlay > .recurrence-modal` 弹窗，内含 `recurrence-modal-options`（6 个选项按钮）、weekly 的 `weekday-selector`、monthly 的 `MonthlyRecurrenceCalendar`，底部「完成」按钮关闭弹窗。
+  - `src/index.css` — 删除 `.add-todo-recurrence` / `.recurrence-detail` 相关规则；新增 `.add-todo-repeat-btn`（40px 方形、hover/active 高亮）、`.recurrence-modal`、`.recurrence-modal-options`（flex-wrap 选项按钮）、`.recurrence-modal-detail`（含 `.weekday-selector` 小按钮）；并在主题 `border-radius` 覆盖选择器列表中加入 `.add-todo-repeat-btn`、`.recurrence-modal-options button`。
+  - `test/taskRecurrence.test.ts` — 源级断言由 `/value="everyTwoDays"/`（旧 `<select><option>`）更新为 `/'everyTwoDays'/` + `/recurrence-modal-options/`（新 `recurrenceOptions` 数组 + 弹窗 class）。
+- **接口 / 数据模型变化**：`TaskRecurrence` / `TaskRecurrenceKind` 字符串值不变；`changeRecurrenceKind` 入参类型由隐式改为显式 `TaskRecurrenceKind`（内部函数，非导出接口）。存储与同步无变化。
+- **关键实现细节 / 注意事项**：
+  - 弹窗遵循既有模态范式：`.modal-overlay` 点击关闭、`.modal-content` `stopPropagation`；`recurrence` state 在弹窗打开期间即可实时变更，点「完成」仅关闭弹窗（无单独确认逻辑）。
+  - `toggleWeekday` 保持「至少保留一个工作日」约束（最后一个选中项不可取消），与旧内联行为一致。
+  - 加号按钮（`add-todo-btn`）与重复按钮均为 `type="button"`/`type="submit"` 分离，避免弹窗按钮误触发表单提交。
+  - 源级回归测试依赖组件源码字符串，JSX 结构调整时须同步更新断言（本次已同步）。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：添加行「+」前出现重复按钮；点击弹出弹窗，选择每周后出现星期选择、选择每月后出现月历；选「不自动刷新」则按钮恢复默认态。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-17 — 完成按钮独立突出、放弃并入操作行 + 任务卡显示累计用时
 
 ### 给人看（Human Summary）
