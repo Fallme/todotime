@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-08-18 — 统计页「今天」走势图改为按一天内 4 小时时段统计
+
+### 给人看（Human Summary）
+- **改了什么**：统计页选「今天」时，柱状走势图不再只显示一根「今日」柱子，而是把一天拆成 6 个 4 小时时段（00-03 / 04-07 / 08-11 / 12-15 / 16-19 / 20-23），按时段展示专注时长、番茄数、完成任务数。
+- **为什么**：单看「今天」只有一根柱子，看不出一天内的时间分布；按时段记录能看清精力集中在哪个时段。
+- **影响范围**：统计页「今天」视图的走势柱状图；近七天 / 近一个月视图不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — 新增模块级 `DAY_SLOT_HOURS = [0,4,8,12,16,20]`、`getHour(iso)`、`slotOf(hour)`（`Math.floor(hour/4)`）、`computeTodaySlots(records, todos, today, runningMinutes)`；新增 `todayRecords` useMemo（合并去重 `dayDataMap` 今日已完成记录 + `todayPomodoros`，键为 `id || start|end`）与 `daySlots` useMemo；新增 `trendPoints`（`period === 'day'` 时用 `daySlots` 的 `label/minutes/pomodoros/tasksDone`，否则用 `activeData.daily` 的 `date.slice(5)/date/...`）；`trendData` 的 labels 与三个 dataset 的 data 全部改为从 `trendPoints` 取值；tooltip `title` 回调改用 `trendPoints[idx].title`（今天显示时段名，周/月仍显示完整日期）。
+- **接口 / 数据模型变化**：无（纯渲染期派生，不改变 `PeriodResult` / 存储 / 同步）。
+- **关键实现细节 / 注意事项**：
+  - 时段按 `start` 时间（番茄记录）与 `completedAt` 时间（完成任务记录）的本地小时数分桶；`runningMinutes`（进行中的实时时长）计入当前小时所在时段。
+  - 番茄数仍走 `isPomodoroRecord`（≥15min）口径，与汇总卡、饼图一致；时段 `minutes` 是 `duration` 之和（<15min 也计入），与既有时长口径一致。
+  - 6 个时段标签为语言中性的 `00-03` 等，`maxTicksLimit`（非 month 为 7）能完整显示 6 个刻度。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页默认「今天」，走势图 x 轴显示 00-03…20-23 六个时段，各时段柱子随今日番茄/任务变化；切到近七天/近一个月仍是按天。
+- **后续待办 / 已知问题**：时段粒度固定 4 小时；如需更细可按小时，或做成可切换（暂不实现）。
+
+---
+
 ## 2026-08-18 — 修复每月刷新周期的 31 天选择面板被弹窗裁切
 
 ### 给人看（Human Summary）

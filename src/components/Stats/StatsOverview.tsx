@@ -96,6 +96,49 @@ function computePeriodData(
   return { daily, totalPomodoros, totalMinutes, totalTasks, totalTasksCompleted, categoryMinutes, categoryPomodoros, categoryTasks };
 }
 
+// For the "today" view the trend chart buckets the day into 4-hour slots.
+const DAY_SLOT_HOURS = [0, 4, 8, 12, 16, 20];
+
+function getHour(iso: string): number {
+  return new Date(iso).getHours();
+}
+
+function slotOf(hour: number): number {
+  return Math.floor(hour / 4);
+}
+
+function computeTodaySlots(
+  records: PomodoroRecord[],
+  todos: Todo[],
+  today: string,
+  runningMinutes: number,
+): { label: string; minutes: number; pomodoros: number; tasksDone: number }[] {
+  const slots = DAY_SLOT_HOURS.map(start => ({
+    label: `${String(start).padStart(2, '0')}-${String(start + 3).padStart(2, '0')}`,
+    minutes: 0,
+    pomodoros: 0,
+    tasksDone: 0,
+  }));
+  for (const record of records) {
+    const idx = slotOf(getHour(record.start));
+    if (idx >= 0 && idx < slots.length) {
+      slots[idx].minutes += record.duration;
+      if (isPomodoroRecord(record)) slots[idx].pomodoros += 1;
+    }
+  }
+  if (runningMinutes > 0) {
+    const idx = slotOf(new Date().getHours());
+    if (idx >= 0 && idx < slots.length) slots[idx].minutes += runningMinutes;
+  }
+  const doneToday = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
+    getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(today)).map(record => record.completedAt));
+  for (const completedAt of doneToday) {
+    const idx = slotOf(getHour(completedAt));
+    if (idx >= 0 && idx < slots.length) slots[idx].tasksDone += 1;
+  }
+  return slots;
+}
+
 function getCategoryData(data: PeriodResult, metric: ChartMetric, categories: CategoryItem[]): { label: string; value: number; color: string }[] {
   const source = metric === 'minutes' ? data.categoryMinutes : metric === 'pomodoros' ? data.categoryPomodoros : data.categoryTasks;
   return Object.entries(source)
@@ -133,6 +176,15 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
 
   const activeData = period === 'day' ? dayData : period === 'week' ? weekData : monthData;
   const isCompact = period === 'month';
+
+  // Merged completed records for today (dedup between git history and live session).
+  const todayRecords = useMemo(() => {
+    const day = dayDataMap.get(today);
+    const poms = day?.pomodoros?.filter(p => p.completed) ?? [];
+    const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
+    return [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
+  }, [dayDataMap, todayPomodoros, today]);
+  const daySlots = useMemo(() => computeTodaySlots(todayRecords, todos, today, runningMinutes), [todayRecords, todos, today, runningMinutes]);
 
   const handleRefresh = useCallback(async () => {
     if (!onRefresh || refreshing) return;
@@ -183,25 +235,29 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const lastDate = activeData.daily[activeData.daily.length - 1]?.date ?? '';
   const dateRange = period === 'day' ? firstDate : `${firstDate.slice(5)} ~ ${lastDate.slice(5)}`;
 
-  // All three metrics use grouped square bars so daily values can be compared directly.
+  // All three metrics use grouped square bars so values can be compared directly.
+  // For "today" the x-axis is 4-hour slots instead of dates.
+  const trendPoints = period === 'day'
+    ? daySlots.map(s => ({ label: s.label, title: s.label, minutes: s.minutes, pomodoros: s.pomodoros, tasksDone: s.tasksDone }))
+    : activeData.daily.map(d => ({ label: d.date.slice(5), title: d.date, minutes: d.minutes, pomodoros: d.pomodoros, tasksDone: d.tasksDone }));
   const trendData = {
-    labels: activeData.daily.map(d => d.date.slice(5)),
+    labels: trendPoints.map(p => p.label),
     datasets: [
       {
         type: 'bar' as const,
-        label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
+        label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: trendPoints.map(p => p.minutes), yAxisID: 'minutes',
         borderColor: '#5b8c9e99', backgroundColor: '#5b8c9e55', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
         type: 'bar' as const,
-        label: t('pomodoroCount'), data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
+        label: t('pomodoroCount'), data: trendPoints.map(p => p.pomodoros), yAxisID: 'counts',
         borderColor: '#d2704a', backgroundColor: '#d2704a99', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 1,
       },
       {
         type: 'bar' as const,
-        label: t('completedTasks'), data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
+        label: t('completedTasks'), data: trendPoints.map(p => p.tasksDone), yAxisID: 'counts',
         borderColor: '#6f9e6b', backgroundColor: '#6f9e6b99', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 2,
       },
@@ -218,7 +274,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       },
       tooltip: {
         callbacks: {
-          title: (items: unknown) => activeData.daily[(items as Array<{ dataIndex: number }>)[0]?.dataIndex]?.date ?? '',
+          title: (items: unknown) => trendPoints[(items as Array<{ dataIndex: number }>)[0]?.dataIndex]?.title ?? '',
           label: (ctx: unknown) => {
             const item = ctx as { dataset: { label?: string; yAxisID?: string }; parsed: { y: number } };
             return ` ${item.dataset.label}: ${item.parsed.y}${item.dataset.yAxisID === 'minutes' ? '分钟' : '个'}`;
