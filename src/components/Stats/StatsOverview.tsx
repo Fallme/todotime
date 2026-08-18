@@ -96,15 +96,15 @@ function computePeriodData(
   return { daily, totalPomodoros, totalMinutes, totalTasks, totalTasksCompleted, categoryMinutes, categoryPomodoros, categoryTasks };
 }
 
-// For the "today" view the trend chart buckets the day into 4-hour slots.
-const DAY_SLOT_HOURS = [0, 4, 8, 12, 16, 20];
+// For the "today" view the trend chart buckets the day into 2-hour slots.
+const DAY_SLOT_HOURS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22];
 
 function getHour(iso: string): number {
   return new Date(iso).getHours();
 }
 
 function slotOf(hour: number): number {
-  return Math.floor(hour / 4);
+  return Math.floor(hour / 2);
 }
 
 function computeTodaySlots(
@@ -114,7 +114,7 @@ function computeTodaySlots(
   runningMinutes: number,
 ): { label: string; minutes: number; pomodoros: number; tasksDone: number }[] {
   const slots = DAY_SLOT_HOURS.map(start => ({
-    label: `${String(start).padStart(2, '0')}-${String(start + 3).padStart(2, '0')}`,
+    label: `${String(start).padStart(2, '0')}:00`,
     minutes: 0,
     pomodoros: 0,
     tasksDone: 0,
@@ -304,7 +304,11 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   // All three metrics use grouped square bars so values can be compared directly.
   // For "today" the x-axis is 4-hour slots instead of dates.
   const trendPoints = period === 'day'
-    ? daySlots.map(s => ({ label: s.label, title: s.label, minutes: s.minutes, pomodoros: s.pomodoros, tasksDone: s.tasksDone }))
+    ? daySlots.map((s, i) => {
+        const startHour = DAY_SLOT_HOURS[i] ?? 0;
+        const endHour = startHour + 2;
+        return { label: s.label, title: `${s.label}–${String(endHour).padStart(2, '0')}:00`, minutes: s.minutes, pomodoros: s.pomodoros, tasksDone: s.tasksDone };
+      })
     : activeData.daily.map(d => ({ label: d.date.slice(5), title: d.date, minutes: d.minutes, pomodoros: d.pomodoros, tasksDone: d.tasksDone }));
   const trendData = {
     labels: trendPoints.map(p => p.label),

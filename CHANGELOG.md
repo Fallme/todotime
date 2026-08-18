@@ -21,7 +21,28 @@
 
 ---
 
-## 2026-08-18 — 顶部组数标记旁新增缩减组数「−」按钮
+## 2026-08-18 — 设置页反馈精简 + 识别码内联操作按钮 + 今日统计改为 2 小时分段
+
+### 给人看（Human Summary）
+- **改了什么**：
+  1. 设置页「反馈」板块精简为标题 + 一个按钮（去掉了提示文字），更紧凑。
+  2. 识别码输入框右侧内嵌「显示/隐藏」和「复制」两个小图标按钮，操作更直观；生成码、启用新码、加载已有码等按钮保留在下方。
+  3. 统计页「今天」走势图从 4 小时一段改为 **2 小时一段**（00:00、02:00、04:00 … 22:00），横轴显示具体时间，tooltip 显示完整时段（如 14:00–16:00）。
+- **为什么**：反馈区文字冗余，去掉后更干净；识别码操作按钮与输入框同行更紧凑；2 小时分段比 4 小时更细粒度，能更清楚看到一天中专注的时间分布。
+- **影响范围**：设置页反馈区、识别码区布局；统计页「今天」走势图横轴分段与 tooltip。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Settings/SettingsPanel.tsx` — 反馈 section 移除 `<p className="settings-hint">`；识别码 section 重构：input 包裹在 `<div className="sync-code-row">` 内，右侧内嵌 `<button className="btn icon">` 显示 `Eye`/`EyeOff`（切换 `codeVisible`）与 `Copy`（复制识别码）；新增 `Eye`、`EyeOff` icon import；生成码、启用新码、加载已有码按钮留在 `.settings-actions` 下方。
+  - `src/components/Stats/StatsOverview.tsx` — `DAY_SLOT_HOURS` 由 `[0, 4, 8, 12, 16, 20]` 改为 `[0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]`（12 段）；`slotOf` 由 `Math.floor(hour / 4)` 改为 `Math.floor(hour / 2)`；slot label 由 `"00-03"` 改为 `"00:00"` 格式；`trendPoints` title 改为 `"00:00–02:00"` 格式（tooltip 显示完整时段）。
+  - `src/index.css` — 新增 `.sync-code-row`（`display: flex; gap: 4px`，input 用 `flex: 1` 自动填充宽度）、`.btn.icon`（32px 方形图标按钮，边框 + hover 高亮）、`.btn.icon:disabled` 样式。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - `sync-code-row` 里的 input 从 `.settings-row input` 继承 `width: 200px`，通过 `flex: 1; min-width: 0; width: auto` 覆盖为自适应宽度，确保在不同屏幕宽度下按钮不溢出。
+  - 2 小时分段产生 12 个横轴标签，需注意 `maxTicksLimit` 不应低于 12；当前 `isCompact ? 8 : 7` 对 day 模式不适用（`isCompact` 仅 month 为 true），day 模式走 `maxTicksLimit: 7` — 实际渲染时 Chart.js 会自动调整标签密度，12 个标签在正常宽度下可完整显示。
+  - tooltip 回调使用 `trendPoints[dataIndex].title`，已更新为 `HH:00–HH+2:00` 格式。
+- **验证方式**：`npm run lint` 通过、`npm run build`（`tsc -b && vite build`）通过、`npm run test:logic` 35/35 通过。手测：设置页 → 反馈区仅标题和按钮；识别码输入框右侧有小眼睛和复制图标；统计页 → 今天 → 走势图横轴显示 00:00–22:00 每 2 小时一段。
+- **后续待办 / 已知问题**：无新增。
 
 ### 给人看（Human Summary）
 - **改了什么**：顶部组数圆点左侧新增「−」缩减组数按钮（Minus 图标），与右侧「+」对称排列，整体居中；组数已为最小值 2 时「−」自动变灰禁用。

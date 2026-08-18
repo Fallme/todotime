@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AppSettings, ThemeId } from '../../types';
-import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X, MessageSquare } from 'lucide-react';
+import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X, MessageSquare, Eye, EyeOff } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -158,13 +158,19 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
         <h3>{t('personalSync')}</h3>
         <div className="settings-row">
           <label>{t('syncCode')}</label>
-          <input type={codeVisible ? 'text' : 'password'} autoComplete="off" spellCheck={false} placeholder={t('syncCodePlaceholder')} value={syncCodeDraft}
-            onChange={event => { setSyncCodeDraft(normalizeSyncCode(event.target.value)); setIsNewCode(false); }} />
+          <div className="sync-code-row">
+            <input type={codeVisible ? 'text' : 'password'} autoComplete="off" spellCheck={false} placeholder={t('syncCodePlaceholder')} value={syncCodeDraft}
+              onChange={event => { setSyncCodeDraft(normalizeSyncCode(event.target.value)); setIsNewCode(false); }} />
+            <button className="btn icon" type="button" onClick={() => setCodeVisible(value => !value)} title={codeVisible ? t('hide') : t('show')} aria-label={codeVisible ? t('hide') : t('show')}>
+              {codeVisible ? <EyeOff size={15} /> : <Eye size={15} />}
+            </button>
+            <button className="btn icon" type="button" disabled={!syncCodeDraft} onClick={() => { void navigator.clipboard.writeText(syncCodeDraft); setCodeMessage(msg('识别码已复制，请妥善保存', 'Code copied. Keep it safe.')); }} title={t('copy')} aria-label={t('copy')}>
+              <Copy size={15} />
+            </button>
+          </div>
         </div>
         <div className="settings-actions" style={{ marginTop: 8 }}>
           <button className="btn secondary" type="button" onClick={createCode}>{t('createCode')}</button>
-          <button className="btn secondary" type="button" onClick={() => setCodeVisible(value => !value)}>{codeVisible ? t('hide') : t('show')}</button>
-          <button className="btn secondary" type="button" disabled={!syncCodeDraft} onClick={() => { void navigator.clipboard.writeText(syncCodeDraft); setCodeMessage(msg('识别码已复制，请妥善保存', 'Code copied. Keep it safe.')); }}><Copy size={15} /> {t('copy')}</button>
           <button className="btn primary" type="button" disabled={syncing || !syncCodeDraft || !isNewCode} onClick={() => void activateCode('new')}><RefreshCw size={15} className={syncing ? 'spin' : ''} />{t('enableNewCode')}</button>
           <button className="btn secondary" type="button" disabled={syncing || !syncCodeDraft || syncCodeDraft === settings.syncCode} onClick={() => void activateCode('existing')}>{t('loadExistingCode')}</button>
         </div>
@@ -175,7 +181,6 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
 
       <section className="settings-section">
         <h3>{t('feedback')}</h3>
-        <p className="settings-hint">{t('feedbackHint')}</p>
         <button className="btn secondary" type="button" onClick={() => { setShowFeedback(true); setFeedbackMessage(''); }}><MessageSquare size={16} /> {t('submitFeedback')}</button>
       </section>
 
