@@ -21,6 +21,25 @@
 
 ---
 
+## 2026-08-18 — 统计图「专注时长」柱子改为浅金色
+
+### 给人看（Human Summary）
+- **改了什么**：统计页综合走势图与周报/月报组合柱状图中，「专注时长」的柱子由偏蓝改为浅金色；左侧「分钟」坐标轴刻度与标题改用更深的金色以保证浅色卡片上可读。番茄数（暖橙红）、完成任务（绿色）保持不变。
+- **为什么**：用户希望专注时长以浅金色呈现，与另外两种指标区分更柔和、更醒目。
+- **影响范围**：统计页「今天 / 近七天 / 近一个月」走势图、周报/月报弹窗组合柱状图的时长柱子与左侧坐标轴颜色；数据模型与同步逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — `durationColor` 由 `mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.65)`（偏蓝）改为 `mixRgb(hexToRgb(accentLight), hexToRgb('#e8c87a'), 0.7)`（浅金，仍随主题强调色轻微偏移）；新增 `durationAxisColor = mixRgb(durationColor, hexToRgb('#8a6a2f'), 0.5)`（更深的金，用于坐标轴文字）。`trendOptions.scales.minutes` 与 `combinedBarOpts.scales.minutes` 的 `ticks.color` / `title.color` 由 `rgba(durationColor, 1)` 改为 `rgba(durationAxisColor, 1)`；柱子本身继续用 `durationColor`。
+- **接口 / 数据模型变化**：无（仅渲染期颜色派生）。
+- **关键实现细节 / 注意事项**：
+  - `durationColor` 同时被柱子（`backgroundColor`/`borderColor`）与左轴文字（`ticks`/`title`）复用；浅金作为文字在浅色卡片上对比度不足，故拆出 `durationAxisColor` 专供轴文字，柱子保持浅金。
+  - `pomodoroColor`、`tasksColor` 未改动，避免破坏既有区分度。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页走势图「专注时长」为浅金柱子，左轴刻度/标题为可读的深金；切不同主题柱子仍随主题轻微变化。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 饼图图例支持点击隐藏/显示对应板块
 
 ### 给人看（Human Summary）

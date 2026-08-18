@@ -295,9 +295,11 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   // Each metric keeps its own hue identity but is shifted toward the active theme.
   const accent = readCssColor('--accent', '#FF6B6B');
   const accentLight = readCssColor('--accent-light', '#FFA07A');
-  const durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.65);
+  const durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#e8c87a'), 0.7); // 专注时长：浅金
   const pomodoroColor = mixRgb(hexToRgb(accent), hexToRgb('#d2704a'), 0.3);
   const tasksColor = mixRgb(hexToRgb(accentLight), hexToRgb('#4caf50'), 0.72);
+  // Axis labels need a deeper gold to stay readable on light cards (bars keep the light gold above).
+  const durationAxisColor = mixRgb(durationColor, hexToRgb('#8a6a2f'), 0.5);
 
   // All three metrics use grouped square bars so values can be compared directly.
   // For "today" the x-axis is 4-hour slots instead of dates.
@@ -351,7 +353,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         grid: { display: false },
         ticks: { color: '#999', font: { size: isCompact ? 8 : 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isCompact ? 8 : 7 },
       },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: rgba(durationColor, 1), precision: 0 }, title: { display: true, text: '分钟', color: rgba(durationColor, 1), font: { size: 10 } } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0 }, title: { display: true, text: '分钟', color: rgba(durationAxisColor, 1), font: { size: 10 } } },
       counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 }, title: { display: true, text: '番茄 / 任务', color: rgba(pomodoroColor, 1), font: { size: 10 } } },
     },
   };
@@ -393,7 +395,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: rgba(durationColor, 1), precision: 0 } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0 } },
       counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 } },
     },
   };
