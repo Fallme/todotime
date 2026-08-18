@@ -1397,6 +1397,16 @@ html[data-theme="farmcraft"] body {
 .monthly-calendar-popover p { margin: 9px 1px 0; color: var(--text-muted); font-size: 9px; line-height: 1.4; }
 .monthly-calendar.compact .monthly-calendar-trigger { min-width: 106px; height: 27px; }
 
+/* In the recurrence modal the 31-day grid must flow inline, otherwise the modal's
+   scroll container clips the absolutely-positioned popover and days are cut off. */
+.recurrence-modal-detail .monthly-calendar { flex: 1 0 100%; }
+.recurrence-modal-detail .monthly-calendar-popover {
+  position: static;
+  margin-top: 6px;
+  width: 100%;
+  box-shadow: none;
+}
+
 /* Subtasks */
 .todo-card-subs { padding: 0 10px 4px 50px; }
 .sub-row {

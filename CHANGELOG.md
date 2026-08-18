@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-08-18 — 修复每月刷新周期的 31 天选择面板被弹窗裁切
+
+### 给人看（Human Summary）
+- **改了什么**：设置任务「每月」刷新周期时，31 天的日期选择面板不再被弹窗底部裁切，全部天数都能完整显示；面板改为在弹窗内直接展开。
+- **为什么**：之前 31 天面板用绝对定位浮在触发按钮下方，被刷新周期弹窗的滚动容器裁掉下半部分，看不到后面的日期。
+- **影响范围**：添加任务弹窗里的「每月」日期选择；任务卡片上原有的内联月份选择（compact）不受影响。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/index.css` — 新增两条规则：`.recurrence-modal-detail .monthly-calendar { flex: 1 0 100%; }`（让日历容器在弹窗详情行内占满整行）与 `.recurrence-modal-detail .monthly-calendar-popover { position: static; margin-top: 6px; width: 100%; box-shadow: none; }`（把绝对定位的浮层改为文档流内联展开，随弹窗 `max-height: 80vh; overflow-y: auto` 自然滚动，不再被裁切）。
+- **接口 / 数据模型变化**：无（仅 CSS；`MonthlyRecurrenceCalendar` 组件与 `TaskRecurrence` 模型不变）。
+- **关键实现细节 / 注意事项**：
+  - 裁切根因：`.modal-content` 有 `overflow-y: auto`，而 `.monthly-calendar-popover` 原本 `position: absolute; top: calc(100% + 6px); right: 0` 向下展开，超出弹窗可视区被裁掉。
+  - 只对 `.recurrence-modal-detail` 内的日历做内联化（即 AddTodo 弹窗场景）；TodoItem 的 compact 用法在 `.todo-recurrence-picker` 内，`.todo-card` 为 `overflow: visible`，浮层正常，故保留绝对定位行为不变。
+  - 内联化后 `width: 100%` 依赖 `.monthly-calendar` 先 `flex: 1 0 100%` 撑满整行，避免百分比宽度因父容器内容自适应而塌缩。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：添加任务 → 点重复按钮 → 选「每月」→ 31 天网格完整显示、可多选、可滚动查看。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 统计页改为「时间范围切换 + 汇总 + 饼图 + 走势」的单一布局
 
 ### 给人看（Human Summary）
