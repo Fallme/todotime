@@ -157,6 +157,36 @@ function diffText(current: number, previous: number): { text: string; cls: strin
   return { text: '持平', cls: 'same', icon: <Minus size={12} /> };
 }
 
+// Chart colors are derived from the active theme's accent variables so every theme
+// gets its own bar colors. Chart.js renders to canvas, so CSS `var(--x)` strings do
+// not work — the values must be resolved to concrete rgba() strings in JS.
+type RGB = [number, number, number];
+
+function hexToRgb(hex: string): RGB {
+  const h = hex.replace('#', '');
+  const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+  const num = parseInt(full, 16);
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+function mixRgb(a: RGB, b: RGB, t: number): RGB {
+  return [
+    Math.round(a[0] + (b[0] - a[0]) * t),
+    Math.round(a[1] + (b[1] - a[1]) * t),
+    Math.round(a[2] + (b[2] - a[2]) * t),
+  ];
+}
+
+function rgba(c: RGB, alpha: number): string {
+  return `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${alpha})`;
+}
+
+function readCssColor(prop: string, fallback: string): string {
+  if (typeof window === 'undefined') return fallback;
+  const value = getComputedStyle(document.documentElement).getPropertyValue(prop).trim();
+  return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(value) ? value : fallback;
+}
+
 export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
   const { language, t } = useLanguage();
   const [period, setPeriod] = useState<Period>('day');
@@ -235,6 +265,14 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const lastDate = activeData.daily[activeData.daily.length - 1]?.date ?? '';
   const dateRange = period === 'day' ? firstDate : `${firstDate.slice(5)} ~ ${lastDate.slice(5)}`;
 
+  // Resolve the theme accent into the three semantic bar colors (duration / pomodoros / tasks).
+  // Each metric keeps its own hue identity but is shifted toward the active theme.
+  const accent = readCssColor('--accent', '#FF6B6B');
+  const accentLight = readCssColor('--accent-light', '#FFA07A');
+  const durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.45);
+  const pomodoroColor = mixRgb(hexToRgb(accent), hexToRgb('#d2704a'), 0.3);
+  const tasksColor = mixRgb(hexToRgb(accentLight), hexToRgb('#6f9e6b'), 0.5);
+
   // All three metrics use grouped square bars so values can be compared directly.
   // For "today" the x-axis is 4-hour slots instead of dates.
   const trendPoints = period === 'day'
@@ -246,19 +284,19 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       {
         type: 'bar' as const,
         label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: trendPoints.map(p => p.minutes), yAxisID: 'minutes',
-        borderColor: '#5b8c9e99', backgroundColor: '#5b8c9e55', borderWidth: 1,
+        borderColor: rgba(durationColor, 0.6), backgroundColor: rgba(durationColor, 0.33), borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
         type: 'bar' as const,
         label: t('pomodoroCount'), data: trendPoints.map(p => p.pomodoros), yAxisID: 'counts',
-        borderColor: '#d2704a', backgroundColor: '#d2704a99', borderWidth: 1,
+        borderColor: rgba(pomodoroColor, 1), backgroundColor: rgba(pomodoroColor, 0.6), borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 1,
       },
       {
         type: 'bar' as const,
         label: t('completedTasks'), data: trendPoints.map(p => p.tasksDone), yAxisID: 'counts',
-        borderColor: '#6f9e6b', backgroundColor: '#6f9e6b99', borderWidth: 1,
+        borderColor: rgba(tasksColor, 1), backgroundColor: rgba(tasksColor, 0.6), borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 2,
       },
     ],
@@ -287,8 +325,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         grid: { display: false },
         ticks: { color: '#999', font: { size: isCompact ? 8 : 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isCompact ? 8 : 7 },
       },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: '#5b8c9e', precision: 0 }, title: { display: true, text: '分钟', color: '#5b8c9e', font: { size: 10 } } },
-      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#d2704a', precision: 0 }, title: { display: true, text: '番茄 / 任务', color: '#d2704a', font: { size: 10 } } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: rgba(durationColor, 1), precision: 0 }, title: { display: true, text: '分钟', color: rgba(durationColor, 1), font: { size: 10 } } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 }, title: { display: true, text: '番茄 / 任务', color: rgba(pomodoroColor, 1), font: { size: 10 } } },
     },
   };
 
@@ -316,9 +354,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#5b8c9eaa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
-      { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#d2704aaa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
-      { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#6f9e6baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: rgba(durationColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: rgba(pomodoroColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: rgba(tasksColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
@@ -326,8 +364,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#5b8c9e', precision: 0 } },
-      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#d2704a', precision: 0 } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: rgba(durationColor, 1), precision: 0 } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 } },
     },
   };
 

@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-18 — 统计柱状图配色改为跟随主题
+
+### 给人看（Human Summary）
+- **改了什么**：统计页的柱状走势图、以及周报/月报弹窗里的组合柱状图，三根柱子（专注时长 / 番茄 / 完成任务）的颜色不再写死为固定的蓝灰/陶土橙/草绿，而是根据当前主题的强调色动态生成——不同主题下柱子颜色不同，同时保持「时长 / 番茄 / 任务」三种语义仍可区分。
+- **为什么**：此前柱状图用固定 hex 色，切换主题后图表颜色不变，和整体主题不协调。
+- **影响范围**：统计页「今天 / 近七天 / 近一个月」走势图、周报/月报弹窗的组合柱状图及其 y 轴刻度颜色；饼图（按分类取色）与数据模型不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — 新增模块级颜色工具：`type RGB = [number, number, number]`、`hexToRgb(hex)`、`mixRgb(a, b, t)`、`rgba(c, alpha)`、`readCssColor(prop, fallback)`；组件内读取主题变量 `--accent` / `--accent-light`（fallback `#FF6B6B` / `#FFA07A`），派生 `durationColor`（`mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.45)`）、`pomodoroColor`（`mixRgb(hexToRgb(accent), hexToRgb('#d2704a'), 0.3)`）、`tasksColor`（`mixRgb(hexToRgb(accentLight), hexToRgb('#6f9e6b'), 0.5)`）；`trendData` / `trendOptions` / `combinedBarData` / `combinedBarOpts` 中所有写死的 hex 值替换为 `rgba(...)` 动态色。
+- **接口 / 数据模型变化**：无（仅渲染期颜色派生；`StatsOverviewProps`、存储、同步均不变）。
+- **关键实现细节 / 注意事项**：
+  - Chart.js 渲染到 canvas，`var(--x)` CSS 字符串无法被消费，必须在 JS 里 `getComputedStyle(document.documentElement).getPropertyValue('--accent')` 解析成具体 `rgba()` 字符串。
+  - 主题由 `App.tsx` 的 `useEffect` 设置到 `document.documentElement.dataset.theme`；统计页仅在切到设置页时才卸载，因此渲染期读取即可；`readCssColor` 校验结果必须是 hex（3/6 位）才采用，否则回落 fallback，防止拿到空串或 `hsl(...)` 等导致 `hexToRgb` 解析失败。
+  - 三色保留语义区分：时长偏蓝灰、番茄偏暖橙红、任务偏绿，但各自按主题强调色做不同程度的混合偏移，保证不同主题整体观感不同。
+  - 透明度沿用原固定色语义：分钟柱描边 0.6 / 填充 0.33；番茄、任务描边实色 / 填充 0.6；报告组合柱填充 0.67；y 轴刻度与标题实色。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：设置页切换不同主题 → 回统计页，柱状图与周报/月报柱状图三根柱子颜色随主题变化，且三者仍可区分。
+- **后续待办 / 已知问题**：`--accent-light` 未注册为 `@property`，`getComputedStyle` 返回的就是 CSS 中定义的原始值（hex），当前各主题均为 hex，无需额外处理；若未来有主题改用 `hsl()` 或 `color-mix()`，`readCssColor` 会回落默认值，届时需扩展解析。
+
+---
+
 ## 2026-08-18 — 修复已有类别无法编辑名称/颜色（改为铅笔按钮编辑）
 
 ### 给人看（Human Summary）
