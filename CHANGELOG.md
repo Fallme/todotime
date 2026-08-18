@@ -21,6 +21,27 @@
 
 ---
 
+## 2026-08-18 — 顶部组数标记旁新增缩减组数「−」按钮
+
+### 给人看（Human Summary）
+- **改了什么**：顶部组数圆点左侧新增「−」缩减组数按钮（Minus 图标），与右侧「+」对称排列，整体居中；组数已为最小值 2 时「−」自动变灰禁用。
+- **为什么**：此前只能通过顶部「+」增加组数，无法在 UI 中减少组数（只能去设置页改），补充「−」按钮使增减操作对称完整。
+- **影响范围**：计时器页顶部组数标记区域；设置页 `longBreakInterval` 输入框行为不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/App.tsx` — import 新增 `Minus`；新增 `handleRemoveGroup`（调用 `normalizeSettings({ ...s, longBreakInterval: s.longBreakInterval - 1 })`）；`.cycle-indicator` 内左侧新增 `<button className="add-group-btn" disabled={settings.longBreakInterval <= 2} onClick={handleRemoveGroup} title={t('removeGroup')}><Minus size={14} /></button>`，圆点两侧对称。
+  - `src/i18n/LanguageContext.tsx` — 新增 `removeGroup`（zh: `减少组数`，en: `Remove group`）。
+  - `src/index.css` — `.cycle-indicator` 新增 `gap: 8px` 统一间距；`.add-group-btn` 去掉 `margin-left`，新增 `:disabled` 样式（`opacity: 0.35; cursor: default`），`:hover:not(:disabled)` 替代原 `:hover`。
+- **接口 / 数据模型变化**：无。`longBreakInterval` 范围仍为 `[2, 10]`（由 `normalizeSettings` 中 `clampInteger` 控制），减至 2 时按钮禁用。
+- **关键实现细节 / 注意事项**：
+  - `handleRemoveGroup` 与 `handleAddGroup` 同样经 `normalizeSettings` 处理，不会跌破最小值；禁用仅作 UI 提示，`normalizeSettings` 本身已有兜底。
+  - `.cycle-indicator` 已有 `justify-content: center`，加 `gap: 8px` 后三个子元素（`[-]` `[dots]` `[+]`）自然居中对称。
+- **验证方式**：`npm run lint` 通过、`npm run build`（`tsc -b && vite build`）通过、`npm run test:logic` 35/35 通过。手测：顶部圆点左右「−」「+」对称居中；点「−」组数减 1 圆点同步减少；组数为 2 时「−」变灰不可点；组数为 10 时「+」变灰不可点。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 恢复「跳过当前阶段」按钮，「增加组数」移到顶部组数标记旁
 
 ### 给人看（Human Summary）

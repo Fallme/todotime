@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Minus } from 'lucide-react';
 import type { AppSettings, Category, CategoryItem, FeedbackEntry, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS, normalizeTheme, OTHER_CATEGORY_COLOR, OTHER_CATEGORY_NAME } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -300,6 +300,9 @@ export default function App() {
   const handleAddGroup = () => {
     setSettings(s => normalizeSettings({ ...s, longBreakInterval: s.longBreakInterval + 1 }));
   };
+  const handleRemoveGroup = () => {
+    setSettings(s => normalizeSettings({ ...s, longBreakInterval: s.longBreakInterval - 1 }));
+  };
 
   const handleActivateSyncCode = async (code: string, mode: SyncCodeMode) => {
     await flush();
@@ -485,6 +488,9 @@ export default function App() {
             <CountdownTimer title={settings.countdownTitle} targetDate={settings.countdownDate} onUpdate={handleCountdownUpdate} />
             <div className="timer-section">
               <div className="cycle-indicator">
+                <button className="add-group-btn" type="button" disabled={settings.longBreakInterval <= 2} onClick={handleRemoveGroup} title={t('removeGroup')} aria-label={t('removeGroup')}>
+                  <Minus size={14} />
+                </button>
                 <div className="cycle-dots">
                   {Array.from({ length: settings.longBreakInterval }, (_, i) => (
                     <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />

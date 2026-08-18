@@ -8,7 +8,7 @@ const messages = {
   'zh-CN': {
     appName: '番茄钟', focus: '专注', stats: '统计', settings: '设置', nav: '主导航',
     syncing: '同步中...', syncFailed: '同步失败', toggleTheme: '切换主题', switchLanguage: 'Switch to English',
-    quote: '每一个番茄都是进步', start: '开始', pause: '暂停', endRound: '结束并记录本轮', skipStage: '跳过当前阶段', addGroup: '增加组数',
+    quote: '每一个番茄都是进步', start: '开始', pause: '暂停', endRound: '结束并记录本轮', skipStage: '跳过当前阶段', addGroup: '增加组数', removeGroup: '减少组数',
     focusing: '专注中', shortBreak: '短休息', longBreak: '长休息', paused: '已暂停',
     targetName: '目标名称', save: '保存', cancel: '取消', invalidDate: '日期无效，点击修改', arrived: '🎉 已到达！',
     days: '天', hours: '时', minutesShort: '分', seconds: '秒',
@@ -38,7 +38,7 @@ const messages = {
   en: {
     appName: 'Pomodoro', focus: 'Focus', stats: 'Insights', settings: 'Settings', nav: 'Main navigation',
     syncing: 'Syncing...', syncFailed: 'Sync failed', toggleTheme: 'Toggle theme', switchLanguage: '切换到中文',
-    quote: 'Every focused minute moves you forward', start: 'Start', pause: 'Pause', endRound: 'End and save this session', skipStage: 'Skip current stage', addGroup: 'Add group',
+    quote: 'Every focused minute moves you forward', start: 'Start', pause: 'Pause', endRound: 'End and save this session', skipStage: 'Skip current stage', addGroup: 'Add group', removeGroup: 'Remove group',
     focusing: 'Focusing', shortBreak: 'Short break', longBreak: 'Long break', paused: 'Paused',
     targetName: 'Goal name', save: 'Save', cancel: 'Cancel', invalidDate: 'Invalid date — click to edit', arrived: '🎉 Goal reached!',
     days: 'Days', hours: 'Hours', minutesShort: 'Min', seconds: 'Sec',
