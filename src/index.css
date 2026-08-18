@@ -2198,6 +2198,13 @@ html[data-theme="farmcraft"] body {
 .manual-focus-error { margin: -4px 0 10px; color: #e74c3c; font-size: 12px; }
 .modal-title { font-size: 18px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
 .modal-desc { font-size: 13px; color: var(--text-secondary); margin-bottom: 16px; }
+.feedback-modal { max-width: 480px; }
+.feedback-textarea {
+  width: 100%; min-height: 120px; resize: vertical; padding: 10px 12px; margin-bottom: 16px;
+  border: 1px solid var(--border); border-radius: 10px; background: var(--bg); color: var(--text);
+  font: inherit; font-size: 13px; line-height: 1.5; outline: none;
+}
+.feedback-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 
 /* Batch assign */
 .batch-assign-all { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }

@@ -1,4 +1,4 @@
-import type { DayData, ConfigData } from '../types';
+import type { DayData, ConfigData, FeedbackEntry } from '../types';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
 import { mergeTodosById } from '../utils/todoMerge';
 
@@ -142,4 +142,20 @@ export async function loadConfig(token: string): Promise<ConfigData | null> {
   const file = await getFile(token, CONFIG_PATH);
   if (!file) return null;
   return JSON.parse(file.content) as ConfigData;
+}
+
+const FEEDBACK_PATH = 'feedback.json';
+
+export async function saveFeedback(syncCode: string, entry: FeedbackEntry): Promise<void> {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    const existing = await getFile(syncCode, FEEDBACK_PATH);
+    const current = existing ? JSON.parse(existing.content) as { items?: FeedbackEntry[] } : { items: [] };
+    const items = [...(current.items ?? []), entry];
+    try {
+      await putFile(syncCode, FEEDBACK_PATH, JSON.stringify({ items }, null, 2), existing?.sha);
+      return;
+    } catch (error) {
+      if (!(error instanceof SyncConflictError) || attempt === 2) throw error;
+    }
+  }
 }

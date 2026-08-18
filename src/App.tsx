@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import type { AppSettings, Category, CategoryItem, PomodoroRecord, Todo } from './types';
+import type { AppSettings, Category, CategoryItem, FeedbackEntry, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS, normalizeTheme, OTHER_CATEGORY_COLOR, OTHER_CATEGORY_NAME } from './types';
 import { formatDate } from './utils/dateUtils';
 import { initAudio } from './utils/sound';
@@ -18,7 +18,7 @@ import type { SyncCodeMode } from './components/Auth/SyncCodeGate';
 import { useTimer } from './hooks/useTimer';
 import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
-import { loadConfig } from './services/github';
+import { loadConfig, saveFeedback } from './services/github';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
 import { isPomodoroRecord } from './utils/pomodoroRules';
 import { pomodoroRecordKey } from './utils/syncMerge';
@@ -422,6 +422,16 @@ export default function App() {
     clearActiveSyncCode();
     window.location.reload();
   };
+  const handleSubmitFeedback = async (content: string) => {
+    const entry: FeedbackEntry = {
+      id: `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+      createdAt: new Date().toISOString(),
+      content,
+      language,
+      userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined,
+    };
+    await saveFeedback(activeSyncCode, entry);
+  };
   const handleToggleTheme = () => setSettings(s => ({ ...s, darkMode: !s.darkMode }));
   const handleCountdownUpdate = (title: string, date: string) => setSettings(s => ({ ...s, countdownTitle: title, countdownDate: date }));
 
@@ -526,7 +536,7 @@ export default function App() {
         )}
         {tab === 'settings' && (
           <SettingsPanel settings={settings} onSave={handleSaveSettings} onExport={handleExport} onImport={handleImport} onClear={handleClear}
-            onActivateSyncCode={handleActivateSyncCode} syncing={syncing} lastSyncedAt={lastSyncedAt} />
+            onActivateSyncCode={handleActivateSyncCode} syncing={syncing} lastSyncedAt={lastSyncedAt} onSubmitFeedback={handleSubmitFeedback} />
         )}
       </main>
       <TabNav active={tab} onChange={setTab} />

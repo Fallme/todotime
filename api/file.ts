@@ -17,7 +17,7 @@ interface ApiResponse {
 interface GitHubContentResponse { content: string; sha: string }
 interface GitHubWriteResponse { content?: { sha?: string } }
 
-const ALLOWED_PATH = /^(config\.json|history\.json|data\/\d{4}\/\d{2}\/\d{4}-\d{2}-\d{2}\.json)$/;
+const ALLOWED_PATH = /^(config\.json|history\.json|feedback\.json|data\/\d{4}\/\d{2}\/\d{4}-\d{2}-\d{2}\.json)$/;
 const CODE_PATTERN = /^[A-Z0-9_-]{12,64}$/;
 const MAX_CONTENT_BYTES = 2 * 1024 * 1024;
 

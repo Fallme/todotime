@@ -177,3 +177,11 @@ export interface ConfigData {
   todos: Todo[];
   updatedAt: string;
 }
+
+export interface FeedbackEntry {
+  id: string;
+  createdAt: string;
+  content: string;
+  language: string;
+  userAgent?: string;
+}

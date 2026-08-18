@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { AppSettings, ThemeId } from '../../types';
-import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X } from 'lucide-react';
+import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X, MessageSquare } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -12,6 +12,7 @@ interface SettingsPanelProps {
   onImport: (file: File) => void;
   onClear: () => void;
   onActivateSyncCode: (code: string, mode: SyncCodeMode) => Promise<void>;
+  onSubmitFeedback: (content: string) => Promise<void>;
   syncing: boolean;
   lastSyncedAt: string;
 }
@@ -49,7 +50,7 @@ const THEME_OPTIONS: Array<{
   { id: 'midnight', name: ['星夜深蓝', 'Midnight Stars'], description: ['静谧星空与蓝紫微光', 'Quiet starlight and indigo glow'], colors: ['#8b7cf6', '#4cc9f0', '#11162e'] },
 ];
 
-export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, onActivateSyncCode, syncing, lastSyncedAt }: SettingsPanelProps) {
+export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, onActivateSyncCode, onSubmitFeedback, syncing, lastSyncedAt }: SettingsPanelProps) {
   const { language, setLanguage, t } = useLanguage();
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [syncCodeDraft, setSyncCodeDraft] = useState(settings.syncCode);
@@ -57,6 +58,10 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const [isNewCode, setIsNewCode] = useState(false);
   const [codeVisible, setCodeVisible] = useState(false);
   const [showThemePicker, setShowThemePicker] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackText, setFeedbackText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState('');
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => onSave({ ...settings, [key]: value });
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
@@ -87,6 +92,23 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
     setIsNewCode(true);
     setCodeVisible(true);
     setCodeMessage(msg('新识别码已生成，请复制保存后点击“启用新识别码”', 'New code generated. Copy it before selecting “Use new code”.'));
+  };
+
+  const submitFeedback = async () => {
+    const content = feedbackText.trim();
+    if (!content || submitting) return;
+    setSubmitting(true);
+    setFeedbackMessage('');
+    try {
+      await onSubmitFeedback(content);
+      setFeedbackText('');
+      setFeedbackMessage(msg('感谢反馈，已上传到你的数据仓库。', 'Thanks! Your feedback was uploaded to your data repo.'));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : '';
+      setFeedbackMessage(detail === 'Failed to fetch' ? msg('暂时无法连接同步服务，请检查网络后重试', 'Unable to reach sync. Check your connection and retry.') : detail || msg('提交失败，请稍后重试', 'Failed to submit. Please retry.'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -151,6 +173,12 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
         {lastSyncedAt && <p className="settings-hint">{t('lastSynced')}：{new Date(lastSyncedAt).toLocaleString(language)}</p>}
       </section>
 
+      <section className="settings-section">
+        <h3>{t('feedback')}</h3>
+        <p className="settings-hint">{t('feedbackHint')}</p>
+        <button className="btn secondary" type="button" onClick={() => { setShowFeedback(true); setFeedbackMessage(''); }}><MessageSquare size={16} /> {t('submitFeedback')}</button>
+      </section>
+
       <div className="settings-actions">
         <button className="btn secondary" onClick={onExport}><Download size={16} /> {t('exportData')}</button>
         <label className="btn secondary"><Upload size={16} /> {t('importData')}<input type="file" accept=".json" onChange={handleFileChange} hidden /></label>
@@ -202,6 +230,25 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
                 );
               })}
             </div>
+          </div>
+        </div>
+      )}
+
+      {showFeedback && (
+        <div className="modal-overlay" onClick={() => setShowFeedback(false)}>
+          <div className="modal-content feedback-modal" onClick={event => event.stopPropagation()}>
+            <h3 className="modal-title">{t('submitFeedback')}</h3>
+            <p className="modal-desc">{t('feedbackHint')}</p>
+            <textarea className="feedback-textarea" rows={5} maxLength={2000} autoFocus
+              placeholder={t('feedbackPlaceholder')} value={feedbackText}
+              onChange={event => setFeedbackText(event.target.value)} />
+            <div className="modal-actions">
+              <button className="modal-btn" type="button" onClick={() => setShowFeedback(false)}>{t('cancel')}</button>
+              <button className="modal-btn primary" type="button" disabled={!feedbackText.trim() || submitting} onClick={() => void submitFeedback()}>
+                {submitting ? t('submitting') : t('submit')}
+              </button>
+            </div>
+            {feedbackMessage && <p className="settings-hint">{feedbackMessage}</p>}
           </div>
         </div>
       )}

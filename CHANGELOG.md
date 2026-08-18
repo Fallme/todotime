@@ -21,6 +21,35 @@
 
 ---
 
+## 2026-08-18 — 设置页新增「反馈」按钮，反馈内容一并存入数据仓库
+
+### 给人看（Human Summary）
+- **改了什么**：设置页新增「反馈」板块与「提交反馈」按钮，点击弹出输入框填写意见后提交；反馈会跟随当前识别码，与任务/番茄数据一样存入你的私有数据仓库（GitHub），实现持久化。
+- **为什么**：让用户能直接提交建议或问题，且反馈随个人数据仓库一起保存，便于后续统一查看。
+- **影响范围**：设置页新增反馈入口与弹窗；数据仓库新增 `feedback.json` 文件；其余同步、任务、统计逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `api/file.ts` — `ALLOWED_PATH` 增加 `feedback\.json`，放行反馈文件的读写。
+  - `src/types/index.ts` — 新增 `FeedbackEntry`（`id` / `createdAt` / `content` / `language` / `userAgent?`）。
+  - `src/services/github.ts` — 新增 `FEEDBACK_PATH = 'feedback.json'` 与 `saveFeedback(syncCode, entry)`：读旧文件 → 追加新条目 → 带 sha 写回，`SyncConflictError` 时最多重试 3 次。
+  - `src/App.tsx` — 新增 `handleSubmitFeedback`（构造 `FeedbackEntry` 并调用 `saveFeedback(activeSyncCode, entry)`），把 `onSubmitFeedback` 传给 `SettingsPanel`。
+  - `src/components/Settings/SettingsPanel.tsx` — props 增加 `onSubmitFeedback`；新增「反馈」section + 提交按钮 + 反馈弹窗（textarea、提交/取消、loading/成功/失败提示），并引入 `MessageSquare` 图标。
+  - `src/i18n/LanguageContext.tsx` — 新增 `feedback` / `feedbackHint` / `submitFeedback` / `feedbackPlaceholder` / `submitting` / `submit`（zh/en）。
+  - `src/index.css` — 新增 `.feedback-modal` / `.feedback-textarea` 样式。
+- **接口 / 数据模型变化**：
+  - 新增类型 `FeedbackEntry`；数据仓库新增文件 `profiles/{profileId}/feedback.json`，结构 `{ items: FeedbackEntry[] }`。
+  - 服务端 `ALLOWED_PATH` 放行 `feedback.json`（仍只允许白名单路径，未放宽其他）。
+- **关键实现细节 / 注意事项**：
+  - 反馈文件复用 `getFile` / `putFile` 与乐观并发（sha）机制，冲突时重试 3 次，与 `history.json` / `config.json` 同模式。
+  - 反馈以「追加」方式写入独立文件，不参与 config/history 的合并逻辑，避免污染现有同步合并；也不进 localStorage 缓存。
+  - 无识别码时设置页不渲染（`App` 层 `SyncCodeGate` 兜底），故提交时 `activeSyncCode` 必存在。
+  - 内容前端 `trim()` + `maxLength={2000}`，空内容禁用提交按钮；提交失败时区分 `Failed to fetch`（网络/服务不可达）与普通错误文案。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run typecheck:api`（`tsc -p api/tsconfig.json` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：设置 → 反馈 → 输入意见 → 提交 → 出现成功提示；到私有数据仓库查看 `profiles/{hash}/feedback.json` 出现新条目。
+- **后续待办 / 已知问题**：反馈目前仅落库，无后台查看界面；如需管理端读取/汇总反馈，需另建只读入口（暂不实施）。
+
+---
+
 ## 2026-08-18 — 统计图「专注时长」柱子改为浅金色
 
 ### 给人看（Human Summary）
