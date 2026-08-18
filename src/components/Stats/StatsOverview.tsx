@@ -193,6 +193,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  // Hidden pie slices are scoped so switching metric/period/report starts fresh without an effect.
+  const [hiddenCats, setHiddenCats] = useState<{ scope: string; labels: ReadonlySet<string> }>({ scope: '', labels: new Set() });
+  const [reportHiddenCats, setReportHiddenCats] = useState<{ scope: string; labels: ReadonlySet<string> }>({ scope: '', labels: new Set() });
   const today = formatDate(new Date());
 
   // Current period data
@@ -221,6 +224,29 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     setRefreshing(true);
     try { await onRefresh(); } finally { setRefreshing(false); }
   }, [onRefresh, refreshing]);
+
+  // Toggling a category in the custom pie legend hides/shows its slice.
+  // Hidden sets are scoped by the current metric/period (main) and report (modal),
+  // so switching context naturally shows everything again without an effect.
+  const pieScope = `${period}:${chartMetric}`;
+  const reportScope = showReport ?? '';
+  const toggleCat = useCallback((label: string) => {
+    setHiddenCats(prev => {
+      const current = prev.scope === pieScope ? prev.labels : new Set<string>();
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label); else next.add(label);
+      return { scope: pieScope, labels: next };
+    });
+  }, [pieScope]);
+
+  const toggleReportCat = useCallback((label: string) => {
+    setReportHiddenCats(prev => {
+      const current = prev.scope === reportScope ? prev.labels : new Set<string>();
+      const next = new Set(current);
+      if (next.has(label)) next.delete(label); else next.add(label);
+      return { scope: reportScope, labels: next };
+    });
+  }, [reportScope]);
 
   const handleDownload = useCallback((rd: PeriodResult, reportType: string, insights: ReportInsight[]) => {
     const lines: string[] = [];
@@ -333,13 +359,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   // Pie chart
   const pieCategories = useMemo(() => getCategoryData(activeData, chartMetric, categories), [activeData, chartMetric, categories]);
   const pieTotal = pieCategories.reduce((s, c) => s + c.value, 0);
-  const pieData = pieCategories.length > 0 ? {
-    labels: pieCategories.map(c => c.label),
-    datasets: [{ data: pieCategories.map(c => c.value), backgroundColor: pieCategories.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg-card)' }],
+  const activeHiddenCats = hiddenCats.scope === pieScope ? hiddenCats.labels : new Set<string>();
+  const visiblePieCategories = pieCategories.filter(c => !activeHiddenCats.has(c.label));
+  const visiblePieTotal = visiblePieCategories.reduce((s, c) => s + c.value, 0);
+  const pieData = visiblePieCategories.length > 0 ? {
+    labels: visiblePieCategories.map(c => c.label),
+    datasets: [{ data: visiblePieCategories.map(c => c.value), backgroundColor: visiblePieCategories.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg-card)' }],
   } : null;
   const pieOptions = {
     responsive: true, maintainAspectRatio: false, cutout: '55%', animation: { duration: 0 },
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}${metricInfo.unit} (${Math.round(v / pieTotal * 100)}%)`; } } } },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}${metricInfo.unit} (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
   };
 
   // Report data
@@ -403,17 +432,27 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
             <button className={`metric-btn ${chartMetric === 'tasks' ? 'active' : ''}`} onClick={() => setChartMetric('tasks')}><CheckCircle2 size={12} /> {t('tasks')}</button>
           </div>
         </div>
-        {pieData ? (
+        {pieCategories.length > 0 ? (
           <div className="pie-layout">
-            <div className="chart-wrapper-pie"><Doughnut data={pieData} options={pieOptions} /></div>
+            <div className="chart-wrapper-pie">
+              {visiblePieCategories.length > 0 && pieData
+                ? <Doughnut data={pieData} options={pieOptions} />
+                : <div className="chart-empty">{t('noData')}</div>}
+            </div>
             <div className="pie-legend">
-              {pieCategories.map(c => (
-                <div key={c.label} className="pie-legend-item">
-                  <span className="pie-dot" style={{ background: c.color }} />
-                  <span>{c.label}</span>
-                  <span className="pie-legend-val">{Math.round(c.value / pieTotal * 100)}% ({c.value}{metricInfo.unit})</span>
-                </div>
-              ))}
+              {pieCategories.map(c => {
+                const hidden = activeHiddenCats.has(c.label);
+                return (
+                  <div key={c.label} className={`pie-legend-item${hidden ? ' hidden' : ''}`}
+                    onClick={() => toggleCat(c.label)} role="button" tabIndex={0} aria-pressed={!hidden}
+                    title={hidden ? t('showCategory') : t('hideCategory')}
+                    onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCat(c.label); } }}>
+                    <span className="pie-dot" style={{ background: c.color }} />
+                    <span>{c.label}</span>
+                    <span className="pie-legend-val">{Math.round(c.value / pieTotal * 100)}% ({c.value}{metricInfo.unit})</span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         ) : <div className="chart-empty">{t('noData')}</div>}
@@ -438,13 +477,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         // Pie chart data for categories
         const pieCategories = reportCats.map(([k, v]) => ({ label: k, value: v, color: getCategoryColor(categories, k) }));
         const pieTotal = pieCategories.reduce((s, c) => s + c.value, 0);
-        const pieData = pieCategories.length > 0 ? {
-          labels: pieCategories.map(c => c.label),
-          datasets: [{ data: pieCategories.map(c => c.value), backgroundColor: pieCategories.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg)' }],
+        const activeReportHidden = reportHiddenCats.scope === reportScope ? reportHiddenCats.labels : new Set<string>();
+        const visiblePieCategories = pieCategories.filter(c => !activeReportHidden.has(c.label));
+        const visiblePieTotal = visiblePieCategories.reduce((s, c) => s + c.value, 0);
+        const pieData = visiblePieCategories.length > 0 ? {
+          labels: visiblePieCategories.map(c => c.label),
+          datasets: [{ data: visiblePieCategories.map(c => c.value), backgroundColor: visiblePieCategories.map(c => c.color), borderWidth: 2, borderColor: 'var(--bg)' }],
         } : null;
         const pieOpts = {
           responsive: true, maintainAspectRatio: false, cutout: '60%', animation: { duration: 0 },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${pieTotal > 0 ? Math.round(v / pieTotal * 100) : 0}%)`; } } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
         };
 
         // Completed tasks in period
@@ -523,19 +565,29 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               </div>
 
               {/* Pie chart - category distribution */}
-              {pieData && (
+              {pieCategories.length > 0 && (
                 <div className="report-section-apple">
                   <h4>{t('categoryDistribution')}</h4>
                   <div className="report-pie-layout">
-                    <div className="report-pie-chart"><Doughnut data={pieData} options={pieOpts} /></div>
+                    <div className="report-pie-chart">
+                      {visiblePieCategories.length > 0 && pieData
+                        ? <Doughnut data={pieData} options={pieOpts} />
+                        : <div className="chart-empty">{t('noData')}</div>}
+                    </div>
                     <div className="report-pie-legend">
-                      {pieCategories.map(c => (
-                        <div key={c.label} className="report-pie-item">
-                          <span className="report-pie-dot" style={{ background: c.color }} />
-                          <span className="report-pie-name">{c.label}</span>
-                          <span className="report-pie-val">{formatDuration(c.value)} ({pieTotal > 0 ? Math.round(c.value / pieTotal * 100) : 0}%)</span>
-                        </div>
-                      ))}
+                      {pieCategories.map(c => {
+                        const hidden = activeReportHidden.has(c.label);
+                        return (
+                          <div key={c.label} className={`report-pie-item${hidden ? ' hidden' : ''}`}
+                            onClick={() => toggleReportCat(c.label)} role="button" tabIndex={0} aria-pressed={!hidden}
+                            title={hidden ? t('showCategory') : t('hideCategory')}
+                            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReportCat(c.label); } }}>
+                            <span className="report-pie-dot" style={{ background: c.color }} />
+                            <span className="report-pie-name">{c.label}</span>
+                            <span className="report-pie-val">{formatDuration(c.value)} ({pieTotal > 0 ? Math.round(c.value / pieTotal * 100) : 0}%)</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>

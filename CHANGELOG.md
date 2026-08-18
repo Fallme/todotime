@@ -21,6 +21,29 @@
 
 ---
 
+## 2026-08-18 — 饼图图例支持点击隐藏/显示对应板块
+
+### 给人看（Human Summary）
+- **改了什么**：统计页「板块占比」饼图、以及周报/月报弹窗里的「板块分布」饼图，点击右侧图例的某一项，即可隐藏或重新显示该分类对应的扇形；隐藏的图例会变淡并加删除线，再点一次恢复。综合走势柱状图顶部的图例本就支持点击开关（Chart.js 原生行为），本次未变。
+- **为什么**：此前饼图图例是自定义 HTML 列表，只能看不能点；想暂时屏蔽某个分类、只看其余分类的占比对比时做不到。
+- **影响范围**：统计页饼图图例、周报/月报弹窗饼图图例；数据模型与同步逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — 新增 scoped 隐藏状态 `hiddenCats` / `reportHiddenCats`（形如 `{ scope: string; labels: ReadonlySet<string> }`）与 `toggleCat` / `toggleReportCat`；主饼与报告饼的 `pieData` 改为由 `visiblePieCategories`（过滤隐藏项）派生，tooltip 百分比分母改用 `visiblePieTotal`；图例项加 `onClick`、`role="button"`、`tabIndex={0}`、`aria-pressed`、键盘 Enter/Space 与 `title`（用新 i18n key）。
+  - `src/i18n/LanguageContext.tsx` — 新增 `hideCategory`（zh「点击隐藏该板块」/ en「Click to hide this category」）、`showCategory`（zh「点击显示该板块」/ en「Click to show this category」）。
+  - `src/index.css` — `.pie-legend-item` / `.report-pie-item` 增加 `cursor: pointer`，并新增 `.pie-legend-item.hidden` / `.report-pie-item.hidden`（`opacity: 0.4; text-decoration: line-through;`）。
+- **接口 / 数据模型变化**：无（仅组件内部 UI 状态与图例交互；存储、同步、图表数据口径均不变）。
+- **关键实现细节 / 注意事项**：
+  - 隐藏状态带 `scope` 而非用 effect 清空：`react-hooks/set-state-in-effect` 规则禁止在 effect 内同步 setState，故改为「读取时若 `scope` 不匹配当前 `period:chartMetric`（主饼）或 `showReport`（报告饼）就当作空集」，切换指标/周期/打开报告天然回到全显，无需 effect。
+  - 全部隐藏后仍保留图例可点回恢复：外层条件从 `pieData ?` 改为 `pieCategories.length > 0`，图表区在 `visiblePieCategories.length === 0` 时显示 `chart-empty`。
+  - 柱状图顶部图例的开关是 Chart.js 默认 `onClick`（`chart.hide/show` + `legendItem.hidden`）行为，本项目未覆盖、未改动。
+  - 图例项为可聚焦元素（`role="button"` + `tabIndex` + 键盘事件），保证键盘可操作。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页饼图点图例项 → 对应扇形消失、图例变淡划线，再点恢复；周报/月报弹窗内饼图同理；切换「时长/番茄/任务」指标后隐藏状态重置。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 统计图「完成任务」改为绿色系并与「专注时长」明显区分；「其他」改为完全不可修改的固定默认分类
 
 ### 给人看（Human Summary）
