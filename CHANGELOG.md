@@ -21,7 +21,30 @@
 
 ---
 
-## 2026-08-18 — 设置页反馈精简 + 识别码内联操作按钮 + 今日统计改为 2 小时分段
+## 2026-08-18 — 修复完成任务数统计不准 + 导出/导入/清除/反馈合并为一栏
+
+### 给人看（Human Summary）
+- **改了什么**：
+  1. 统计页「完成任务」数修复：同一任务在同一天被完成多次（如 toggle 完成→撤销→再完成）现在只计为 1 个完成任务，不再重复计数；周报/月报的已完成任务列表同样按任务去重。
+  2. 设置页将「导出数据」「导入数据」「清除数据」与「提交反馈」合并到同一个「数据管理」卡片中，不再单独占一栏。
+- **为什么**：此前完成任务数可能超过总量（因重复完成记录被多次计数）；导出/导入/清除与反馈功能上都属于数据管理，合并更紧凑。
+- **影响范围**：统计页所有视图（今天/近七天/近一个月）的任务完成数与周报/月报已完成任务列表；设置页数据管理区域布局。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` —
+    - `computePeriodData`：`doneToday` 由 `flatMap` 改为 `Map<todo.id, …>` 按任务 ID 去重，`tasksDone = doneTodayMap.size`；`categoryTasks` 遍历改用 `doneTodayMap.values()`。
+    - `computeTodaySlots`：移除旧的 `doneToday.flatMap` 循环，改为遍历每个 todo 取其当天 `completionRecords`，按 `todo.id` 去重后只计一次。
+    - Report modal `periodTasks`：由 `flatMap` 改为 `Map<todo.id, …>` 按任务去重。
+  - `src/components/Settings/SettingsPanel.tsx` — 「反馈」section + 底部 `settings-actions` div 合并为一个 `<section className="settings-section">`，标题 `t('dataManagement')`，内含反馈按钮 + 导入 + 导出 + 清除按钮。
+  - `src/i18n/LanguageContext.tsx` — 新增 `dataManagement`（zh: `数据管理`，en: `Data`）。
+- **接口 / 数据模型变化**：无。
+- **关键实现细节 / 注意事项**：
+  - 去重逻辑使用 `Map<todo.id, …>` + `if (!map.has(id)) map.set(…)` 保证每任务每天只计一次完成；选择第一个匹配的 completion record 用于分类统计。
+  - `totalTasksDay` 仍用 `Math.max(createdToday, tasksDone)` 兜底，确保完成数始终 ≤ 总数。
+  - 设置页 `settings-actions` 样式（`display: flex; flex-wrap: wrap; gap: 8px`）复用于新 section 内的按钮行。
+- **验证方式**：`npm run lint` 通过、`npm run build`（`tsc -b && vite build`）通过、`npm run test:logic` 35/35 通过。手测：同一任务完成→撤销→再完成，统计页「完成任务」只 +1；设置页「数据管理」卡片包含反馈/导出/导入/清除四个按钮。
+- **后续待办 / 已知问题**：无新增。
 
 ### 给人看（Human Summary）
 - **改了什么**：

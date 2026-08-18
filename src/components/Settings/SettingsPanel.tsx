@@ -180,19 +180,18 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
       </section>
 
       <section className="settings-section">
-        <h3>{t('feedback')}</h3>
-        <button className="btn secondary" type="button" onClick={() => { setShowFeedback(true); setFeedbackMessage(''); }}><MessageSquare size={16} /> {t('submitFeedback')}</button>
+        <h3>{t('dataManagement')}</h3>
+        <div className="settings-actions">
+          <button className="btn secondary" type="button" onClick={() => { setShowFeedback(true); setFeedbackMessage(''); }}><MessageSquare size={16} /> {t('submitFeedback')}</button>
+          <button className="btn secondary" onClick={onExport}><Download size={16} /> {t('exportData')}</button>
+          <label className="btn secondary"><Upload size={16} /> {t('importData')}<input type="file" accept=".json" onChange={handleFileChange} hidden /></label>
+          {!showClearConfirm ? (
+            <button className="btn danger" onClick={() => setShowClearConfirm(true)}><Trash2 size={16} /> {t('clearData')}</button>
+          ) : (
+            <div className="clear-confirm"><span>{t('clearConfirm')}</span><button className="btn danger small" onClick={() => { onClear(); setShowClearConfirm(false); }}>{t('confirm')}</button><button className="btn secondary small" onClick={() => setShowClearConfirm(false)}>{t('cancel')}</button></div>
+          )}
+        </div>
       </section>
-
-      <div className="settings-actions">
-        <button className="btn secondary" onClick={onExport}><Download size={16} /> {t('exportData')}</button>
-        <label className="btn secondary"><Upload size={16} /> {t('importData')}<input type="file" accept=".json" onChange={handleFileChange} hidden /></label>
-        {!showClearConfirm ? (
-          <button className="btn danger" onClick={() => setShowClearConfirm(true)}><Trash2 size={16} /> {t('clearData')}</button>
-        ) : (
-          <div className="clear-confirm"><span>{t('clearConfirm')}</span><button className="btn danger small" onClick={() => { onClear(); setShowClearConfirm(false); }}>{t('confirm')}</button><button className="btn secondary small" onClick={() => setShowClearConfirm(false)}>{t('cancel')}</button></div>
-        )}
-      </div>
 
       {showThemePicker && (
         <div className="modal-overlay" onClick={() => setShowThemePicker(false)}>

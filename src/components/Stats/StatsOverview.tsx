@@ -61,11 +61,14 @@ function computePeriodData(
     const dayData = dayDataMap.get(date);
     let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
     // Count completed tasks from local todos by completedAt date (ISO format: 2026-06-03T...)
-    const doneToday = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
+    // Deduplicate by task ID: toggling a task done/undone/done on the same day should count once.
+    const doneTodayMap = new Map<string, { todo: Todo; record: { id: string; completedAt: string } }>();
+    todos.filter(todo => !todo.deletedAt).forEach(todo => {
       getTodoCompletionRecords(todo)
         .filter(record => record.completedAt.startsWith(date))
-        .map(record => ({ todo, record })));
-    const tasksDone = doneToday.length;
+        .forEach(record => { if (!doneTodayMap.has(todo.id)) doneTodayMap.set(todo.id, { todo, record }); });
+    });
+    const tasksDone = doneTodayMap.size;
     const totalTasksDay = Math.max(todos.filter(t => !t.deletedAt && t.createdAt.startsWith(date)).length, tasksDone);
     if (date === today) {
       const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
@@ -87,7 +90,7 @@ function computePeriodData(
     if (liveMinutes > 0) {
       categoryMinutes[runningCategory] = (categoryMinutes[runningCategory] || 0) + liveMinutes;
     }
-    doneToday.forEach(({ todo }) => {
+    doneTodayMap.forEach(({ todo }) => {
       categoryTasks[todo.category] = (categoryTasks[todo.category] || 0) + 1;
     });
     return { date, minutes: mins, pomodoros: tomatoCount, tasksDone, totalTasks: totalTasksDay };
@@ -130,11 +133,16 @@ function computeTodaySlots(
     const idx = slotOf(new Date().getHours());
     if (idx >= 0 && idx < slots.length) slots[idx].minutes += runningMinutes;
   }
-  const doneToday = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
-    getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(today)).map(record => record.completedAt));
-  for (const completedAt of doneToday) {
-    const idx = slotOf(getHour(completedAt));
-    if (idx >= 0 && idx < slots.length) slots[idx].tasksDone += 1;
+  // Deduplicate by task: multiple completions on the same day count once.
+  const seenTaskIds = new Set<string>();
+  for (const todo of todos.filter(todo => !todo.deletedAt)) {
+    const records = getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(today));
+    if (records.length === 0) continue;
+    const idx = slotOf(getHour(records[0].completedAt));
+    if (idx >= 0 && idx < slots.length && !seenTaskIds.has(todo.id)) {
+      slots[idx].tasksDone += 1;
+      seenTaskIds.add(todo.id);
+    }
   }
   return slots;
 }
@@ -495,13 +503,16 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
           plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
         };
 
-        // Completed tasks in period
+        // Completed tasks in period (deduplicated by task ID)
         const periodStart = rd.daily[0]?.date ?? '';
         const periodEnd = rd.daily[rd.daily.length - 1]?.date ?? '';
-        const periodTasks = todos.filter(todo => !todo.deletedAt).flatMap(todo =>
+        const periodTaskMap = new Map<string, { todo: Todo; record: { id: string; completedAt: string } }>();
+        todos.filter(todo => !todo.deletedAt).forEach(todo => {
           getTodoCompletionRecords(todo)
             .filter(record => record.completedAt >= periodStart && record.completedAt <= periodEnd + 'T23:59:59')
-            .map(record => ({ todo, record })));
+            .forEach(record => { if (!periodTaskMap.has(todo.id)) periodTaskMap.set(todo.id, { todo, record }); });
+        });
+        const periodTasks = [...periodTaskMap.values()];
 
         const insights = generateReportInsights({
           language,
