@@ -21,6 +21,28 @@
 
 ---
 
+## 2026-08-18 — 修复已有类别无法编辑名称/颜色（改为铅笔按钮编辑）
+
+### 给人看（Human Summary）
+- **改了什么**：添加任务时打开分类选择，每个已有分类标签旁新增一个 ✎ 铅笔按钮（左上角，悬停显示），点击即可编辑该分类的名称和颜色；不再依赖「双击」。
+- **为什么**：原来编辑靠「双击标签」，但单击会立即选中分类并关闭选择面板，双击永远无法触发，等于「点不了」。
+- **影响范围**：添加任务表单里的分类选择面板（编辑名称/颜色入口）；选择、删除逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/TodoList/AddTodo.tsx` — lucide 导入加 `Pencil`；`category-chip` 按钮移除 `onDoubleClick`（原 `startEdit` 入口），在 `category-chip-wrap` 内、`category-chip-del` 之前新增 `category-chip-edit` 按钮（`Pencil` 图标，`onClick` 调 `startEdit(cat)`，`title={t('editCategory')}`）。
+  - `src/i18n/LanguageContext.tsx` — 新增 key `editCategory`（zh「编辑分类」/ en「Edit category」）；`editCategoryHint` 文案由「双击标签可编辑名称和颜色」改为「点击标签旁的 ✎ 编辑名称和颜色，× 删除」（en 同步）。
+  - `src/index.css` — 新增 `.category-chip-edit`（左上角 16px 圆形、accent 底色、hover 显示，与 `.category-chip-del` 对称）；加入非 tomato 主题的 `border-radius` 覆盖选择器列表，与删除按钮视觉一致。
+- **接口 / 数据模型变化**：无（`onRenameCategory`/`onDeleteCategory` 等 props 不变；仅 UI 入口与 i18n 文案）。
+- **关键实现细节 / 注意事项**：
+  - 根因：`onClick`（`setCategory + setShowCatPicker(false)`）与 `onDoubleClick`（`startEdit`）互斥——第一次单击就把面板关了，第二次点击落到别处，双击事件不触发。
+  - 修复采用显式铅笔按钮而非「区分单击/双击延迟」，更可靠、可发现；`startEdit` 会把 `showCatAdd` 关掉并填充 `editName/editColor`，逻辑复用不变。
+  - 铅笔与删除按钮都 `position: absolute` 贴角、`opacity: 0` 默认、`.category-chip-wrap:hover` 时显示，避免常驻两个角标造成拥挤。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：添加任务 → 点分类标签 → 悬停某分类出现 ✎ 与 × → 点 ✎ 进入编辑面板可改名/改色并保存，点 × 删除正常。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 统计页「今天」走势图改为按一天内 4 小时时段统计
 
 ### 给人看（Human Summary）

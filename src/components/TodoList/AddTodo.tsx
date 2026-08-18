@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Repeat2 } from 'lucide-react';
+import { Plus, Repeat2, Pencil } from 'lucide-react';
 import type { Priority, Category, CategoryItem, TaskRecurrence } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
@@ -195,9 +195,12 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                     <button type="button"
                       className={`category-chip ${cat.name === selectedCategory ? 'active' : ''}`}
                       style={{ color: 'var(--text)', borderColor: cat.color }}
-                      onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}
-                      onDoubleClick={(e) => { e.stopPropagation(); startEdit(cat); }}>
+                      onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}>
                       {cat.name}
+                    </button>
+                    <button type="button" className="category-chip-edit"
+                      onClick={(e) => { e.stopPropagation(); startEdit(cat); }} title={t('editCategory')}>
+                      <Pencil size={11} />
                     </button>
                     <button type="button" className="category-chip-del" disabled={categories.length <= 1}
                       onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || '其他'); }} title={categories.length <= 1 ? t('keepOneCategory') : t('deleteCategory')}>×</button>
