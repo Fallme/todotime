@@ -21,6 +21,30 @@
 
 ---
 
+## 2026-08-18 — 统计页改为「时间范围切换 + 汇总 + 饼图 + 走势」的单一布局
+
+### 给人看（Human Summary）
+- **改了什么**：统计页重新布局——顶部一个时间范围切换（今天 / 近七天 / 近一个月，默认「今天」），其下是一行汇总卡（🍅 番茄、时长、完成任务），紧接着就是饼状图（板块占比），再往下是柱状走势图。原来的「今日信息卡」和「一周/一月汇总卡」两套卡片合并为一套，不再重复。柱状图配色改为更自然的蓝灰（时长）、陶土橙（番茄）、草绿（任务）。
+- **为什么**：原来顶部「今日卡」和中间「周/月汇总卡」信息重叠，饼图还单独带一套时间切换，页面显得啰嗦；统一一个时间切换驱动所有卡片/图表更清晰，配色也更柔和耐看。
+- **影响范围**：统计页布局、时间范围切换、柱状图颜色；周报/月报弹窗功能与数据模型不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — `Period` 类型由 `'week' | 'month'` 扩为 `'day' | 'week' | 'month'`；删除 `PiePeriod` 类型与 `piePeriod` state；`period` 默认值由 `'week'` 改为 `'day'`；删除独立 `todayData` useMemo（汇总数据统一走 `computePeriodData` 的 `dayData`）；`activeData` 改为 `period === 'day' ? dayData : period === 'week' ? weekData : monthData`；`activePieData` 删除、饼图改用 `activeData`；删除 `stats-aggregate-card` 汇总卡 JSX 与 `activeDays` 派生变量；新增 `periodLabel` 与单日 `dateRange` 处理；JSX 顶部改为「toolbar(今天/近七天/近一个月 + 周报月报按钮) → stats-top-row 汇总卡(总番茄/总时长/完成任务) → 饼图卡 → 走势图卡」。柱状图配色：时长 `#6c5ce7→#5b8c9e`、番茄 `#FF6B6B→#d2704a`、任务 `#27ae60→#6f9e6b`，同步更新 `trendOptions`/`combinedBarOpts` 的 y 轴刻度色与 `combinedBarData` 背景色。
+  - `src/index.css` — 未改动（`stats-top-row`、`stats-card-full`、`pie-layout`、`stats-period-toggle`、`metric-btn` 等复用既有样式；`.stats-aggregate-card`/`.agg-*` 成为死 CSS，暂保留未删）。
+- **接口 / 数据模型变化**：无导出接口变化；`StatsOverviewProps` 不变；存储与同步无变化。
+- **关键实现细节 / 注意事项**：
+  - 单个 `period` state 同时驱动汇总卡、饼图、走势图；「今天」时 `activeData = dayData`（`computePeriodData(count=1)` 已含 `runningMinutes` 实时时长与 `todayPomodoros` 合并去重，与旧 `todayData` 口径一致）。
+  - 汇总卡文案由「今日番茄/今日时长/今日完成」改为中性的「番茄/时长/完成任务」，避免切到周/月时语义错误；`t('today')`、`t('lastSevenDays')`、`t('lastMonth')` 均为既有 key。
+  - 单日 `dateRange` 显示完整日期（如 `2026-08-18`），周/月显示 `MM-DD ~ MM-DD`，避免「08-18 ~ 08-18」。
+  - 删除 `Calendar`（lucide）导入（原 activeDays 用）；`activeDays` 在报告弹窗 IIFE 内仍有局部变量，保留。
+  - 源级测试 `test/timerInteractions.test.ts` 仍通过（未引入 `type: 'line'`）。
+  - 遗留死 CSS：`.stats-aggregate-card` / `.agg-item` / `.agg-val` / `.agg-label` 及主题 override 选择器中的对应引用已无 JSX 使用，可后续清理。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页默认「今天」；切换近七天/近一个月后汇总卡、饼图、走势图同步变化；柱状图三色为蓝灰/陶土橙/草绿。
+- **后续待办 / 已知问题**：可清理 `.stats-aggregate-card` 等死 CSS；「今天」走势图只有一根柱，如需更丰富可考虑按小时聚合（暂不实现）。
+
+---
+
 ## 2026-08-18 — 添加任务的刷新周期改为「加号前的按钮 + 弹窗」设置
 
 ### 给人看（Human Summary）

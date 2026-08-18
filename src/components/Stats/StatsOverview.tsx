@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from 'react';
 import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
-import { X, Clock, CheckCircle2, Calendar, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
+import { X, Clock, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { isPomodoroRecord } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
@@ -11,8 +11,7 @@ import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
 
 ChartJS.register(CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend);
 
-type Period = 'week' | 'month';
-type PiePeriod = 'day' | 'week' | 'month';
+type Period = 'day' | 'week' | 'month';
 type ChartMetric = 'minutes' | 'pomodoros' | 'tasks';
 
 interface StatsOverviewProps {
@@ -117,23 +116,11 @@ function diffText(current: number, previous: number): { text: string; cls: strin
 
 export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, runningMinutes = 0, runningCategory = '其他', onRefresh }: StatsOverviewProps) {
   const { language, t } = useLanguage();
-  const [period, setPeriod] = useState<Period>('week');
-  const [piePeriod, setPiePeriod] = useState<PiePeriod>('week');
+  const [period, setPeriod] = useState<Period>('day');
   const [chartMetric, setChartMetric] = useState<ChartMetric>('minutes');
   const [showReport, setShowReport] = useState<'week' | 'month' | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const today = formatDate(new Date());
-
-  const todayData = useMemo(() => {
-    const dayData = dayDataMap.get(today);
-    let poms = dayData?.pomodoros?.filter(p => p.completed) ?? [];
-    const existing = new Set(poms.map(p => p.id || `${p.start}-${p.end}`));
-    poms = [...poms, ...todayPomodoros.filter(p => p.completed && (p.date || today) === today && !existing.has(p.id || `${p.start}-${p.end}`))];
-    const mins = poms.reduce((s, p) => s + p.duration, 0) + runningMinutes;
-    const tasksDone = todos.filter(todo => !todo.deletedAt)
-      .reduce((sum, todo) => sum + getTodoCompletionRecords(todo).filter(record => record.completedAt.startsWith(today)).length, 0);
-    return { pomodoros: poms.filter(isPomodoroRecord).length, minutes: mins, tasksDone };
-  }, [dayDataMap, todayPomodoros, today, todos, runningMinutes]);
 
   // Current period data
   const weekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 0, todos, runningMinutes, runningCategory), [dayDataMap, todayPomodoros, today, todos, runningMinutes, runningCategory]);
@@ -144,8 +131,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const prevWeekData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 7, today, 7, todos), [dayDataMap, todayPomodoros, today, todos]);
   const prevMonthData = useMemo(() => computePeriodData(dayDataMap, todayPomodoros, 30, today, 30, todos), [dayDataMap, todayPomodoros, today, todos]);
 
-  const activeData = period === 'week' ? weekData : monthData;
-  const activePieData = piePeriod === 'day' ? dayData : piePeriod === 'week' ? weekData : monthData;
+  const activeData = period === 'day' ? dayData : period === 'week' ? weekData : monthData;
   const isCompact = period === 'month';
 
   const handleRefresh = useCallback(async () => {
@@ -192,8 +178,10 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   }, []);
 
   const metricInfo = chartMetric === 'minutes' ? { label: t('focusDuration'), unit: language === 'zh-CN' ? '分钟' : 'min' } : chartMetric === 'pomodoros' ? { label: t('pomodoroCount'), unit: language === 'zh-CN' ? '个' : '' } : { label: t('completedTasks'), unit: language === 'zh-CN' ? '个' : '' };
-  const dateRange = `${activeData.daily[0]?.date.slice(5)} ~ ${activeData.daily[activeData.daily.length - 1]?.date.slice(5)}`;
-  const activeDays = activeData.daily.filter(d => d.minutes > 0 || d.tasksDone > 0).length;
+  const periodLabel = period === 'day' ? t('today') : period === 'week' ? t('lastSevenDays') : t('lastMonth');
+  const firstDate = activeData.daily[0]?.date ?? '';
+  const lastDate = activeData.daily[activeData.daily.length - 1]?.date ?? '';
+  const dateRange = period === 'day' ? firstDate : `${firstDate.slice(5)} ~ ${lastDate.slice(5)}`;
 
   // All three metrics use grouped square bars so daily values can be compared directly.
   const trendData = {
@@ -202,19 +190,19 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       {
         type: 'bar' as const,
         label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: activeData.daily.map(d => d.minutes), yAxisID: 'minutes',
-        borderColor: '#6c5ce799', backgroundColor: '#6c5ce755', borderWidth: 1,
+        borderColor: '#5b8c9e99', backgroundColor: '#5b8c9e55', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
       {
         type: 'bar' as const,
         label: t('pomodoroCount'), data: activeData.daily.map(d => d.pomodoros), yAxisID: 'counts',
-        borderColor: '#FF6B6B', backgroundColor: '#FF6B6B99', borderWidth: 1,
+        borderColor: '#d2704a', backgroundColor: '#d2704a99', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 1,
       },
       {
         type: 'bar' as const,
         label: t('completedTasks'), data: activeData.daily.map(d => d.tasksDone), yAxisID: 'counts',
-        borderColor: '#27ae60', backgroundColor: '#27ae6099', borderWidth: 1,
+        borderColor: '#6f9e6b', backgroundColor: '#6f9e6b99', borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 10 : 20, order: 2,
       },
     ],
@@ -243,13 +231,13 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         grid: { display: false },
         ticks: { color: '#999', font: { size: isCompact ? 8 : 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isCompact ? 8 : 7 },
       },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: '#6c5ce7', precision: 0 }, title: { display: true, text: '分钟', color: '#6c5ce7', font: { size: 10 } } },
-      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B', precision: 0 }, title: { display: true, text: '番茄 / 任务', color: '#FF6B6B', font: { size: 10 } } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: '#5b8c9e', precision: 0 }, title: { display: true, text: '分钟', color: '#5b8c9e', font: { size: 10 } } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#d2704a', precision: 0 }, title: { display: true, text: '番茄 / 任务', color: '#d2704a', font: { size: 10 } } },
     },
   };
 
   // Pie chart
-  const pieCategories = useMemo(() => getCategoryData(activePieData, chartMetric, categories), [activePieData, chartMetric, categories]);
+  const pieCategories = useMemo(() => getCategoryData(activeData, chartMetric, categories), [activeData, chartMetric, categories]);
   const pieTotal = pieCategories.reduce((s, c) => s + c.value, 0);
   const pieData = pieCategories.length > 0 ? {
     labels: pieCategories.map(c => c.label),
@@ -272,9 +260,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#6c5ce7aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
-      { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#FF6B6Baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
-      { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#27ae60aa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: '#5b8c9eaa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: '#d2704aaa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
+      { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: '#6f9e6baa', borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
@@ -282,8 +270,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#6c5ce7', precision: 0 } },
-      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#FF6B6B', precision: 0 } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: '#5b8c9e', precision: 0 } },
+      counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: '#d2704a', precision: 0 } },
     },
   };
 
@@ -291,16 +279,10 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
 
   return (
     <div className="stats-overview">
-      {/* Today summary */}
-      <div className="stats-top-row">
-        <div className="stats-top-item accent"><span className="stats-top-val">{todayData.pomodoros}</span><span className="stats-top-label">🍅 {t('todayPomodoros')}</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{todayData.minutes}m</span><span className="stats-top-label"><Clock size={12} /> {t('todayDuration')}</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{todayData.tasksDone}</span><span className="stats-top-label"><CheckCircle2 size={12} /> {t('todayCompleted')}</span></div>
-      </div>
-
-      {/* Toolbar: all controls in one row */}
+      {/* Toolbar: unified period switch + reports */}
       <div className="stats-toolbar">
-        <div className="stats-period-toggle">
+        <div className="stats-period-toggle" aria-label="统计时间范围">
+          <button className={`period-btn ${period === 'day' ? 'active' : ''}`} onClick={() => setPeriod('day')}>{t('today')}</button>
           <button className={`period-btn ${period === 'week' ? 'active' : ''}`} onClick={() => setPeriod('week')}>{t('lastSevenDays')}</button>
           <button className={`period-btn ${period === 'month' ? 'active' : ''}`} onClick={() => setPeriod('month')}>{t('lastMonth')}</button>
         </div>
@@ -310,32 +292,17 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         </div>
       </div>
 
-      {/* Aggregate summary */}
-      <div className="stats-aggregate-card">
-        <div className="agg-item"><span className="agg-val">{activeData.totalPomodoros}</span><span className="agg-label">🍅 {t('pomodoros')}</span></div>
-        <div className="agg-item"><span className="agg-val">{activeData.totalMinutes}m</span><span className="agg-label"><Clock size={11} /> {t('duration')}</span></div>
-        <div className="agg-item"><span className="agg-val">{activeData.totalTasksCompleted}</span><span className="agg-label"><CheckCircle2 size={11} /> {t('completedTasks')}</span></div>
-        <div className="agg-item"><span className="agg-val">{activeDays}/{activeData.daily.length}</span><span className="agg-label"><Calendar size={11} /> {t('activeDays')}</span></div>
+      {/* Unified summary (pomodoros / duration / completed) for the selected period */}
+      <div className="stats-top-row">
+        <div className="stats-top-item accent"><span className="stats-top-val">{activeData.totalPomodoros}</span><span className="stats-top-label">🍅 {t('pomodoros')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{activeData.totalMinutes}m</span><span className="stats-top-label"><Clock size={12} /> {t('duration')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{activeData.totalTasksCompleted}</span><span className="stats-top-label"><CheckCircle2 size={12} /> {t('completedTasks')}</span></div>
       </div>
 
-      {/* Combined trend chart */}
-      <div className="stats-card-full">
-        <div className="chart-header">
-          <h4 className="chart-sub-title">{period === 'week' ? t('lastSevenDays') : t('lastMonth')} · {t('combinedTrend')}</h4>
-          <span className="stats-period-range">{dateRange}</span>
-        </div>
-        <div className="chart-wrapper-lg trend-chart"><Bar data={trendData} options={trendOptions} /></div>
-      </div>
-
-      {/* Pie chart */}
+      {/* Pie chart immediately below the summary */}
       <div className="stats-card-full">
         <div className="chart-header pie-chart-header">
           <h4 className="chart-sub-title">{t('categoryShare')} · {metricInfo.label}</h4>
-          <div className="stats-period-toggle" aria-label="板块占比时间范围">
-            <button className={`period-btn ${piePeriod === 'day' ? 'active' : ''}`} onClick={() => setPiePeriod('day')}>{t('today')}</button>
-            <button className={`period-btn ${piePeriod === 'week' ? 'active' : ''}`} onClick={() => setPiePeriod('week')}>{t('lastSevenDays')}</button>
-            <button className={`period-btn ${piePeriod === 'month' ? 'active' : ''}`} onClick={() => setPiePeriod('month')}>{t('lastMonth')}</button>
-          </div>
           <div className="stats-metric-toggle" aria-label="饼图分布指标">
             <button className={`metric-btn ${chartMetric === 'minutes' ? 'active' : ''}`} onClick={() => setChartMetric('minutes')}><Clock size={12} /> {t('duration')}</button>
             <button className={`metric-btn ${chartMetric === 'pomodoros' ? 'active' : ''}`} onClick={() => setChartMetric('pomodoros')}>🍅 {t('pomodoros')}</button>
@@ -356,6 +323,15 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
             </div>
           </div>
         ) : <div className="chart-empty">{t('noData')}</div>}
+      </div>
+
+      {/* Combined trend chart */}
+      <div className="stats-card-full">
+        <div className="chart-header">
+          <h4 className="chart-sub-title">{periodLabel} · {t('combinedTrend')}</h4>
+          <span className="stats-period-range">{dateRange}</span>
+        </div>
+        <div className="chart-wrapper-lg trend-chart"><Bar data={trendData} options={trendOptions} /></div>
       </div>
 
       {/* Report Modal */}
