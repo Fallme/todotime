@@ -1,4 +1,5 @@
 import { lazy, Suspense, useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { Plus } from 'lucide-react';
 import type { AppSettings, Category, CategoryItem, FeedbackEntry, PomodoroRecord, Todo } from './types';
 import { DEFAULT_SETTINGS, normalizeTheme, OTHER_CATEGORY_COLOR, OTHER_CATEGORY_NAME } from './types';
 import { formatDate } from './utils/dateUtils';
@@ -489,9 +490,12 @@ export default function App() {
                     <div key={i} className={`cycle-dot ${i < timer.cycleCount ? 'filled' : ''}`} />
                   ))}
                 </div>
+                <button className="add-group-btn" type="button" onClick={handleAddGroup} title={t('addGroup')} aria-label={t('addGroup')}>
+                  <Plus size={14} />
+                </button>
               </div>
               <TimerRing timeLeft={timer.timeLeft} totalTime={timer.totalTime} mode={timer.mode} isRunning={timer.isRunning} currentTaskName={currentTask?.title ?? null} currentCategory={currentTask?.category ?? null} onClick={() => setShowTaskPicker(true)} />
-              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onAddGroup={handleAddGroup} />
+              <TimerControls isRunning={timer.isRunning} onStart={timer.start} onPause={timer.pause} onNewRound={timer.endNow} onSkip={timer.skip} />
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}

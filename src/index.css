@@ -1020,6 +1020,14 @@ html[data-theme="farmcraft"] body {
   box-sizing: border-box; transition: all 0.3s;
 }
 .cycle-dot.filled { background: var(--accent); border-color: transparent; }
+.add-group-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; padding: 0; margin-left: 8px;
+  border: 1px dashed var(--border); border-radius: 50%;
+  background: transparent; color: var(--text-muted); cursor: pointer;
+  transition: all 0.2s; flex-shrink: 0;
+}
+.add-group-btn:hover { color: var(--accent); border-color: var(--accent); border-style: solid; }
 
 /* Timer ring */
 .timer-ring-container {

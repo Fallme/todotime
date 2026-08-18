@@ -21,6 +21,29 @@
 
 ---
 
+## 2026-08-18 — 恢复「跳过当前阶段」按钮，「增加组数」移到顶部组数标记旁
+
+### 给人看（Human Summary）
+- **改了什么**：计时器下方控制区恢复「跳过当前阶段」按钮（SkipForward 图标），专注、短休息、长休息任一阶段都可一键跳到下一阶段；「增加组数」按钮不再占用控制区，改为放在顶部组数标记（圆点）右侧的小「+」按钮。
+- **为什么**：此前某次改动把「跳过当前阶段」替换成了「增加组数」，导致跳过阶段的功能消失；用户希望恢复跳过功能，同时把「增加组数」放回顶部组数标记之后，控制区回到「结束并记录本轮 / 开始暂停 / 跳过」三个按钮。
+- **影响范围**：计时器页控制区布局与顶部组数标记旁新增小按钮；跳过/增加组数的功能行为不变（分别调用 `timer.skip` 与 `handleAddGroup`）。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Timer/TimerControls.tsx` — import 由 `Plus` 改回 `SkipForward`；props 由 `onAddGroup` 改回 `onSkip`；第三个按钮由「增加组数」改回 `<button className="ctrl-btn secondary" onClick={onSkip} title={t('skipStage')}><SkipForward size={18} /></button>`。
+  - `src/App.tsx` — 新增 `import { Plus } from 'lucide-react'`；`.cycle-indicator` 内、`.cycle-dots` 之后新增 `<button className="add-group-btn" onClick={handleAddGroup} title={t('addGroup')}><Plus size={14} /></button>`；`TimerControls` 使用处 `onAddGroup={handleAddGroup}` 改为 `onSkip={timer.skip}`。
+  - `src/index.css` — 新增 `.add-group-btn` 样式（22px 圆形虚线边框按钮，hover 变强调色）。
+  - `test/timerInteractions.test.ts` — 断言由 `controls` 匹配 `onAddGroup` / 不匹配 `onSkip` 改为匹配 `onSkip` / 不匹配 `onAddGroup`，并新增 `app` 匹配 `add-group-btn`、`onClick={handleAddGroup}` 与 `styles` 匹配 `.add-group-btn`。
+- **接口 / 数据模型变化**：无。`timer.skip` 与 `handleAddGroup` 均已存在，本次仅改 UI 挂接与样式。
+- **关键实现细节 / 注意事项**：
+  - 跳过功能原本就在 `useTimer` 里暴露为 `skip()`，此前只是按钮被 `onAddGroup` 替换掉了；恢复时直接接线 `onSkip={timer.skip}` 即可，无需改 hook。
+  - 「增加组数」按钮与顶部组数圆点同处 `.cycle-indicator`（已是 flex 居中容器），因此用 `margin-left: 8px` 排布，无需额外包裹层。
+  - `handleAddGroup` 逻辑未变（`longBreakInterval + 1` 并 `normalizeSettings`），仍由 App 层持有。
+- **验证方式**：`npm run lint` 通过、`npm run build`（`tsc -b && vite build`）通过、`npm run test:logic`（35/35 通过）。手测：进入计时器，专注/休息阶段点「跳过」按钮可直接切到下一阶段；顶部圆点右侧「+」点击后组数 +1 且圆点数同步增加。
+- **后续待办 / 已知问题**：无新增。
+
+---
+
 ## 2026-08-18 — 设置页新增「反馈」按钮，反馈内容一并存入数据仓库
 
 ### 给人看（Human Summary）
