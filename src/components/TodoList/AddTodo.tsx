@@ -199,10 +199,12 @@ export function AddTodo({ onAdd, categories, onAddCategory, onDeleteCategory, on
                       onClick={() => { setCategory(cat.name); setShowCatPicker(false); }}>
                       {cat.name}
                     </button>
-                    <button type="button" className="category-chip-edit"
-                      onClick={(e) => { e.stopPropagation(); startEdit(cat); }} title={t('editCategory')}>
-                      <Pencil size={11} />
-                    </button>
+                    {cat.name !== OTHER_CATEGORY_NAME && (
+                      <button type="button" className="category-chip-edit"
+                        onClick={(e) => { e.stopPropagation(); startEdit(cat); }} title={t('editCategory')}>
+                        <Pencil size={11} />
+                      </button>
+                    )}
                     <button type="button" className="category-chip-del" disabled={categories.length <= 1 || cat.name === OTHER_CATEGORY_NAME}
                       onClick={(e) => { e.stopPropagation(); onDeleteCategory(cat.name); if (selectedCategory === cat.name) setCategory(categories.find(c => c.name !== cat.name)?.name || OTHER_CATEGORY_NAME); }} title={categories.length <= 1 ? t('keepOneCategory') : cat.name === OTHER_CATEGORY_NAME ? t('keepOtherCategory') : t('deleteCategory')}>×</button>
                   </div>

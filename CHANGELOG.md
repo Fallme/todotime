@@ -21,6 +21,31 @@
 
 ---
 
+## 2026-08-18 — 统计图「完成任务」改为绿色系并与「专注时长」明显区分；「其他」改为完全不可修改的固定默认分类
+
+### 给人看（Human Summary）
+- **改了什么**：
+  1. 统计页柱状图（今天 / 近七天 / 近一个月走势图 + 周报/月报组合柱状图）中，「完成任务」柱子改以绿色系为主（贴近 `#4caf50`），「专注时长」柱子改得更偏蓝（`#5b8c9e` 权重加大），两者色相差异明显，不再相近难辨；「番茄数」柱子保持暖橙红不变。
+  2. 「其他」分类由「可改名改色、仅不可删除」收紧为**完全不可修改的固定默认设置**：分类面板里「其他」不再显示 ✎ 编辑按钮，改名/改色入口被封死，名称与颜色恒为默认值。
+- **为什么**：上一版「完成任务」用的是偏灰的草绿、与偏蓝的「专注时长」观感接近，用户反馈区分不大；「其他不可修改就是默认设置」——它是未分配专注的系统兜底，不应允许任何自定义。
+- **影响范围**：统计页所有柱状图的三色观感；添加任务分类面板里「其他」的编辑入口（删除按钮仍保持禁用，未变）；数据模型与同步逻辑不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/Stats/StatsOverview.tsx` — 颜色派生三行改为：`durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.65)`（原 0.45，更偏蓝）、`tasksColor = mixRgb(hexToRgb(accentLight), hexToRgb('#4caf50'), 0.72)`（原 `#6f9e6b` 权重 0.5，改为明确绿色且更接近绿色基准）、`pomodoroColor` 不变（`mixRgb(hexToRgb(accent), hexToRgb('#d2704a'), 0.3)`）。
+  - `src/components/TodoList/AddTodo.tsx` — `category-chip-edit`（✎）按钮整体包进 `{cat.name !== OTHER_CATEGORY_NAME && (...)}`，「其他」不再渲染编辑按钮。
+  - `src/App.tsx` — `handleRenameCategory` 顶部新增 `if (oldName === OTHER_CATEGORY_NAME) return;`，App 层守卫禁止改名/改色「其他」。
+  - `src/types/index.ts` — 顶部注释由「名称固定为常量，颜色可改」改为「名称与颜色均为固定默认值，不可修改、不可删除」。
+- **接口 / 数据模型变化**：无（`OTHER_CATEGORY_NAME` / `OTHER_CATEGORY_COLOR` 常量不变；仅 UI 入口 + 守卫 + 颜色派生参数）。
+- **关键实现细节 / 注意事项**：
+  - 「其他」不可修改采用双层防护：UI 层隐藏 ✎（AddTodo）+ 逻辑层守卫 `handleRenameCategory` 直接 return，防止未来新增入口绕过 UI；删除保护沿用上一版的双层（App 守卫 + 删除按钮 disabled）。
+  - 三色语义最终定为：时长偏蓝（`accentLight` 与 `#5b8c9e` 0.65 混合）、番茄偏暖橙红（`accent` 与 `#d2704a` 0.3）、任务偏绿（`accentLight` 与 `#4caf50` 0.72），仍各自随主题强调色偏移，保证「不同主题颜色不同」与「三者可区分」同时成立。
+  - `pomodoroColor` 未改动，避免与任务绿、时长蓝的既有区分度被破坏。
+- **验证方式**：`npm run build`（`tsc -b && vite build` 通过）、`npm run test:logic`（35/35 通过）、`npm run lint` 通过。手测：统计页切不同主题看柱状图，任务绿与时长蓝明显可辨；添加任务 → 分类面板，「其他」无 ✎ 只有禁用的 ×，其余分类 ✎/× 正常。
+- **后续待办 / 已知问题**：若未来希望「其他」颜色也能跟随某主题（如深色主题下更柔和），当前仍是固定 `#b08968`，可另行评估；暂不实施。
+
+---
+
 ## 2026-08-18 — 「其他」分类改为可编辑的暖色兜底分类，不再灰色
 
 ### 给人看（Human Summary）

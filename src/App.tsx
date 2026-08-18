@@ -438,6 +438,7 @@ export default function App() {
     todosHook.renameTodosCategory(name, replacement.name);
   };
   const handleRenameCategory = (oldName: string, newName: string, newColor: string) => {
+    if (oldName === OTHER_CATEGORY_NAME) return;
     if (oldName !== newName && settings.categories.some(c => c.name === newName)) return;
     setSettings(s => ({
       ...s,

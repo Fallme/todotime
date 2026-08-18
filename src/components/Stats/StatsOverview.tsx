@@ -269,9 +269,9 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   // Each metric keeps its own hue identity but is shifted toward the active theme.
   const accent = readCssColor('--accent', '#FF6B6B');
   const accentLight = readCssColor('--accent-light', '#FFA07A');
-  const durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.45);
+  const durationColor = mixRgb(hexToRgb(accentLight), hexToRgb('#5b8c9e'), 0.65);
   const pomodoroColor = mixRgb(hexToRgb(accent), hexToRgb('#d2704a'), 0.3);
-  const tasksColor = mixRgb(hexToRgb(accentLight), hexToRgb('#6f9e6b'), 0.5);
+  const tasksColor = mixRgb(hexToRgb(accentLight), hexToRgb('#4caf50'), 0.72);
 
   // All three metrics use grouped square bars so values can be compared directly.
   // For "today" the x-axis is 4-hour slots instead of dates.

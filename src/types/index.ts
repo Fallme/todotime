@@ -16,7 +16,7 @@ export interface CategoryItem {
 }
 
 // 「其他」是系统兜底分类：未指定任务的专注都会归到它，因此它必须始终存在。
-// 名称固定为常量，颜色可改（默认用暖色，不再用灰色）。
+// 名称与颜色均为固定默认值，不可修改、不可删除（默认用暖色，不再用灰色）。
 export const OTHER_CATEGORY_NAME = '其他';
 export const OTHER_CATEGORY_COLOR = '#b08968';
 
