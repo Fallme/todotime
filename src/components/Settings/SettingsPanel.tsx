@@ -1,9 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppSettings, ThemeId } from '../../types';
-import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X, MessageSquare, Eye, EyeOff } from 'lucide-react';
+import { Download, Upload, Trash2, Copy, RefreshCw, Check, Palette, ChevronRight, X, MessageSquare, Eye, EyeOff, Activity, Users, Clock3 } from 'lucide-react';
 import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/syncIdentity';
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
+import { checkDeveloperAccess, loadDeveloperOverview, type DeveloperOverview } from '../../services/github';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -62,11 +63,25 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const [feedbackText, setFeedbackText] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [developerAccess, setDeveloperAccess] = useState({ syncCode: '', allowed: false });
+  const [showDeveloperOverview, setShowDeveloperOverview] = useState(false);
+  const [developerOverview, setDeveloperOverview] = useState<DeveloperOverview | null>(null);
+  const [developerLoading, setDeveloperLoading] = useState(false);
+  const [developerError, setDeveloperError] = useState('');
 
   const update = <K extends keyof AppSettings>(key: K, value: AppSettings[K]) => onSave({ ...settings, [key]: value });
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const copyIndex = language === 'zh-CN' ? 0 : 1;
   const currentTheme = THEME_OPTIONS.find(option => option.id === settings.theme) ?? THEME_OPTIONS[0];
+  const isDeveloper = developerAccess.syncCode === settings.syncCode && developerAccess.allowed;
+
+  useEffect(() => {
+    let active = true;
+    void checkDeveloperAccess(settings.syncCode).then(result => {
+      if (active) setDeveloperAccess({ syncCode: settings.syncCode, allowed: result });
+    });
+    return () => { active = false; };
+  }, [settings.syncCode]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -110,6 +125,33 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
       setSubmitting(false);
     }
   };
+
+  const refreshDeveloperOverview = async () => {
+    if (developerLoading) return;
+    setDeveloperLoading(true);
+    setDeveloperError('');
+    try {
+      setDeveloperOverview(await loadDeveloperOverview(settings.syncCode));
+    } catch (error) {
+      const detail = error instanceof Error ? error.message : '';
+      setDeveloperError(detail || msg('读取失败，请稍后重试', 'Unable to load. Please retry.'));
+    } finally {
+      setDeveloperLoading(false);
+    }
+  };
+
+  const openDeveloperOverview = () => {
+    setShowDeveloperOverview(true);
+    if (!developerOverview) void refreshDeveloperOverview();
+  };
+
+  const formatMinutes = (minutes: number) => {
+    const hours = Math.floor(minutes / 60);
+    const rest = minutes % 60;
+    return hours > 0 ? msg(`${hours}小时${rest ? `${rest}分` : ''}`, `${hours}h ${rest ? `${rest}m` : ''}`) : msg(`${minutes}分`, `${minutes}m`);
+  };
+
+  const formatMoment = (value: string) => value ? new Date(value).toLocaleString(language, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : msg('暂无', 'None');
 
   return (
     <div className="settings-panel">
@@ -183,6 +225,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
         <h3>{t('dataManagement')}</h3>
         <div className="settings-actions">
           <button className="btn secondary" type="button" onClick={() => { setShowFeedback(true); setFeedbackMessage(''); }}><MessageSquare size={16} /> {t('submitFeedback')}</button>
+          {isDeveloper && <button className="btn primary developer-view-btn" type="button" onClick={openDeveloperOverview}><Activity size={16} /> {msg('查看用户概况', 'View usage')}</button>}
           <button className="btn secondary" onClick={onExport}><Download size={16} /> {t('exportData')}</button>
           <label className="btn secondary"><Upload size={16} /> {t('importData')}<input type="file" accept=".json" onChange={handleFileChange} hidden /></label>
           {!showClearConfirm ? (
@@ -253,6 +296,75 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
               </button>
             </div>
             {feedbackMessage && <p className="settings-hint">{feedbackMessage}</p>}
+          </div>
+        </div>
+      )}
+
+      {showDeveloperOverview && isDeveloper && (
+        <div className="modal-overlay" onClick={() => setShowDeveloperOverview(false)}>
+          <div className="modal-content developer-modal" onClick={event => event.stopPropagation()}>
+            <div className="developer-modal-header">
+              <div>
+                <span className="developer-kicker">{msg('开发者视图', 'Developer view')}</span>
+                <h3 className="modal-title">{msg('用户使用概况与反馈', 'Usage overview and feedback')}</h3>
+                <p className="modal-desc">{msg('用户以匿名编号显示，不会展示任何人的识别码。', 'Users are shown by anonymous profile ID; sync codes are never displayed.')}</p>
+              </div>
+              <div className="developer-header-actions">
+                <button className="btn icon" type="button" disabled={developerLoading} onClick={() => void refreshDeveloperOverview()} title={t('refresh')} aria-label={t('refresh')}><RefreshCw size={15} className={developerLoading ? 'spin' : ''} /></button>
+                <button className="theme-picker-close" type="button" aria-label={msg('关闭', 'Close')} onClick={() => setShowDeveloperOverview(false)}><X size={18} /></button>
+              </div>
+            </div>
+
+            {developerLoading && !developerOverview && <div className="developer-loading"><RefreshCw size={18} className="spin" />{msg('正在汇总用户数据…', 'Loading user overview…')}</div>}
+            {developerError && <div className="developer-error">{developerError}</div>}
+
+            {developerOverview && (
+              <>
+                <div className="developer-summary-grid">
+                  <div className="developer-summary-card"><Users size={17} /><span>{msg('用户', 'Users')}</span><strong>{developerOverview.totals.users}</strong><small>{msg(`近7天 ${developerOverview.totals.active7Days} 人活跃`, `${developerOverview.totals.active7Days} active in 7d`)}</small></div>
+                  <div className="developer-summary-card"><Clock3 size={17} /><span>{msg('累计专注', 'Focus')}</span><strong>{formatMinutes(developerOverview.totals.totalFocusMinutes)}</strong><small>{msg(`近30天 ${developerOverview.totals.active30Days} 人活跃`, `${developerOverview.totals.active30Days} active in 30d`)}</small></div>
+                  <div className="developer-summary-card"><span className="developer-summary-emoji">🍅</span><span>{msg('累计番茄', 'Pomodoros')}</span><strong>{developerOverview.totals.totalPomodoros}</strong><small>{msg(`${developerOverview.totals.totalTasks} 个任务`, `${developerOverview.totals.totalTasks} tasks`)}</small></div>
+                  <div className="developer-summary-card"><MessageSquare size={17} /><span>{msg('反馈', 'Feedback')}</span><strong>{developerOverview.totals.feedback}</strong><small>{msg('按最新时间排列', 'Newest first')}</small></div>
+                </div>
+
+                <section className="developer-section">
+                  <div className="developer-section-heading"><h4>{msg('用户使用情况', 'User activity')}</h4><span>{developerOverview.users.length}</span></div>
+                  <div className="developer-user-table-wrap">
+                    <table className="developer-user-table">
+                      <thead><tr><th>{msg('用户', 'User')}</th><th>{msg('最近活跃', 'Last active')}</th><th>{msg('专注', 'Focus')}</th><th>{msg('番茄', 'Pomodoros')}</th><th>{msg('任务', 'Tasks')}</th><th>{msg('反馈', 'Feedback')}</th></tr></thead>
+                      <tbody>
+                        {developerOverview.users.map(user => (
+                          <tr key={user.profileId}>
+                            <td><code>{user.profileId.slice(0, 8)}</code>{user.isDeveloper && <em>{msg('开发者', 'Developer')}</em>}</td>
+                            <td>{user.lastActiveDate || formatMoment(user.lastUpdatedAt)}</td>
+                            <td>{formatMinutes(user.totalFocusMinutes)}</td>
+                            <td>{user.totalPomodoros}</td>
+                            <td>{user.completedTaskCount}/{user.taskCount}</td>
+                            <td>{user.feedbackCount}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section className="developer-section">
+                  <div className="developer-section-heading"><h4>{msg('用户反馈', 'User feedback')}</h4><span>{developerOverview.feedback.length}</span></div>
+                  <div className="developer-feedback-list">
+                    {developerOverview.feedback.length === 0
+                      ? <p className="developer-empty">{msg('暂时没有反馈', 'No feedback yet')}</p>
+                      : developerOverview.feedback.map(item => (
+                        <article className="developer-feedback-card" key={item.id}>
+                          <div><code>{item.profileId.slice(0, 8)}</code><time>{formatMoment(item.createdAt)}</time></div>
+                          <p>{item.content}</p>
+                        </article>
+                      ))}
+                  </div>
+                </section>
+
+                {developerOverview.truncated && <p className="developer-limit-note">{msg('用户数量较多，本次仅显示前250个用户。', 'Large dataset: this view shows the first 250 users.')}</p>}
+              </>
+            )}
           </div>
         </div>
       )}

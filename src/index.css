@@ -2220,6 +2220,41 @@ html[data-theme="farmcraft"] body {
 }
 .feedback-textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg); }
 
+/* Developer overview */
+.developer-view-btn { background: linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 62%, var(--blue))); }
+.developer-modal { width: min(92vw, 780px); max-width: 780px; max-height: min(86dvh, 820px); overflow-y: auto; }
+.developer-modal-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.developer-modal-header > div:first-child { min-width: 0; }
+.developer-modal-header .modal-desc { margin: 5px 0 0; }
+.developer-kicker { display: block; margin-bottom: 3px; color: var(--accent); font-size: 10px; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+.developer-header-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.developer-loading { min-height: 160px; display: flex; align-items: center; justify-content: center; gap: 9px; color: var(--text-secondary); font-size: 13px; }
+.developer-error { margin-bottom: 14px; padding: 10px 12px; border: 1px solid color-mix(in srgb, #e74c3c 45%, var(--border)); border-radius: 9px; background: color-mix(in srgb, #e74c3c 8%, var(--bg-card)); color: #d84343; font-size: 12px; }
+.developer-summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin-bottom: 20px; }
+.developer-summary-card { min-width: 0; display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 3px 7px; padding: 12px; border: 1px solid var(--border); border-radius: 12px; background: var(--bg); color: var(--accent); }
+.developer-summary-card > span:not(.developer-summary-emoji) { min-width: 0; overflow: hidden; color: var(--text-secondary); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+.developer-summary-card strong { grid-column: 1 / -1; overflow: hidden; color: var(--text); font-size: 20px; font-variant-numeric: tabular-nums; text-overflow: ellipsis; white-space: nowrap; }
+.developer-summary-card small { grid-column: 1 / -1; overflow: hidden; color: var(--text-muted); font-size: 9px; text-overflow: ellipsis; white-space: nowrap; }
+.developer-summary-emoji { width: 17px; line-height: 1; text-align: center; }
+.developer-section + .developer-section { margin-top: 20px; }
+.developer-section-heading { display: flex; align-items: center; gap: 7px; margin-bottom: 9px; }
+.developer-section-heading h4 { color: var(--text); font-size: 14px; }
+.developer-section-heading span { min-width: 20px; padding: 2px 6px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); font-size: 9px; font-weight: 800; text-align: center; }
+.developer-user-table-wrap { overflow-x: auto; border: 1px solid var(--border); border-radius: 11px; }
+.developer-user-table { width: 100%; min-width: 620px; border-collapse: collapse; color: var(--text-secondary); font-size: 11px; }
+.developer-user-table th { padding: 8px 10px; background: var(--bg-hover); color: var(--text-muted); font-size: 9px; font-weight: 700; text-align: left; white-space: nowrap; }
+.developer-user-table td { padding: 9px 10px; border-top: 1px solid var(--border); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.developer-user-table code,
+.developer-feedback-card code { color: var(--accent); font-family: "SFMono-Regular", Consolas, monospace; font-size: 10px; }
+.developer-user-table em { margin-left: 5px; padding: 2px 5px; border-radius: 999px; background: var(--accent-bg); color: var(--accent); font-size: 8px; font-style: normal; font-weight: 800; }
+.developer-feedback-list { display: flex; flex-direction: column; gap: 8px; }
+.developer-feedback-card { padding: 11px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--bg); }
+.developer-feedback-card > div { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 6px; }
+.developer-feedback-card time { color: var(--text-muted); font-size: 9px; }
+.developer-feedback-card p { color: var(--text-secondary); font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.developer-empty { padding: 24px; border: 1px dashed var(--border); border-radius: 11px; color: var(--text-muted); font-size: 12px; text-align: center; }
+.developer-limit-note { margin-top: 12px; color: var(--text-muted); font-size: 10px; }
+
 /* Batch assign */
 .batch-assign-all { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px solid var(--border); }
 .batch-label { font-size: 12px; color: var(--text-muted); }
@@ -2283,6 +2318,10 @@ html[data-theme="farmcraft"] body {
 @media (max-width: 480px) {
   .timer-time { font-size: 40px; }
   .stats-cards { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .developer-modal { width: calc(100vw - 20px); padding: 16px 13px; }
+  .developer-modal-header { gap: 8px; }
+  .developer-summary-grid { grid-template-columns: 1fr 1fr; }
+  .developer-summary-card strong { font-size: 17px; }
   .settings-row input[type="password"],
   .settings-row input[type="text"] { width: 150px; }
   .stats-toolbar { flex-wrap: wrap; }

@@ -21,6 +21,28 @@
 
 ---
 
+## 2026-08-20 — 增加服务端授权的开发者用户概况与反馈面板
+
+### 给人看（Human Summary）
+- **改了什么**：指定开发者识别码现在仍可正常使用计时、任务、统计和个人同步，同时在设置页“数据管理”中额外显示“查看用户概况”按钮。点击后可查看匿名用户总数、近 7/30 天活跃人数、累计专注时长、番茄数、任务数、各用户使用概况和最新反馈。
+- **为什么**：开发者需要在不接触其他用户识别码的前提下了解产品使用情况、集中查看反馈，并继续把该识别码当作普通个人账号使用。
+- **影响范围**：仅服务端验证通过的开发者身份增加查看入口；普通识别码的界面、数据权限和同步逻辑保持不变。所有用户仍按 profileId 独立保存数据，面板只显示截断后的匿名编号。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `api/developer.ts` — 新增开发者接口；`isDeveloperSyncCode` 使用 SHA-256 哈希和 `timingSafeEqual` 校验身份；`mode=status` 仅返回权限状态，`mode=overview` 通过 GitHub Tree/Blob API 汇总私有数据仓库内最多 250 个 profile 的 `config.json`、`history.json`、`feedback.json`，输出匿名用户指标与最近 500 条反馈。
+  - `api/tsconfig.json` — API 类型检查范围由单个 `file.ts` 扩展到全部 `api/*.ts`。
+  - `vercel.json` — 在通用 `/api/(.*)` 重写前增加 `/api/developer` 专用路由，避免被转发到文件同步函数。
+  - `src/services/github.ts` — 新增 `DeveloperOverview` / `DeveloperUserSummary` / `DeveloperFeedbackSummary` 类型，以及 `checkDeveloperAccess`、`loadDeveloperOverview` 请求函数。
+  - `src/components/Settings/SettingsPanel.tsx` — 按当前 `settings.syncCode` 异步确认权限；仅授权身份显示按钮；新增可刷新、响应式的开发者概况与反馈弹窗。权限状态带 syncCode 作用域，切换身份时不会沿用旧权限。
+  - `src/index.css` — 新增开发者概况卡片、匿名用户表格、反馈列表、加载/错误状态及移动端双列适配。
+  - `test/developerAccess.test.ts` — 覆盖哈希校验、大小写归一化、普通码拒绝、明文不进入服务端源码、前端按钮必须依赖服务端授权，以及 Vercel 路由优先级。
+  - `docs/FEATURES.md` — 补充开发者视图功能与隐私边界。
+- **接口 / 数据模型变化**：新增只读 `GET /api/developer?mode=status|overview`，凭证继续通过 `X-Sync-Code` 发送；无现有 JSON schema 变化。可用环境变量 `DEVELOPER_SYNC_CODE_HASH` 覆盖内置哈希，前端不包含开发者码或其哈希。
+- **关键实现细节 / 注意事项**：开发者自己的 profileId 与普通用户相同，正常走原有 `/api/file` 同步；查看权限只作用于新接口。概况以仓库树枚举 profile，读取并聚合总量，不返回任务标题、用户识别码或私有仓库位置。返回头使用 `private, no-store`；树被截断或用户超过 250 时响应设置 `truncated=true` 并在界面提示。
+- **验证方式**：`npm test` 通过（37/37 逻辑测试、ESLint、Vite 构建和 API TypeScript 检查）；额外用实际开发者码调用 `isDeveloperSyncCode` 返回授权成功，普通测试码返回拒绝。手测：用普通识别码进入设置无查看按钮；用开发者识别码进入设置出现“查看用户概况”，打开后可刷新指标和反馈。
+- **后续待办 / 已知问题**：本地 Vercel CLI 登录令牌已过期，无法通过 `vercel dev` 完成本地路由端到端请求；提交后需依赖 Git 自动部署，并在正式站点验证 `/api/developer` 路由及数据仓库令牌对 Git Tree/Blob API 的读取权限。
+
 ## 2026-08-18 — 修复完成任务数统计不准 + 导出/导入/清除/反馈合并为一栏
 
 ### 给人看（Human Summary）

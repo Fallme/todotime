@@ -2,5 +2,8 @@
   "framework": "vite",
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
-  "rewrites": [{ "source": "/api/(.*)", "destination": "/api/file" }]
+  "rewrites": [
+    { "source": "/api/developer", "destination": "/api/developer" },
+    { "source": "/api/(.*)", "destination": "/api/file" }
+  ]
 }

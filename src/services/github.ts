@@ -5,12 +5,70 @@ import { mergeTodosById } from '../utils/todoMerge';
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '')
   || '/api';
 
+export interface DeveloperUserSummary {
+  profileId: string;
+  isDeveloper: boolean;
+  lastActiveDate: string;
+  lastUpdatedAt: string;
+  totalFocusMinutes: number;
+  totalPomodoros: number;
+  taskCount: number;
+  completedTaskCount: number;
+  activeTaskCount: number;
+  feedbackCount: number;
+}
+
+export interface DeveloperFeedbackSummary {
+  id: string;
+  profileId: string;
+  createdAt: string;
+  content: string;
+  language: string;
+}
+
+export interface DeveloperOverview {
+  generatedAt: string;
+  truncated: boolean;
+  totals: {
+    users: number;
+    active7Days: number;
+    active30Days: number;
+    totalFocusMinutes: number;
+    totalPomodoros: number;
+    totalTasks: number;
+    feedback: number;
+  };
+  users: DeveloperUserSummary[];
+  feedback: DeveloperFeedbackSummary[];
+}
+
 interface GitHubFile { sha: string; content: string; }
 
 class SyncConflictError extends Error {}
 
 function syncHeaders(syncCode: string): Record<string, string> {
   return { 'Content-Type': 'application/json', 'X-Sync-Code': syncCode };
+}
+
+export async function checkDeveloperAccess(syncCode: string): Promise<boolean> {
+  if (!syncCode) return false;
+  try {
+    const response = await fetch(`${API_BASE}/developer?mode=status`, { headers: syncHeaders(syncCode) });
+    if (!response.ok) return false;
+    const data = await response.json() as { isDeveloper?: boolean };
+    return data.isDeveloper === true;
+  } catch {
+    return false;
+  }
+}
+
+export async function loadDeveloperOverview(syncCode: string): Promise<DeveloperOverview> {
+  const response = await fetch(`${API_BASE}/developer?mode=overview`, { headers: syncHeaders(syncCode) });
+  if (!response.ok) {
+    const body = await response.json().catch(() => null) as { error?: string } | null;
+    throw new Error(body?.error || `开发者概况读取失败：${response.status}`);
+  }
+  return response.json() as Promise<DeveloperOverview>;
 }
 
 async function apiGet(path: string, syncCode: string): Promise<{ content: unknown; sha: string } | null> {
