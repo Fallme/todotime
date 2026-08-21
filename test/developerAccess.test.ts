@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { isDeveloperSyncCode } from '../api/developer.ts';
+import { getStoredPomodoroCount, isDeveloperSyncCode } from '../api/developer.ts';
 
 test('developer access uses a timing-safe server-side hash check', () => {
   const testCode = 'TT-UNIT-TEST-DEVELOPER';
@@ -11,6 +11,12 @@ test('developer access uses a timing-safe server-side hash check', () => {
   assert.equal(isDeveloperSyncCode(`  ${testCode.toLowerCase()}  `, expectedHash), true);
   assert.equal(isDeveloperSyncCode('TT-UNIT-TEST-OTHER', expectedHash), false);
   assert.equal(isDeveloperSyncCode('short', expectedHash), false);
+});
+
+test('developer overview respects explicit multi-pomodoro records', () => {
+  assert.equal(getStoredPomodoroCount({ duration: 65, pomodoroCount: 3, countsAsPomodoro: true }), 3);
+  assert.equal(getStoredPomodoroCount({ duration: 25, countsAsPomodoro: true }), 1);
+  assert.equal(getStoredPomodoroCount({ duration: 10 }), 0);
 });
 
 test('developer code is absent from the browser bundle and the button is server-authorized', async () => {

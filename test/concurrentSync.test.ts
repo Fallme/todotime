@@ -3,6 +3,7 @@ import test from 'node:test';
 import type { Todo } from '../src/types/index.ts';
 import { addPomodoroRecord, mergeTodosById } from '../src/utils/todoMerge.ts';
 import { createManualFocusRecord, resolveManualFocusCategory } from '../src/utils/manualFocus.ts';
+import { pomodoroCounterRecordIds } from '../src/utils/syncMerge.ts';
 
 function task(overrides: Partial<Todo> = {}): Todo {
   return {
@@ -31,14 +32,22 @@ test('replaying the same focus event never increments a task twice', () => {
   assert.deepEqual(twice.pomodoroRecordIds, ['same-record']);
 });
 
-test('manual focus follows the existing one-minute and fifteen-minute rules', () => {
+test('manual focus follows configured rounds and the fifteen-minute remainder rule', () => {
   const common = { endAt: '2026-08-14T10:00', taskId: 'task-1', taskTitle: '共同任务', category: '其他', createdAt: '2026-08-14T10:01:00Z' };
-  const fourteen = createManualFocusRecord({ ...common, duration: 14, id: 'manual-14' });
-  const fifteen = createManualFocusRecord({ ...common, duration: 15, id: 'manual-15' });
+  const fourteen = createManualFocusRecord({ ...common, duration: 14, workMinutes: 25, id: 'manual-14' });
+  const fifteen = createManualFocusRecord({ ...common, duration: 15, workMinutes: 25, id: 'manual-15' });
+  const sixtyFive = createManualFocusRecord({ ...common, duration: 65, workMinutes: 25, id: 'manual-65' });
   assert.equal(fourteen.duration, 14);
   assert.equal(fourteen.countsAsPomodoro, false);
   assert.equal(fifteen.countsAsPomodoro, true);
+  assert.equal(sixtyFive.pomodoroCount, 3);
   assert.equal(fifteen.manual, true);
+
+  const updatedTask = pomodoroCounterRecordIds(sixtyFive).reduce(
+    (current, recordId) => addPomodoroRecord(current, recordId),
+    task(),
+  );
+  assert.equal(updatedTask.completedPomodoros, 6);
 });
 
 test('manual assignment defaults to other, inherits existing category, and only new tasks use configured category', () => {

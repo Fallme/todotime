@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-08-21 — 修正手动补录的多番茄计算与全链路统计
+
+### 给人看（Human Summary）
+- **改了什么**：手动补录不再每条记录最多只算 1 个番茄，而是按当前设置的一轮工作时长计算完整轮数；最后不足一轮的剩余时长达到 15 分钟，再补算 1 个番茄。补录弹窗会即时预览数量，任务、今日概览、统计图表、周月报告、同步数据和开发者概况都使用同一结果。
+- **为什么**：长时间补录过去无论 25 分钟还是数小时都只增加 1 个番茄，低估了实际专注轮次，也造成任务与统计结果不准确。
+- **影响范围**：影响新保存的手动补录及其任务/统计/同步聚合；正常计时仍沿用“单次达到 15 分钟计 1 个”的规则，旧数据继续按原有布尔标记或时长兼容，不会被追溯重算。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/types/index.ts`、`src/utils/pomodoroRules.ts`、`src/utils/manualFocus.ts` — `PomodoroRecord` 新增可选 `pomodoroCount`；新增 `calculateManualPomodoroCount`、`getPomodoroCount`、`sumPomodoroCounts`，补录创建时写入明确数量。
+  - `src/components/Timer/ManualFocusModal.tsx`、`src/App.tsx`、`src/hooks/useTimer.ts` — 弹窗接收 `workMinutes` 并预览计数；保存时按数量更新今日值和关联任务。
+  - `src/utils/syncMerge.ts`、`src/hooks/useTodos.ts` — 多番茄记录派生稳定的 `recordId#1..N` 计数事件；单番茄仍保留原记录 ID，兼容既有去重；记录相等判断增加内容比较，数量变化会触发同步。
+  - `src/services/github.ts`、`src/hooks/useGithubSync.ts`、`src/hooks/useStats.ts`、`src/components/Stats/DailyReport.tsx`、`src/components/Stats/StatsOverview.tsx`、`api/developer.ts` — 今日汇总、云端历史、趋势/分类、报告和开发者概况改为累加记录内番茄数量。
+  - `src/utils/backup.ts` — 导入导出保留 `pomodoroCount`，缺失该字段的旧备份继续走旧规则。
+  - `test/pomodoroRules.test.ts`、`test/concurrentSync.test.ts`、`test/backup.test.ts`、`test/developerAccess.test.ts`、`README.md`、`docs/FEATURES.md`、`docs/TEST_REPORT.md` — 增加计数、任务去重、备份与服务端汇总回归，并同步产品说明。
+- **接口 / 数据模型变化**：`PomodoroRecord.pomodoroCount?: number`；`createManualFocusRecord` 输入新增可选 `workMinutes`（缺省为 25）；`ManualFocusModal` 新增必传 `workMinutes`；同步计数事件允许一条记录映射为多个派生 ID。
+- **关键实现细节 / 注意事项**：公式为 `floor(duration / workMinutes) + (duration % workMinutes >= 15 ? 1 : 0)`；显式 `pomodoroCount` 优先于旧 `countsAsPomodoro`，旧记录无新字段时仍按布尔值或 15 分钟时长回退。单番茄沿用原 ID，避免升级后重复增加任务数量；旧补录不会按当前设置重新计算。
+- **验证方式**：`npm test`（逻辑测试 39/39、ESLint、前端构建、API 类型检查均通过）；示例：设置 25 分钟时，14→0、15→1、35→1、40→2、50→2、65→3；多番茄补录对关联任务累加相同数量。
+- **后续待办 / 已知问题**：无。
+
 ## 2026-08-20 — 增加服务端授权的开发者用户概况与反馈面板
 
 ### 给人看（Human Summary）

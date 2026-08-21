@@ -4,7 +4,7 @@ import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement
 import { getCategoryColor, OTHER_CATEGORY_NAME, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
 import { formatDate, formatDuration } from '../../utils/dateUtils';
-import { isPomodoroRecord } from '../../utils/pomodoroRules';
+import { getPomodoroCount, sumPomodoroCounts } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { getTodoCompletionRecords } from '../../utils/taskRecurrence';
@@ -76,16 +76,14 @@ function computePeriodData(
     }
     const liveMinutes = date === today ? runningMinutes : 0;
     const mins = poms.reduce((s, p) => s + p.duration, 0) + liveMinutes;
-    const tomatoCount = poms.filter(isPomodoroRecord).length;
+    const tomatoCount = sumPomodoroCounts(poms);
     totalPomodoros += tomatoCount;
     totalMinutes += mins;
     totalTasks += totalTasksDay;
     totalTasksCompleted += tasksDone;
     poms.forEach(p => {
       categoryMinutes[p.category] = (categoryMinutes[p.category] || 0) + p.duration;
-      if (isPomodoroRecord(p)) {
-        categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + 1;
-      }
+      categoryPomodoros[p.category] = (categoryPomodoros[p.category] || 0) + getPomodoroCount(p);
     });
     if (liveMinutes > 0) {
       categoryMinutes[runningCategory] = (categoryMinutes[runningCategory] || 0) + liveMinutes;
@@ -126,7 +124,7 @@ function computeTodaySlots(
     const idx = slotOf(getHour(record.start));
     if (idx >= 0 && idx < slots.length) {
       slots[idx].minutes += record.duration;
-      if (isPomodoroRecord(record)) slots[idx].pomodoros += 1;
+      slots[idx].pomodoros += getPomodoroCount(record);
     }
   }
   if (runningMinutes > 0) {

@@ -3,7 +3,7 @@ import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { OTHER_CATEGORY_NAME } from '../types/index.ts';
 import { formatDate, generateId } from '../utils/dateUtils';
 import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
-import { completedMinutes, countsAsPomodoro, getNextCycle, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
+import { completedMinutes, countsAsPomodoro, getNextCycle, getPomodoroCount, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
 import { initAudio, playStart, playEnterBreak, playCycleComplete, playPause, playResume, playEnd } from '../utils/sound';
 import { mergeImportedPomodoros, normalizeImportedPomodoros } from '../utils/backup';
 
@@ -150,17 +150,19 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
   }, [onRecorded]);
 
   const addManualPomodoro = useCallback((record: PomodoroRecord) => {
+    const pomodoroCount = getPomodoroCount(record);
     const normalized = {
       ...record,
       id: record.id || `manual-${deviceIdRef.current}-${generateId()}`,
       manual: true,
       completed: true,
-      countsAsPomodoro: countsAsPomodoro(record.duration),
+      pomodoroCount,
+      countsAsPomodoro: pomodoroCount > 0,
     };
     recordPomodoro(normalized);
-    if (normalized.countsAsPomodoro) setTotalPomodoros(count => count + 1);
-    showToast(normalized.countsAsPomodoro
-      ? `已补录 ${normalized.duration} 分钟 · 1 个番茄`
+    if (pomodoroCount > 0) setTotalPomodoros(count => count + pomodoroCount);
+    showToast(pomodoroCount > 0
+      ? `已补录 ${normalized.duration} 分钟 · ${pomodoroCount} 个番茄`
       : `已补录 ${normalized.duration} 分钟；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
   }, [recordPomodoro, showToast]);
 

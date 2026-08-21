@@ -1,5 +1,5 @@
 import type { DayData, ConfigData, FeedbackEntry } from '../types';
-import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { sumPomodoroCounts } from '../utils/pomodoroRules';
 import { mergeTodosById } from '../utils/todoMerge';
 
 const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '')
@@ -120,7 +120,7 @@ export async function saveDayData(token: string, data: DayData): Promise<void> {
       ...data,
       pomodoros,
       totalFocusMinutes: pomodoros.reduce((sum, item) => sum + item.duration, 0),
-      totalPomodoros: pomodoros.filter(isPomodoroRecord).length,
+      totalPomodoros: sumPomodoroCounts(pomodoros),
     };
     const days = { ...(history.days ?? {}), [data.date]: merged };
     const cutoff = new Date();

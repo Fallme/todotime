@@ -21,8 +21,8 @@ import { useTodos } from './hooks/useTodos';
 import { useGithubSync } from './hooks/useGithubSync';
 import { loadConfig, saveFeedback } from './services/github';
 import { clearActiveSyncCode, getActiveSyncCode, getProfileId, profileStorageKey, readProfileStorage, setActiveSyncCode } from './utils/syncIdentity';
-import { isPomodoroRecord } from './utils/pomodoroRules';
-import { pomodoroRecordKey } from './utils/syncMerge';
+import { isPomodoroRecord, sumPomodoroCounts } from './utils/pomodoroRules';
+import { mergePomodoroRecords, pomodoroCounterRecordIds } from './utils/syncMerge';
 import { createManualFocusRecord } from './utils/manualFocus';
 import { useLanguage } from './i18n/LanguageContext';
 
@@ -143,10 +143,11 @@ export default function App() {
   // Focus duration is always saved after one minute; task tomato counts start at 15 minutes.
   const handlePomodoroRecorded = useCallback((record: PomodoroRecord) => {
     if (record.completed && record.taskId && isPomodoroRecord(record)) {
-      const recordId = pomodoroRecordKey(record);
       // Event IDs are additive, so simultaneous devices can union their results.
-      updateTodoPomodoros(record.taskId, recordId);
-      updateSubtaskPomodoros(record.taskId, recordId);
+      for (const recordId of pomodoroCounterRecordIds(record)) {
+        updateTodoPomodoros(record.taskId, recordId);
+        updateSubtaskPomodoros(record.taskId, recordId);
+      }
     }
   }, [updateTodoPomodoros, updateSubtaskPomodoros]);
 
@@ -191,6 +192,14 @@ export default function App() {
     }
     return map;
   }, [dayDataMap, timer.todayPomodoros]);
+
+  const todayPomodoroCount = useMemo(() => {
+    const records = mergePomodoroRecords(
+      dayDataMap.get(today)?.pomodoros ?? [],
+      timer.todayPomodoros.filter(record => (record.date || today) === today),
+    ).filter(record => record.completed);
+    return sumPomodoroCounts(records);
+  }, [dayDataMap, timer.todayPomodoros, today]);
 
   // --- App open: load chart data, then resolve config by sync timestamp ---
   useEffect(() => {
@@ -371,6 +380,7 @@ export default function App() {
       taskId,
       taskTitle,
       category: input.category,
+      workMinutes: settings.workMinutes,
     }));
     setShowManualFocus(false);
   };
@@ -505,10 +515,7 @@ export default function App() {
             </div>
             <TodoList
               todos={todos} selectedTodoId={selectedTodoId}
-              todayPomodoros={new Set([
-                ...(dayDataMap.get(today)?.pomodoros ?? []),
-                ...timer.todayPomodoros.filter(record => (record.date || today) === today),
-              ].filter(record => record.completed && isPomodoroRecord(record)).map(record => record.id || `${record.start}-${record.end}`)).size}
+              todayPomodoros={todayPomodoroCount}
               categories={settings.categories}
               onAdd={(title, priority, category, recurrence) => todosHook.addTodo(title, priority, category, recurrence)}
               onToggle={todosHook.toggleTodo} onDelete={todosHook.deleteTodo}
@@ -558,6 +565,7 @@ export default function App() {
         <ManualFocusModal
           todos={todos}
           categories={settings.categories}
+          workMinutes={settings.workMinutes}
           onSave={handleManualFocus}
           onClose={() => setShowManualFocus(false)}
         />

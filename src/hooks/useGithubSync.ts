@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AppSettings, ConfigData, DayData, PomodoroRecord, Todo } from '../types';
 import { loadConfig, loadMultipleDays, saveConfig, saveDayData } from '../services/github';
 import { formatDate } from '../utils/dateUtils';
-import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { sumPomodoroCounts } from '../utils/pomodoroRules';
 import { profileStorageKey } from '../utils/syncIdentity';
 import { mergeDayData, mergeDayDataMaps, samePomodoroRecords } from '../utils/syncMerge';
 import { mergeTodosById } from '../utils/todoMerge';
@@ -213,7 +213,7 @@ export function useGithubSync(syncCode: string, profileId: string): UseGithubSyn
       const incoming = pomodoros.filter(item => (item.date || date) === date);
       const payload = mergeDayData({
         date, pomodoros: incoming, tasks: [],
-        totalFocusMinutes: 0, totalPomodoros: incoming.filter(isPomodoroRecord).length,
+        totalFocusMinutes: 0, totalPomodoros: sumPomodoroCounts(incoming),
         totalTasksCompleted: 0, streak: 0,
       }, current, date) as DayData;
       const unchanged = Boolean(current)

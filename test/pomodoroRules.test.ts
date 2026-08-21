@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { completedMinutes, countsAsPomodoro, getNextCycle, isPomodoroRecord, shouldRecordFocus } from '../src/utils/pomodoroRules.ts';
-import { mergeDayDataMaps, mergePomodoroRecords } from '../src/utils/syncMerge.ts';
+import { calculateManualPomodoroCount, completedMinutes, countsAsPomodoro, getNextCycle, getPomodoroCount, isPomodoroRecord, shouldRecordFocus } from '../src/utils/pomodoroRules.ts';
+import { mergeDayDataMaps, mergePomodoroRecords, pomodoroCounterRecordIds, samePomodoroRecords } from '../src/utils/syncMerge.ts';
 
 test('focus duration starts recording at one full minute', () => {
   assert.equal(shouldRecordFocus(59), false);
@@ -14,11 +14,24 @@ test('a pomodoro is counted at fifteen full minutes', () => {
   assert.equal(countsAsPomodoro(15), true);
 });
 
+test('manual focus uses configured rounds plus a fifteen-minute remainder', () => {
+  assert.equal(calculateManualPomodoroCount(14, 25), 0);
+  assert.equal(calculateManualPomodoroCount(15, 25), 1);
+  assert.equal(calculateManualPomodoroCount(25, 25), 1);
+  assert.equal(calculateManualPomodoroCount(39, 25), 1);
+  assert.equal(calculateManualPomodoroCount(40, 25), 2);
+  assert.equal(calculateManualPomodoroCount(50, 25), 2);
+  assert.equal(calculateManualPomodoroCount(65, 25), 3);
+  assert.equal(calculateManualPomodoroCount(50, 50), 1);
+});
+
 test('legacy records derive tomato count from duration', () => {
   const base = { start: '', end: '', taskId: null, taskTitle: '', category: '其他', completed: true, createdAt: '' };
   assert.equal(isPomodoroRecord({ ...base, duration: 10 }), false);
   assert.equal(isPomodoroRecord({ ...base, duration: 25 }), true);
   assert.equal(isPomodoroRecord({ ...base, duration: 25, countsAsPomodoro: false }), false);
+  assert.equal(getPomodoroCount({ ...base, duration: 65, pomodoroCount: 3 }), 3);
+  assert.deepEqual(pomodoroCounterRecordIds({ ...base, id: 'manual', duration: 65, pomodoroCount: 3 }), ['manual#1', 'manual#2', 'manual#3']);
 });
 
 test('cycle progress advances independently and starts a long break at the group boundary', () => {
@@ -44,4 +57,9 @@ test('local and remote focus records are merged without either side losing data'
   const checkpointMerge = mergePomodoroRecords([updatedCheckpoint], [local]);
   assert.equal(checkpointMerge.length, 1);
   assert.equal(checkpointMerge[0]?.duration, 2);
+  assert.equal(samePomodoroRecords([local], [{ ...local, pomodoroCount: 2 }]), false);
+
+  const multi = { ...remote, pomodoroCount: 3 };
+  const multiMerged = mergeDayDataMaps(new Map([['2026-08-13', day([multi])]]), new Map());
+  assert.equal(multiMerged.get('2026-08-13')?.totalPomodoros, 3);
 });

@@ -23,6 +23,10 @@ export function normalizeImportedPomodoros(value: unknown): PomodoroRecord[] {
 
     const createdAt = validDate(item.createdAt) ? item.createdAt : item.end;
     const taskId = typeof item.taskId === 'string' ? item.taskId : null;
+    const importedCount = item.pomodoroCount;
+    const pomodoroCount = typeof importedCount === 'number' && Number.isFinite(importedCount)
+      ? Math.max(0, Math.floor(importedCount))
+      : undefined;
 
     return [{
       id: typeof item.id === 'string' && item.id ? item.id : undefined,
@@ -32,11 +36,14 @@ export function normalizeImportedPomodoros(value: unknown): PomodoroRecord[] {
       start: item.start,
       end: item.end,
       duration,
+      pomodoroCount,
       taskId,
       taskTitle: typeof item.taskTitle === 'string' && item.taskTitle ? item.taskTitle : '未分配',
       category: typeof item.category === 'string' && item.category ? item.category : OTHER_CATEGORY_NAME,
       completed: true,
-      countsAsPomodoro: item.completed === true && typeof item.countsAsPomodoro === 'boolean'
+      countsAsPomodoro: pomodoroCount !== undefined
+        ? pomodoroCount > 0
+        : item.completed === true && typeof item.countsAsPomodoro === 'boolean'
         ? item.countsAsPomodoro
         : countsAsPomodoro(duration),
       manual: item.manual === true,

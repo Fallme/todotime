@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import type { DayData, PomodoroRecord, Todo } from '../types';
-import { isPomodoroRecord } from '../utils/pomodoroRules';
+import { sumPomodoroCounts } from '../utils/pomodoroRules';
 import { getTodoCompletionRecords } from '../utils/taskRecurrence';
 
 export interface UseStatsReturn {
@@ -23,8 +23,8 @@ export function useStats(
 ): UseStatsReturn {
   return useMemo(() => {
     const todayData = dayDataMap.get(todayDate);
-    const todayPomCount = (todayData?.pomodoros ?? []).filter(isPomodoroRecord).length
-      + todayPomodoros.filter(isPomodoroRecord).length;
+    const todayPomCount = sumPomodoroCounts(todayData?.pomodoros ?? [])
+      + sumPomodoroCounts(todayPomodoros);
     const todayCompletedMinutes = todayData
       ? todayData.totalFocusMinutes + todayPomodoros.reduce((s, p) => s + p.duration, 0)
       : todayPomodoros.reduce((s, p) => s + p.duration, 0);
@@ -89,7 +89,7 @@ export function useStats(
       totalPom += d.totalPomodoros;
       totalMins += d.totalFocusMinutes;
     });
-    totalPom += todayPomodoros.filter(isPomodoroRecord).length;
+    totalPom += sumPomodoroCounts(todayPomodoros);
     totalMins += todayPomodoros.reduce((s, p) => s + p.duration, 0) + runningMinutes;
 
     return {

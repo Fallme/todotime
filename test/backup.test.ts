@@ -15,6 +15,7 @@ function record(overrides: Partial<PomodoroRecord> = {}): PomodoroRecord {
     category: '专业课',
     completed: true,
     countsAsPomodoro: true,
+    pomodoroCount: 1,
     createdAt: '2026-08-15T08:25:00.000Z',
     ...overrides,
   };
@@ -23,13 +24,14 @@ function record(overrides: Partial<PomodoroRecord> = {}): PomodoroRecord {
 test('backup import validates records and recovers unfinished checkpoints', () => {
   const normalized = normalizeImportedPomodoros([
     record(),
-    record({ id: 'checkpoint', completed: false, countsAsPomodoro: false, duration: 15 }),
+    record({ id: 'checkpoint', completed: false, countsAsPomodoro: false, pomodoroCount: undefined, duration: 15 }),
     { duration: 20, start: 'invalid', end: 'invalid' },
   ]);
 
   assert.equal(normalized.length, 2);
   assert.equal(normalized[1].completed, true);
   assert.equal(normalized[1].countsAsPomodoro, true);
+  assert.equal(normalizeImportedPomodoros([record({ pomodoroCount: 3 })])[0]?.pomodoroCount, 3);
 });
 
 test('backup import merges by stable focus id without duplicating existing data', () => {

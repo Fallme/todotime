@@ -4,7 +4,7 @@ import { generateId } from '../utils/dateUtils';
 import { getDeviceId, readProfileStorage, profileStorageKey } from '../utils/syncIdentity';
 import { addPomodoroRecord, mergeTodosById, normalizePomodoroCounter, normalizeTodo } from '../utils/todoMerge';
 import { isPomodoroRecord } from '../utils/pomodoroRules';
-import { pomodoroRecordKey } from '../utils/syncMerge';
+import { pomodoroCounterRecordIds } from '../utils/syncMerge';
 import { completeTodo, getNextTaskRefreshAt, refreshRecurringTodos, undoTodoCompletion } from '../utils/taskRecurrence';
 
 interface UseTodosReturn {
@@ -159,12 +159,16 @@ export function useTodos(profileId: string): UseTodosReturn {
       const next = previous.map(todo => {
         let updatedTodo = todo;
         for (const record of completedRecords) {
-          if (record.taskId === todo.id) updatedTodo = addPomodoroRecord(updatedTodo, pomodoroRecordKey(record));
+          if (record.taskId === todo.id) {
+            for (const recordId of pomodoroCounterRecordIds(record)) updatedTodo = addPomodoroRecord(updatedTodo, recordId);
+          }
         }
         const subtasks = updatedTodo.subtasks.map(subtask => {
           let updatedSubtask = subtask;
           for (const record of completedRecords) {
-            if (record.taskId === subtask.id) updatedSubtask = addPomodoroRecord(updatedSubtask, pomodoroRecordKey(record));
+            if (record.taskId === subtask.id) {
+              for (const recordId of pomodoroCounterRecordIds(record)) updatedSubtask = addPomodoroRecord(updatedSubtask, recordId);
+            }
           }
           return updatedSubtask;
         });

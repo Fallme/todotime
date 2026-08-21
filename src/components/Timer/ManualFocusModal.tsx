@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { Clock3, Plus } from 'lucide-react';
 import type { Category, CategoryItem, Todo } from '../../types';
 import { OTHER_CATEGORY_NAME } from '../../types';
-import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
+import { calculateManualPomodoroCount, MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
 import { resolveManualFocusCategory } from '../../utils/manualFocus';
 import { useLanguage } from '../../i18n/LanguageContext';
 
@@ -17,6 +17,7 @@ export interface ManualFocusInput {
 interface ManualFocusModalProps {
   todos: Todo[];
   categories: CategoryItem[];
+  workMinutes: number;
   onSave: (input: ManualFocusInput) => void;
   onClose: () => void;
 }
@@ -26,17 +27,17 @@ function localDateTimeValue(date = new Date()): string {
   return new Date(date.getTime() - offset).toISOString().slice(0, 16);
 }
 
-export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualFocusModalProps) {
+export function ManualFocusModal({ todos, categories, workMinutes, onSave, onClose }: ManualFocusModalProps) {
   const { language } = useLanguage();
   const msg = (zh: string, en: string) => language === 'zh-CN' ? zh : en;
   const activeTodos = useMemo(() => todos.filter(todo => !todo.deletedAt && !todo.done && !todo.abandoned), [todos]);
   const [assignment, setAssignment] = useState('none');
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [duration, setDuration] = useState(25);
+  const [duration, setDuration] = useState(workMinutes);
   const [endAt, setEndAt] = useState(localDateTimeValue);
   const [category, setCategory] = useState<Category>(categories[0]?.name ?? OTHER_CATEGORY_NAME);
   const [error, setError] = useState('');
-  const tomatoCount = duration >= MIN_POMODORO_MINUTES ? 1 : 0;
+  const tomatoCount = calculateManualPomodoroCount(duration, workMinutes);
   const selectedTodo = activeTodos.find(todo => todo.id === assignment);
 
   const submit = () => {
@@ -115,7 +116,7 @@ export function ManualFocusModal({ todos, categories, onSave, onClose }: ManualF
         <div className={`manual-pomodoro-rule ${tomatoCount ? 'counts' : ''}`}>
           <span>🍅</span>
           <p>{tomatoCount
-            ? msg(`本次将计入 1 个番茄（已满 ${MIN_POMODORO_MINUTES} 分钟）`, `This entry counts as 1 pomodoro (${MIN_POMODORO_MINUTES}+ minutes).`)
+            ? msg(`本次将计入 ${tomatoCount} 个番茄（每满 ${workMinutes} 分钟计 1 个，余时满 ${MIN_POMODORO_MINUTES} 分钟再计 1 个）`, `This entry counts as ${tomatoCount} pomodoro${tomatoCount === 1 ? '' : 's'} (${workMinutes} minutes per full round; a ${MIN_POMODORO_MINUTES}+ minute remainder counts once more).`)
             : msg(`本次记录时长，但未满 ${MIN_POMODORO_MINUTES} 分钟，不计番茄`, `Focus time will be saved, but under ${MIN_POMODORO_MINUTES} minutes does not count as a pomodoro.`)}</p>
         </div>
         {error && <p className="manual-focus-error">{error}</p>}

@@ -35,6 +35,7 @@ interface StoredTodo {
 interface StoredPomodoro {
   id?: string;
   duration?: number;
+  pomodoroCount?: number;
   countsAsPomodoro?: boolean;
 }
 
@@ -124,8 +125,10 @@ function lastDate(values: string[]): string {
   return values.filter(Boolean).sort((a, b) => b.localeCompare(a))[0] ?? '';
 }
 
-function countsAsPomodoro(record: StoredPomodoro): boolean {
-  return record.countsAsPomodoro ?? (Number(record.duration) >= 15);
+export function getStoredPomodoroCount(record: StoredPomodoro): number {
+  if (Number.isFinite(record.pomodoroCount)) return Math.max(0, Math.floor(Number(record.pomodoroCount)));
+  if (typeof record.countsAsPomodoro === 'boolean') return record.countsAsPomodoro ? 1 : 0;
+  return Number(record.duration) >= 15 ? 1 : 0;
 }
 
 function buildOverview(profiles: ProfileFiles[], developerProfileId: string, treeTruncated: boolean) {
@@ -143,7 +146,7 @@ function buildOverview(profiles: ProfileFiles[], developerProfileId: string, tre
         ? records.reduce((sum, record) => sum + Math.max(0, Number(record.duration) || 0), 0)
         : Math.max(0, Number(day.totalFocusMinutes) || 0);
       const pomodoros = records.length
-        ? records.filter(countsAsPomodoro).length
+        ? records.reduce((sum, record) => sum + getStoredPomodoroCount(record), 0)
         : Math.max(0, Number(day.totalPomodoros) || 0);
       totalFocusMinutes += minutes;
       totalPomodoros += pomodoros;

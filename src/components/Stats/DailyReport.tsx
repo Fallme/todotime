@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { DayData } from '../../types';
-import { isPomodoroRecord } from '../../utils/pomodoroRules';
+import { sumPomodoroCounts } from '../../utils/pomodoroRules';
 
 interface DailyReportProps {
   dayDataMap: Map<string, DayData>;
@@ -29,7 +29,7 @@ export function DailyReport({ dayDataMap }: DailyReportProps) {
       const poms = data?.pomodoros?.filter(p => p.completed) ?? [];
       const tasksDone = data?.tasks?.filter(t => t.done).length ?? 0;
       const mins = poms.reduce((s, p) => s + p.duration, 0);
-      const tomatoCount = poms.filter(isPomodoroRecord).length;
+      const tomatoCount = sumPomodoroCounts(poms);
       totalPomodoros += tomatoCount;
       totalMinutes += mins;
       totalTasks += tasksDone;

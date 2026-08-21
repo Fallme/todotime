@@ -1,7 +1,7 @@
 import type { Category, PomodoroRecord, Todo } from '../types';
 import { OTHER_CATEGORY_NAME } from '../types/index.ts';
 import { formatDate } from './dateUtils.ts';
-import { countsAsPomodoro } from './pomodoroRules.ts';
+import { calculateManualPomodoroCount } from './pomodoroRules.ts';
 
 interface ManualFocusRecordInput {
   duration: number;
@@ -9,6 +9,7 @@ interface ManualFocusRecordInput {
   taskId: string | null;
   taskTitle: string;
   category: Category;
+  workMinutes?: number;
   createdAt?: string;
   id?: string;
 }
@@ -29,13 +30,15 @@ export function createManualFocusRecord(input: ManualFocusRecordInput): Pomodoro
   if (Number.isNaN(end.getTime())) throw new Error('手动专注时间无效');
   const start = new Date(end.getTime() - duration * 60_000);
   const createdAt = input.createdAt ?? new Date().toISOString();
+  const pomodoroCount = calculateManualPomodoroCount(duration, input.workMinutes ?? 25);
   return {
     id: input.id,
     date: formatDate(end),
     start: start.toISOString(),
     end: end.toISOString(),
     duration,
-    countsAsPomodoro: countsAsPomodoro(duration),
+    pomodoroCount,
+    countsAsPomodoro: pomodoroCount > 0,
     taskId: input.taskId,
     taskTitle: input.taskTitle,
     category: input.category,
