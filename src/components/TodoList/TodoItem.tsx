@@ -66,9 +66,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const recurrenceLabel = getTaskRecurrenceLabel(recurrence, language);
   const weeklyDays = getWeeklyRecurrenceDays(recurrence);
   const totalFocus = Math.max(0, Math.round(focusMinutes));
-  const focusText = language === 'zh-CN'
-    ? (totalFocus < 60 ? `${totalFocus}分钟` : totalFocus % 60 ? `${Math.floor(totalFocus / 60)}小时${totalFocus % 60}分` : `${Math.floor(totalFocus / 60)}小时`)
-    : (totalFocus < 60 ? `${totalFocus}m` : totalFocus % 60 ? `${Math.floor(totalFocus / 60)}h ${totalFocus % 60}m` : `${Math.floor(totalFocus / 60)}h`);
+  const focusText = `${(totalFocus / 60).toFixed(1)}h`;
   const weekdayOptions = language === 'zh-CN'
     ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
     : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];
@@ -134,7 +132,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-body">
-          <div className="todo-card-heading">
+          <div className={`todo-card-heading${recurrence !== 'none' ? ' has-recurrence' : ''}`}>
             <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
               onClick={e => { e.stopPropagation(); setShowCatPicker(!showCatPicker); }}>
               {todo.category}
@@ -156,11 +154,15 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
             ) : (
               <span className="todo-card-title" onClick={startEditTitle} title={msg('点击编辑标题', 'Click to edit title')}>{todo.title}</span>
             )}
+            {recurrence !== 'none' && (
+              <span className="todo-recurrence-tag" title={recurrenceLabel}>
+                <Repeat2 size={10} /><span>{recurrenceLabel}</span>
+              </span>
+            )}
           </div>
-          {(recurrence !== 'none' || todo.abandoned) && (
+          {todo.abandoned && (
             <div className="todo-card-tags">
-              {recurrence !== 'none' && <span className="todo-recurrence-tag"><Repeat2 size={10} />{recurrenceLabel}</span>}
-              {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
+              <span className="abandoned-tag">{t('abandoned')}</span>
             </div>
           )}
         </div>
@@ -175,7 +177,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
           ) : null}
           <span className="todo-card-pom">🍅 {todo.completedPomodoros}</span>
           <span className="todo-card-focus" title={msg('累计用时', 'Total focus time')}>
-            <Clock3 size={11} />{msg('累计', 'Total')} {focusText}
+            <Clock3 size={11} />{focusText}
           </span>
         </div>
 

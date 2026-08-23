@@ -1303,8 +1303,9 @@ html[data-theme="farmcraft"] body {
   min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px 8px;
 }
 .todo-card-heading {
-  min-width: 0; flex: 1 1 180px;
-  display: flex; align-items: center; gap: 8px;
+  min-width: 0; width: 100%; flex: 1 1 100%;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline; gap: 8px;
 }
 .todo-card-tags {
   display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
@@ -1312,8 +1313,11 @@ html[data-theme="farmcraft"] body {
 .todo-recurrence-tag {
   display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
   padding: 2px 6px; border-radius: 99px; background: var(--accent-bg); color: var(--accent);
-  font-size: 10px; font-weight: 600;
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+  justify-self: end; align-self: baseline;
 }
+.todo-recurrence-tag > svg { flex: 0 0 auto; }
+.todo-recurrence-tag > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .todo-card-title {
   font-size: 16px; font-weight: 500; color: var(--text);
   min-width: 0; flex: 1 1 auto;
@@ -2374,14 +2378,18 @@ html[data-theme="farmcraft"] body {
     padding: 10px 8px;
   }
   .todo-card-body { align-items: stretch; flex-direction: column; gap: 5px; }
-  .todo-card-heading { flex: none; width: 100%; align-items: flex-start; }
+  .todo-card-heading {
+    flex: none; width: 100%;
+    grid-template-columns: fit-content(28%) minmax(0, 1fr) fit-content(36%);
+  }
   .todo-card-tags { width: 100%; }
-  .todo-card-cat { max-width: min(42%, 108px); overflow: hidden; text-overflow: ellipsis; }
-  .todo-recurrence-tag { max-width: 100%; line-height: 1.35; }
+  .todo-card-cat { max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+  .todo-recurrence-tag { max-width: 100%; line-height: 1.35; overflow: hidden; }
   .todo-card-meta {
     width: 100%; min-width: 0;
     flex-wrap: wrap; column-gap: 10px; row-gap: 4px;
   }
+  .todo-card-focus { display: none; }
   .todo-card-actions {
     width: 100%; justify-self: stretch; justify-content: flex-end;
     gap: 4px; margin-top: 3px;
@@ -2417,6 +2425,21 @@ html[data-theme="farmcraft"] body {
   .add-todo-repeat-btn { grid-area: repeat; width: 38px; height: 38px; }
   .add-todo-btn { grid-area: add; width: 38px; height: 38px; }
   .todo-card-row { grid-template-columns: 36px minmax(0, 1fr); column-gap: 6px; padding-inline: 6px; }
+  .todo-card-heading.has-recurrence {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 42%);
+    grid-template-areas:
+      "category category"
+      "title recurrence";
+    row-gap: 5px;
+  }
+  .todo-card-heading.has-recurrence .todo-card-cat {
+    grid-area: category; max-width: 100%; justify-self: start;
+  }
+  .todo-card-heading.has-recurrence .todo-card-title,
+  .todo-card-heading.has-recurrence .todo-card-title-input { grid-area: title; }
+  .todo-card-heading.has-recurrence .todo-recurrence-tag {
+    grid-area: recurrence; max-width: 100%;
+  }
   .todo-card-title { font-size: 15px; }
   .todo-card-subs, .todo-card-sub-input { padding-left: 42px; }
   .todo-recurrence-picker { margin-left: 42px; }
