@@ -134,29 +134,35 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
         </div>
 
         <div className="todo-card-body">
-          <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
-            onClick={e => { e.stopPropagation(); setShowCatPicker(!showCatPicker); }}>
-            {todo.category}
-          </span>
-          {editingTitle ? (
-            <input
-              className="todo-card-title-input"
-              value={titleDraft}
-              autoFocus
-              onClick={e => e.stopPropagation()}
-              onChange={e => setTitleDraft(e.target.value)}
-              onBlur={commitTitle}
-              onKeyDown={e => {
-                if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
-                else if (e.key === 'Escape') { setTitleDraft(todo.title); setEditingTitle(false); }
-              }}
-              aria-label={msg('编辑任务标题', 'Edit task title')}
-            />
-          ) : (
-            <span className="todo-card-title" onClick={startEditTitle} title={msg('点击编辑标题', 'Click to edit title')}>{todo.title}</span>
+          <div className="todo-card-heading">
+            <span className="todo-card-cat" style={{ color: catColor, borderColor: catColor }}
+              onClick={e => { e.stopPropagation(); setShowCatPicker(!showCatPicker); }}>
+              {todo.category}
+            </span>
+            {editingTitle ? (
+              <input
+                className="todo-card-title-input"
+                value={titleDraft}
+                autoFocus
+                onClick={e => e.stopPropagation()}
+                onChange={e => setTitleDraft(e.target.value)}
+                onBlur={commitTitle}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') { e.preventDefault(); commitTitle(); }
+                  else if (e.key === 'Escape') { setTitleDraft(todo.title); setEditingTitle(false); }
+                }}
+                aria-label={msg('编辑任务标题', 'Edit task title')}
+              />
+            ) : (
+              <span className="todo-card-title" onClick={startEditTitle} title={msg('点击编辑标题', 'Click to edit title')}>{todo.title}</span>
+            )}
+          </div>
+          {(recurrence !== 'none' || todo.abandoned) && (
+            <div className="todo-card-tags">
+              {recurrence !== 'none' && <span className="todo-recurrence-tag"><Repeat2 size={10} />{recurrenceLabel}</span>}
+              {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
+            </div>
           )}
-          {recurrence !== 'none' && <span className="todo-recurrence-tag"><Repeat2 size={10} />{recurrenceLabel}</span>}
-          {todo.abandoned && <span className="abandoned-tag">{t('abandoned')}</span>}
         </div>
 
         <div className="todo-card-meta">

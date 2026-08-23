@@ -33,7 +33,7 @@ const THEME_OPTIONS: Array<{
   { id: 'stainedglass', name: ['彩色玻璃', 'Stained Glass'], description: ['教堂花窗、宝石色块与铅线分隔', 'Cathedral jewel tones and leaded panels'], colors: ['#7a2e9b', '#e6b83f', '#16233d'] },
   { id: 'tarot', name: ['塔罗牌', 'Tarot'], description: ['深蓝牌布、金线星月与复古纸牌底纹', 'Midnight card cloth, gold constellations and vintage grain'], colors: ['#b9934a', '#6d4ca5', '#14132c'] },
   { id: 'anime', name: ['动漫风格', 'Anime'], description: ['清亮赛璐璐色、柔光与活力线条', 'Bright cel colors and energetic highlights'], colors: ['#ff7096', '#5d8df7', '#f5f8ff'] },
-  { id: 'farmcraft', name: ['星露谷·泰拉像素', 'Farm & Terra Pixels'], description: ['像素农田、木栅栏、作物与矿石冒险元素', 'Pixel farms, fences, crops and mineral adventures'], colors: ['#4f8f54', '#c7853c', '#f3d58a'] },
+  { id: 'farmcraft', name: ['田园像素风格', 'Pastoral Pixel Style'], description: ['像素农田、木栅栏、作物与矿石冒险元素', 'Pixel farms, fences, crops and mineral adventures'], colors: ['#4f8f54', '#c7853c', '#f3d58a'] },
   { id: 'monochrome', name: ['黑白秩序', 'Monochrome'], description: ['纯黑白、高对比与网格秩序', 'Pure contrast and editorial grids'], colors: ['#111111', '#ffffff', '#dedede'] },
   { id: 'constructivist', name: ['苏联色块', 'Soviet Blocks'], description: ['红黑米白的构成主义几何', 'Red, black and cream geometry'], colors: ['#d62828', '#171717', '#f1e3c6'] },
   { id: 'toy3d', name: ['3D 潮玩', '3D Art Toy'], description: ['软糖配色、厚圆角与立体光影', 'Candy colors and sculpted depth'], colors: ['#7357ff', '#ff79b0', '#eff0ff'] },

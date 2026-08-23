@@ -1153,6 +1153,7 @@ html[data-theme="farmcraft"] body {
   font-size: 16px; font-weight: 600; color: var(--text);
   margin-bottom: 12px;
 }
+.todo-list-title { display: inline-flex; align-items: center; gap: 8px; min-width: 0; white-space: nowrap; }
 .todo-header-stats { margin-left: auto; display: flex; gap: 10px; font-size: 14px; font-weight: 500; }
 .todo-stat-done { color: var(--text-secondary); }
 .todo-stat-pom { color: var(--accent); display: flex; align-items: center; gap: 3px; }
@@ -1170,7 +1171,7 @@ html[data-theme="farmcraft"] body {
 .add-todo { margin-bottom: 12px; }
 .add-todo-row { display: flex; gap: 8px; }
 .add-todo-input {
-  flex: 1; padding: 10px 14px; border: 1px solid var(--border);
+  flex: 1; min-width: 0; padding: 10px 14px; border: 1px solid var(--border);
   border-radius: 10px; background: var(--bg); color: var(--text);
   font-size: 14px; outline: none;
 }
@@ -1299,7 +1300,14 @@ html[data-theme="farmcraft"] body {
 
 .todo-card-body {
   grid-area: body;
-  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  min-width: 0; display: flex; align-items: center; flex-wrap: wrap; gap: 5px 8px;
+}
+.todo-card-heading {
+  min-width: 0; flex: 1 1 180px;
+  display: flex; align-items: center; gap: 8px;
+}
+.todo-card-tags {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 5px;
 }
 .todo-recurrence-tag {
   display: inline-flex; align-items: center; gap: 3px; flex: 0 0 auto;
@@ -1308,7 +1316,7 @@ html[data-theme="farmcraft"] body {
 }
 .todo-card-title {
   font-size: 16px; font-weight: 500; color: var(--text);
-  min-width: 0;
+  min-width: 0; flex: 1 1 auto;
   overflow-wrap: break-word;
   word-break: break-word;
   cursor: text;
@@ -2337,7 +2345,59 @@ html[data-theme="farmcraft"] body {
   .manual-focus-wide { grid-column: auto; }
   .main-content { padding-left: 8px; padding-right: 8px; }
   .todo-list-container { padding: 12px 10px; }
-  .todo-card-row { padding: 10px; }
+  .todo-list-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "title stats"
+      "manual manual";
+    gap: 7px 10px;
+  }
+  .todo-list-title { grid-area: title; }
+  .todo-header-stats { grid-area: stats; margin-left: 0; gap: 8px; font-size: 13px; }
+  .manual-focus-open { grid-area: manual; justify-self: start; margin-left: 0; }
+  .status-tab { min-width: 0; font-size: 12px; white-space: nowrap; }
+  .add-todo-row {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 40px 40px;
+    gap: 6px;
+  }
+  .category-badge-add { max-width: 104px; overflow: hidden; text-overflow: ellipsis; }
+  .todo-card-row {
+    grid-template-columns: 40px minmax(0, 1fr);
+    grid-template-areas:
+      "status body"
+      "status meta"
+      ". actions";
+    column-gap: 8px;
+    row-gap: 6px;
+    padding: 10px 8px;
+  }
+  .todo-card-body { align-items: stretch; flex-direction: column; gap: 5px; }
+  .todo-card-heading { flex: none; width: 100%; align-items: flex-start; }
+  .todo-card-tags { width: 100%; }
+  .todo-card-cat { max-width: min(42%, 108px); overflow: hidden; text-overflow: ellipsis; }
+  .todo-recurrence-tag { max-width: 100%; line-height: 1.35; }
+  .todo-card-meta {
+    width: 100%; min-width: 0;
+    flex-wrap: wrap; column-gap: 10px; row-gap: 4px;
+  }
+  .todo-card-actions {
+    width: 100%; justify-self: stretch; justify-content: flex-end;
+    gap: 4px; margin-top: 3px;
+  }
+  .card-btn { width: 32px; height: 32px; background: var(--bg-hover); }
+  .todo-recurrence-picker { margin-left: 48px; }
+  .todo-card-subs { padding-left: 48px; }
+  .todo-card-sub-input { padding-left: 48px; }
+  .sub-row { flex-wrap: wrap; align-items: flex-start; row-gap: 4px; }
+  .sub-text {
+    flex: 1 1 140px; white-space: normal; overflow: visible;
+    text-overflow: clip; line-height: 1.35;
+  }
+  .sub-time, .sub-pom { order: 10; }
+  .sub-dot { width: 18px; height: 18px; }
+  .sub-play, .sub-del { width: 24px; height: 24px; opacity: 1; flex: 0 0 auto; }
 }
 @media (max-width: 350px) {
   .timer-controls { gap: 7px; }
@@ -2346,6 +2406,20 @@ html[data-theme="farmcraft"] body {
   .theme-option { display: grid; grid-template-columns: 92px 1fr; align-items: center; gap: 8px; }
   .theme-preview { height: 50px; }
   .theme-option-copy { padding: 0; }
+  .add-todo-row {
+    grid-template-columns: minmax(0, 1fr) 38px 38px;
+    grid-template-areas:
+      "category category category"
+      "input repeat add";
+  }
+  .category-badge-add { grid-area: category; justify-self: start; }
+  .add-todo-input { grid-area: input; }
+  .add-todo-repeat-btn { grid-area: repeat; width: 38px; height: 38px; }
+  .add-todo-btn { grid-area: add; width: 38px; height: 38px; }
+  .todo-card-row { grid-template-columns: 36px minmax(0, 1fr); column-gap: 6px; padding-inline: 6px; }
+  .todo-card-title { font-size: 15px; }
+  .todo-card-subs, .todo-card-sub-input { padding-left: 42px; }
+  .todo-recurrence-picker { margin-left: 42px; }
 }
 @media (min-width: 481px) {
   :root { --app-max-width: 560px; }
@@ -2359,6 +2433,9 @@ html[data-theme="farmcraft"] body {
 @media (max-width: 340px) {
   .tab-btn { font-size: 11px; padding-inline: 2px; }
   .tab-btn svg { width: 17px; height: 17px; }
+}
+@media (hover: none) {
+  .sub-play, .sub-del { opacity: 1; }
 }
 @media (max-height: 600px) {
   .tab-nav {

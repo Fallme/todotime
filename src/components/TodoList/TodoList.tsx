@@ -101,7 +101,9 @@ export function TodoList({ todos, selectedTodoId, todayPomodoros, categories, on
   return (
     <div className="todo-list-container">
       <div className="todo-list-header">
-        <ListTodo size={20} /><span>{t('taskList')}</span>
+        <div className="todo-list-title">
+          <ListTodo size={20} /><span>{t('taskList')}</span>
+        </div>
         <button className="manual-focus-open" type="button" onClick={onOpenManualFocus} title={msg('手动补录专注', 'Add focus manually')}>
           <Clock3 size={13} />
           <span>{msg('补录', 'Add')}</span>

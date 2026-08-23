@@ -33,6 +33,8 @@ test('settings keeps theme selection in a secondary picker', async () => {
   assert.match(source, /className="theme-picker-trigger"/);
   assert.match(source, /showThemePicker &&/);
   assert.match(source, /className="modal-content theme-picker-modal"/);
+  assert.match(source, /name: \['田园像素风格', 'Pastoral Pixel Style'\]/);
+  assert.doesNotMatch(source, /星露谷·泰拉像素|Farm & Terra Pixels/);
 });
 
 test('new theme choices include matching picker entries and visual rules', async () => {

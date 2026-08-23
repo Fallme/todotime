@@ -21,6 +21,26 @@
 
 ---
 
+## 2026-08-23 — 重排手机窄屏任务卡并将主题改名为田园像素风格
+
+### 给人看（Human Summary）
+- **改了什么**：手机窄屏下的任务卡改为清晰的分层布局：分类与完整标题、循环标签、时间/番茄/累计时长、操作按钮分别占用稳定区域，可自然换行，不再互相遮挡。任务清单标题、补录入口、统计数字和新增任务栏也会随屏幕宽度合理换行；触屏上的子任务操作按钮始终可见。“星露谷·泰拉像素”主题展示名同时改为“田园像素风格”。
+- **为什么**：旧布局在第二行同时放置三项统计和最多五个操作按钮，约 440px 及更窄屏幕的可用宽度不足，导致累计时长、循环、放弃、删除图标重叠；长分类和长标题也会彼此挤压。旧主题名还直接引用了游戏名称，需要改成独立、通用的风格名称。
+- **影响范围**：任务清单在手机和窄窗口中的标题栏、新增任务区、主任务卡、子任务行与触屏按钮；设置页主题选择器及 README/宣传文案。桌面端布局、主题内部 ID、已有用户主题设置和主题素材均保持不变。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/components/TodoList/TodoItem.tsx` — 新增 `.todo-card-heading` 和 `.todo-card-tags` 语义容器，把分类/标题与循环/放弃标签分组，保持标题完整换行及编辑能力。
+  - `src/components/TodoList/TodoList.tsx` — 用 `.todo-list-title` 包装标题图标与文字，使窄屏标题、补录按钮和统计区域可独立布置。
+  - `src/index.css` — `@media (max-width: 480px)` 将任务卡改为两列三行网格（`status/body`、`status/meta`、`actions`），meta 允许换行，actions 独占下一行右对齐并使用 32px 触控按钮；限制长分类宽度，标签单独换行。列表头改为两行 grid，新增任务行改为含 `minmax(0, 1fr)` 的 grid；≤350px 时分类独占首行。子任务标题允许换行，meta 后排，触屏下操作按钮常显并扩大点击区域。
+  - `src/components/Settings/SettingsPanel.tsx` — `farmcraft` 用户可见名由“星露谷·泰拉像素 / Farm & Terra Pixels”改为“田园像素风格 / Pastoral Pixel Style”；内部 `ThemeId`、CSS 选择器和 `farmcraft_background.webp` 不变，避免旧设置失效。
+  - `test/mobileLayout.test.ts`、`test/themes.test.ts` — 新增移动端 DOM/CSS 分层、极窄新增栏、触屏子任务可见性和主题新名称回归断言。
+  - `README.md`、`docs/FEATURES.md`、`docs/PROMOTION.md`、`docs/TEST_REPORT.md` — 同步主题名、窄屏行为和验证记录。
+- **接口 / 数据模型变化**：无。`ThemeId` 仍为 `farmcraft`，同步设置和旧数据无需迁移。
+- **关键实现细节 / 注意事项**：手机任务卡不再让 `.todo-card-meta` 与 `.todo-card-actions` 争抢同一网格行；所有内容列均使用 `minmax(0, 1fr)` / `min-width: 0`，长标题仍完整显示，不恢复省略或 line clamp。媒体断点为 480px，350px 以下再把新增任务分类拆到首行；`@media (hover: none)` 保证子任务操作不依赖 hover。
+- **验证方式**：`npm test`（逻辑测试 40/40、ESLint、前端生产构建、API 类型检查）；浏览器以 442px 视口渲染长中英标题、长分类、每周标签、三项 meta 和五个按钮，卡片 `scrollWidth === clientWidth`，meta 与 actions 边界不相交；`git diff --check`。
+- **后续待办 / 已知问题**：无。
+
 ## 2026-08-21 — 修正手动补录的多番茄计算与全链路统计
 
 ### 给人看（Human Summary）
