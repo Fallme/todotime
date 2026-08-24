@@ -110,11 +110,12 @@ export default function App() {
   }, [settings.darkMode, settings.theme]);
   useEffect(() => { localStorage.setItem(profileStorageKey('todotime_settings', profileId), JSON.stringify(settings)); }, [settings, profileId]);
 
-  // Unlock audio on first user interaction
+  // Prepare audio before React click handlers run. Task play buttons stop
+  // propagation, so a bubbling listener would miss their first interaction.
   useEffect(() => {
-    const unlock = () => { initAudio(); document.removeEventListener('click', unlock); };
-    document.addEventListener('click', unlock);
-    return () => document.removeEventListener('click', unlock);
+    const unlock = () => { initAudio(); };
+    document.addEventListener('click', unlock, { capture: true, once: true });
+    return () => document.removeEventListener('click', unlock, true);
   }, []);
 
   const { dayDataMap, syncing, syncError, lastSyncedAt, syncDayData, syncConfig, loadAll, syncBidirectional, flush } = useGithubSync(activeSyncCode, profileId);

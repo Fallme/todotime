@@ -9,6 +9,16 @@ test('motivation library offers varied Chinese and English copy', () => {
   assert.equal(nextQuoteIndex(0, 12, () => 0), 1);
 });
 
+test('quick starting a task prepares and plays the fresh-start cue', async () => {
+  const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const hook = await readFile(new URL('../src/hooks/useTimer.ts', import.meta.url), 'utf8');
+
+  assert.match(app, /document\.addEventListener\('click', unlock, \{ capture: true, once: true \}\)/);
+  assert.match(app, /const handleQuickStart = \(todo: Todo\) => \{[\s\S]*?timer\.startWork\(\);[\s\S]*?\};/);
+  assert.match(app, /const handleQuickStartSubtask = \(subtask:[\s\S]*?timer\.startWork\(\);[\s\S]*?\};/);
+  assert.match(hook, /const startWork = useCallback\(\(\) => \{[\s\S]*?playSound\(playStart\);[\s\S]*?\}, \[clearTimer, playSound\]\);/);
+});
+
 test('timer separates whole-cycle settlement from stage skipping', async () => {
   const controls = await readFile(new URL('../src/components/Timer/TimerControls.tsx', import.meta.url), 'utf8');
   const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
