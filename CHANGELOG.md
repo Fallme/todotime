@@ -21,6 +21,25 @@
 
 ---
 
+## 2026-08-28 — 重置时清空组数并统一总时长小时格式
+
+### 给人看（Human Summary）
+- **改了什么**：点击左侧回转按钮重置时，会先按原规则保存当前专注，再把顶部组数清空，从第 0 组开始。统计页概览及周/月报告中的总时长统一显示为 `5.4h` 这样的一位小数小时格式。
+- **为什么**：此前重置后的顶部组数可能保留或增加，和“重新开始”的预期不一致；总时长使用分钟会在累计较多时占用空间且不便快速阅读。
+- **影响范围**：计时器重置后的轮次进度，以及统计页和周/月报告的总专注时长展示。今日番茄、历史专注记录、图表明细和同步数据不清空、不改单位。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/hooks/useTimer.ts`、`src/App.tsx` — 计时器回转按钮改为调用 `timer.reset`；`reset()` 先执行 `endNow()` 结算，再同步写入 `cycleCountRef.current = 0` 和 `setCycleCount(0)`。
+  - `src/utils/dateUtils.ts` — 新增 `formatHours(minutes)`，对非负分钟统一除以 60 并 `toFixed(1)`。
+  - `src/components/Stats/StatsOverview.tsx` — 所选周期概览、周/月报告及报告下载中的总专注时长改用 `formatHours`；趋势图、饼图分类明细仍保留分钟口径。
+  - `test/timerInteractions.test.ts` — 新增 0/30/65/326 分钟格式测试，以及回转按钮调用重置、结算后组数归零的回归断言。
+  - `README.md`、`docs/FEATURES.md`、`docs/TEST_REPORT.md` — 同步行为与验证记录。
+- **接口 / 数据模型变化**：新增前端展示工具函数 `formatHours(minutes: number): string`；无 API、存储或同步模型变化。
+- **关键实现细节 / 注意事项**：重置只清空当前轮次的 `cycleCount`，不清空 `totalPomodoros` 或已保存记录；`endNow()` 必须先执行，保证本次已达到 1 分钟的时长仍正常保存。小时显示固定一位小数，0 分钟为 `0.0h`。
+- **验证方式**：`npm test`（逻辑测试 43/43、ESLint、前端生产构建、API 类型检查）；`git diff --check`。
+- **后续待办 / 已知问题**：无。
+
 ## 2026-08-24 — 任务快速开始同步播放开始提示音
 
 ### 给人看（Human Summary）

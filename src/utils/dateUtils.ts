@@ -56,6 +56,11 @@ export function formatDuration(minutes: number): string {
   return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
 }
 
+export function formatHours(minutes: number): string {
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
+  return `${(safeMinutes / 60).toFixed(1)}h`;
+}
+
 export function generateId(): string {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
 }

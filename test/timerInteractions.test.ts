@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MOTIVATION_QUOTES, nextQuoteIndex } from '../src/utils/motivation.ts';
+import { formatHours } from '../src/utils/dateUtils.ts';
 
 test('motivation library offers varied Chinese and English copy', () => {
   assert.ok(MOTIVATION_QUOTES['zh-CN'].length >= 10);
@@ -17,6 +18,26 @@ test('quick starting a task prepares and plays the fresh-start cue', async () =>
   assert.match(app, /const handleQuickStart = \(todo: Todo\) => \{[\s\S]*?timer\.startWork\(\);[\s\S]*?\};/);
   assert.match(app, /const handleQuickStartSubtask = \(subtask:[\s\S]*?timer\.startWork\(\);[\s\S]*?\};/);
   assert.match(hook, /const startWork = useCallback\(\(\) => \{[\s\S]*?playSound\(playStart\);[\s\S]*?\}, \[clearTimer, playSound\]\);/);
+});
+
+test('focus totals use a compact one-decimal hour format', async () => {
+  assert.equal(formatHours(0), '0.0h');
+  assert.equal(formatHours(30), '0.5h');
+  assert.equal(formatHours(65), '1.1h');
+  assert.equal(formatHours(326), '5.4h');
+
+  const overview = await readFile(new URL('../src/components/Stats/StatsOverview.tsx', import.meta.url), 'utf8');
+  assert.match(overview, /formatHours\(activeData\.totalMinutes\)/);
+  assert.match(overview, /formatHours\(rd\.totalMinutes\)/);
+  assert.doesNotMatch(overview, /activeData\.totalMinutes\}m/);
+});
+
+test('reset settles the session and clears cycle progress to group zero', async () => {
+  const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8');
+  const hook = await readFile(new URL('../src/hooks/useTimer.ts', import.meta.url), 'utf8');
+
+  assert.match(app, /onNewRound=\{timer\.reset\}/);
+  assert.match(hook, /const reset = useCallback\(\(\) => \{[\s\S]*?endNow\(\);[\s\S]*?cycleCountRef\.current = 0;[\s\S]*?setCycleCount\(0\);[\s\S]*?\}, \[endNow\]\);/);
 });
 
 test('timer separates whole-cycle settlement from stage skipping', async () => {

@@ -532,7 +532,12 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     setIsRunning(false); clearTimer();
     playSound(playPause);
   }, [clearTimer, playSound]);
-  const reset = useCallback(() => { endNow(); }, [endNow]);
+  const reset = useCallback(() => {
+    // Settle the active focus first, then begin the next cycle from group zero.
+    endNow();
+    cycleCountRef.current = 0;
+    setCycleCount(0);
+  }, [endNow]);
 
   // Skip: quickly complete current phase and move to next (keeps running)
   const skip = useCallback(() => {

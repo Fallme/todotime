@@ -3,7 +3,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, OTHER_CATEGORY_NAME, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
-import { formatDate, formatDuration } from '../../utils/dateUtils';
+import { formatDate, formatDuration, formatHours } from '../../utils/dateUtils';
 import { getPomodoroCount, sumPomodoroCounts } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -260,7 +260,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     lines.push(`日期: ${rd.daily[0]?.date} ~ ${rd.daily[rd.daily.length - 1]?.date}`);
     lines.push('');
     lines.push(`番茄: ${rd.totalPomodoros}个`);
-    lines.push(`专注时长: ${rd.totalMinutes}分钟`);
+    lines.push(`专注时长: ${formatHours(rd.totalMinutes)}`);
     lines.push(`完成任务: ${rd.totalTasksCompleted}个`);
     lines.push(`活跃天数: ${rd.daily.filter(d => d.pomodoros > 0).length}天`);
     lines.push('');
@@ -430,7 +430,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       {/* Unified summary (pomodoros / duration / completed) for the selected period */}
       <div className="stats-top-row">
         <div className="stats-top-item accent"><span className="stats-top-val">{activeData.totalPomodoros}</span><span className="stats-top-label">🍅 {t('pomodoros')}</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{activeData.totalMinutes}m</span><span className="stats-top-label"><Clock size={12} /> {t('duration')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{formatHours(activeData.totalMinutes)}</span><span className="stats-top-label"><Clock size={12} /> {t('duration')}</span></div>
         <div className="stats-top-item"><span className="stats-top-val">{activeData.totalTasksCompleted}</span><span className="stats-top-label"><CheckCircle2 size={12} /> {t('completedTasks')}</span></div>
       </div>
 
@@ -539,7 +539,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               <div className="report-apple-stats">
                 <div className="report-apple-stat">
                   <span className="report-apple-stat-label">{t('focusDuration')}</span>
-                  <span className="report-apple-stat-val">{formatDuration(rd.totalMinutes)}</span>
+                  <span className="report-apple-stat-val">{formatHours(rd.totalMinutes)}</span>
                   <span className={`report-apple-stat-diff ${diffText(rd.totalMinutes, pd.totalMinutes).cls}`}>
                     {diffText(rd.totalMinutes, pd.totalMinutes).icon} {diffText(rd.totalMinutes, pd.totalMinutes).text}
                   </span>
