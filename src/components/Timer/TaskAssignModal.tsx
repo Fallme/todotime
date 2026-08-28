@@ -3,6 +3,7 @@ import type { Todo, Category } from '../../types';
 import { OTHER_CATEGORY_NAME } from '../../types';
 import type { PendingAssignment } from '../../hooks/useTimer';
 import { MIN_POMODORO_MINUTES } from '../../utils/pomodoroRules';
+import { formatFocusDuration } from '../../utils/dateUtils';
 import { useLanguage } from '../../i18n/LanguageContext';
 
 interface TaskAssignModalProps {
@@ -41,7 +42,7 @@ export function TaskAssignModal({ assignments, todos, currentTaskId, onAssignAll
       <div className="modal-content">
         <h3 className="modal-title">{msg('未指派专注已完成', 'Unassigned focus completed')}</h3>
         <p className="modal-desc">
-          {assignments.length} {t('focusRecords')} · {t('total')} {totalMinutes} {t('minutesShort')}
+          {assignments.length} {t('focusRecords')} · {t('total')} {formatFocusDuration(totalMinutes)}
           {tomatoCount > 0 ? ` · ${tomatoCount} ${t('pomodoros')}` : ''}
         </p>
 

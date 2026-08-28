@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { formatFocusDuration } from '../../utils/dateUtils';
 
 interface HeatMapProps {
   data: { date: string; minutes: number }[];
@@ -34,7 +35,7 @@ export function HeatMap({ data }: HeatMapProps) {
           <div
             key={i}
             className={`heatmap-cell level-${cell.level}`}
-            title={`${cell.date}: ${cell.minutes}分钟`}
+            title={`${cell.date}: ${formatFocusDuration(cell.minutes)}`}
           >
             {cell.day}
           </div>

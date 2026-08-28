@@ -1,4 +1,5 @@
 import { Flame } from 'lucide-react';
+import { formatFocusDuration } from '../../utils/dateUtils';
 
 interface StreakCardProps {
   streak: number;
@@ -22,7 +23,7 @@ export function StreakCard({ streak, totalPomodoros, totalFocusHours }: StreakCa
           <span className="streak-stat-label">累计番茄</span>
         </div>
         <div className="streak-stat">
-          <span className="streak-stat-value">{totalFocusHours}h</span>
+          <span className="streak-stat-value">{formatFocusDuration(totalFocusHours * 60)}</span>
           <span className="streak-stat-label">累计专注</span>
         </div>
       </div>

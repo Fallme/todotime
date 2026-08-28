@@ -17,7 +17,7 @@ test('narrow task cards separate headings metadata and actions into stable rows'
   assert.ok(headingStart >= 0 && headingEnd > headingStart);
   assert.ok(recurrenceStart > headingStart && recurrenceStart < headingEnd);
   assert.doesNotMatch(item.slice(abandonedTagsStart, abandonedTagsEnd), /todo-recurrence-tag/);
-  assert.match(item, /const focusText = `\$\{\(totalFocus \/ 60\)\.toFixed\(1\)\}h`/);
+  assert.match(item, /const focusText = formatFocusDuration\(totalFocus\)/);
   assert.doesNotMatch(item, /msg\('累计', 'Total'\)/);
   assert.match(list, /className="todo-list-title"/);
   assert.match(styles, /\.todo-card-heading\s*\{[\s\S]*grid-template-columns: auto minmax\(0, 1fr\) auto/);

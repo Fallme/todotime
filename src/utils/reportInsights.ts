@@ -1,3 +1,5 @@
+import { formatFocusDuration } from './dateUtils.ts';
+
 export interface ReportDaySummary {
   date: string;
   minutes: number;
@@ -51,18 +53,18 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
       { kind: 'neutral', title: 'Ready for your first entry', text: `There is no focus data for this ${period === 'week' ? 'week' : 'month'} yet. Begin with one small 15-minute target.` },
       { kind: 'attention', title: 'A simple next step', text: `Aim for one pomodoro and one completed task ${period === 'week' ? 'next week' : 'next month'}, then build gradually.` },
     ];
-    if (averageChange === null) insights.push({ kind: 'positive', title: 'A new baseline', text: `You logged ${totalMinutes} focused minutes, ${totalPomodoros} pomodoros, and ${totalTasksCompleted} completed tasks. Keep tracking to reveal a useful trend.` });
+    if (averageChange === null) insights.push({ kind: 'positive', title: 'A new baseline', text: `You logged ${formatFocusDuration(totalMinutes)} of focus, ${totalPomodoros} pomodoros, and ${totalTasksCompleted} completed tasks. Keep tracking to reveal a useful trend.` });
     else if (averageChange >= 20) insights.push({ kind: 'positive', title: 'Strong overall growth', text: `Your core metrics improved by about ${averageChange}% on average. The current rhythm is turning effort into outcomes.` });
     else if (averageChange >= 5) insights.push({ kind: 'positive', title: 'Steady progress', text: `Core metrics rose by about ${averageChange}%—a healthy, sustainable pace.` });
     else if (averageChange > -5) insights.push({ kind: 'neutral', title: 'A stable rhythm', text: 'Results are close to the previous period. Choose one metric for a small, focused improvement next.' });
     else if (averageChange > -20) insights.push({ kind: 'neutral', title: 'A small dip', text: `Core metrics fell about ${Math.abs(averageChange)}%. Check for temporary disruptions and avoid compensating with an unsustainable sprint.` });
     else insights.push({ kind: 'attention', title: 'Rebuild the rhythm', text: `Core metrics fell about ${Math.abs(averageChange)}%. Restore a consistent start time before trying to recover total volume.` });
     if (activeRatio >= .8) insights.push({ kind: 'positive', title: 'Excellent consistency', text: `${activeDays} active days gave you ${Math.round(activeRatio * 100)}% coverage. Showing up consistently is a real strength.` });
-    else if (activeRatio >= .5) insights.push({ kind: 'neutral', title: 'A rhythm is forming', text: `${activeDays} active days averaged ${activeAverage} focused minutes. Turn a few gaps into light-focus days.` });
+    else if (activeRatio >= .5) insights.push({ kind: 'neutral', title: 'A rhythm is forming', text: `${activeDays} active days averaged ${formatFocusDuration(activeAverage)} of focus. Turn a few gaps into light-focus days.` });
     else insights.push({ kind: 'attention', title: 'Focus is concentrated', text: `Only ${activeDays} days have meaningful activity. Smaller tasks on more days may work better than occasional high-volume sessions.` });
     if (totalPomodoros >= 4 && totalTasksCompleted === 0) insights.push({ kind: 'attention', title: 'Effort needs a finish line', text: `${totalPomodoros} pomodoros were logged without a completed task. Break large work into pieces that can close within a day.` });
     else if (totalTasksCompleted > totalPomodoros && totalMinutes < totalTasksCompleted * 10) insights.push({ kind: 'neutral', title: 'Many fragmented tasks', text: `You completed ${totalTasksCompleted} tasks with short focus per item. Batch similar small tasks to reduce switching costs.` });
-    else if (totalTasksCompleted > 0 && totalPomodoros > 0) insights.push({ kind: 'positive', title: 'Effort reached outcomes', text: `${totalMinutes} focused minutes produced ${totalTasksCompleted} completed tasks—about ${Math.round(totalMinutes / totalTasksCompleted)} minutes each.` });
+    else if (totalTasksCompleted > 0 && totalPomodoros > 0) insights.push({ kind: 'positive', title: 'Effort reached outcomes', text: `${formatFocusDuration(totalMinutes)} of focus produced ${totalTasksCompleted} completed tasks—about ${formatFocusDuration(totalMinutes / totalTasksCompleted)} each.` });
     const categories = Object.entries(categoryMinutes).filter(([, minutes]) => minutes > 0).sort((a, b) => b[1] - a[1]);
     if (categories.length) {
       const [topCategory, topMinutes] = categories[0]; const topShare = totalMinutes ? topMinutes / totalMinutes : 0;
@@ -70,7 +72,7 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
       else if (categories.length >= 3 && topShare < .5) insights.push({ kind: 'positive', title: 'Balanced categories', text: `Focus was spread across ${categories.length} categories, with the largest at only ${Math.round(topShare * 100)}%.` });
     }
     const bestDay = daily.reduce<ReportDaySummary | null>((best, day) => !best || day.minutes > best.minutes ? day : best, null);
-    if (bestDay?.minutes) insights.push({ kind: 'positive', title: 'A clue from your best day', text: `${bestDay.date.slice(5)} led with ${bestDay.minutes} focused minutes. Review that day’s timing, environment, and task setup.` });
+    if (bestDay?.minutes) insights.push({ kind: 'positive', title: 'A clue from your best day', text: `${bestDay.date.slice(5)} led with ${formatFocusDuration(bestDay.minutes)} of focus. Review that day’s timing, environment, and task setup.` });
     return insights.slice(0, 4);
   }
 
@@ -95,7 +97,7 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
 
   if (averageChange === null) {
     insights.push({ kind: 'positive', title: '新的积累', text: select([
-      `${periodName}建立了新的专注基线：${totalMinutes} 分钟、${totalPomodoros} 个番茄。继续记录后，趋势判断会更准确。`,
+      `${periodName}建立了新的专注基线：${formatFocusDuration(totalMinutes)}、${totalPomodoros} 个番茄。继续记录后，趋势判断会更准确。`,
       `${periodName}开始形成可追踪的节奏，共完成 ${totalPomodoros} 个番茄和 ${totalTasksCompleted} 项任务。`,
     ], seed) });
   } else if (averageChange >= 20) {
@@ -126,7 +128,7 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
       `${periodName}大部分日期都保持了行动，连续性已经成为你的优势。`,
     ], seed + 1) });
   } else if (activeRatio >= 0.5) {
-    insights.push({ kind: 'neutral', title: '节奏基本成形', text: `${activeDays} 天有有效记录，活跃日平均专注 ${activeAverage} 分钟。可以尝试把空档日补成轻量专注日。` });
+    insights.push({ kind: 'neutral', title: '节奏基本成形', text: `${activeDays} 天有有效记录，活跃日平均专注 ${formatFocusDuration(activeAverage)}。可以尝试把空档日补成轻量专注日。` });
   } else {
     insights.push({ kind: 'attention', title: '专注分布偏集中', text: `${periodName}只有 ${activeDays} 天留下有效记录。与其在少数几天冲量，不如把任务拆小，增加出现频率。` });
   }
@@ -136,7 +138,7 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
   } else if (totalTasksCompleted > totalPomodoros && totalMinutes < totalTasksCompleted * 10) {
     insights.push({ kind: 'neutral', title: '碎片任务较多', text: `完成了 ${totalTasksCompleted} 项任务，但单项专注投入较短。可把同类小任务合并处理，减少切换成本。` });
   } else if (totalTasksCompleted > 0 && totalPomodoros > 0) {
-    insights.push({ kind: 'positive', title: '投入产出有闭环', text: `${totalMinutes} 分钟专注转化为 ${totalTasksCompleted} 项完成，平均每项约 ${Math.round(totalMinutes / totalTasksCompleted)} 分钟。` });
+    insights.push({ kind: 'positive', title: '投入产出有闭环', text: `${formatFocusDuration(totalMinutes)} 专注转化为 ${totalTasksCompleted} 项完成，平均每项约 ${formatFocusDuration(totalMinutes / totalTasksCompleted)}。` });
   }
 
   const categories = Object.entries(categoryMinutes).filter(([, minutes]) => minutes > 0).sort((a, b) => b[1] - a[1]);
@@ -152,7 +154,7 @@ export function generateReportInsights(input: ReportInsightInput): ReportInsight
 
   const bestDay = daily.reduce<ReportDaySummary | null>((best, day) => !best || day.minutes > best.minutes ? day : best, null);
   if (bestDay && bestDay.minutes > 0) {
-    insights.push({ kind: 'positive', title: '高效日线索', text: `${bestDay.date.slice(5)} 是本期投入最高的一天，共专注 ${bestDay.minutes} 分钟。可以复盘当天的时间、环境和任务安排。` });
+    insights.push({ kind: 'positive', title: '高效日线索', text: `${bestDay.date.slice(5)} 是本期投入最高的一天，共专注 ${formatFocusDuration(bestDay.minutes)}。可以复盘当天的时间、环境和任务安排。` });
   }
   return insights.slice(0, 4);
 }

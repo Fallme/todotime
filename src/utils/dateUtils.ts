@@ -49,16 +49,9 @@ export function getWeekDayShort(date: string): string {
   return `周${getWeekDay(date)}`;
 }
 
-export function formatDuration(minutes: number): string {
-  if (minutes < 60) return `${minutes}分钟`;
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return m > 0 ? `${h}小时${m}分钟` : `${h}小时`;
-}
-
-export function formatHours(minutes: number): string {
-  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, minutes) : 0;
-  return `${(safeMinutes / 60).toFixed(1)}h`;
+export function formatFocusDuration(minutes: number): string {
+  const safeMinutes = Number.isFinite(minutes) ? Math.max(0, Math.round(minutes)) : 0;
+  return safeMinutes < 60 ? `${safeMinutes}m` : `${(safeMinutes / 60).toFixed(1)}h`;
 }
 
 export function generateId(): string {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MOTIVATION_QUOTES, nextQuoteIndex } from '../src/utils/motivation.ts';
-import { formatHours } from '../src/utils/dateUtils.ts';
+import { formatFocusDuration } from '../src/utils/dateUtils.ts';
 
 test('motivation library offers varied Chinese and English copy', () => {
   assert.ok(MOTIVATION_QUOTES['zh-CN'].length >= 10);
@@ -20,16 +20,31 @@ test('quick starting a task prepares and plays the fresh-start cue', async () =>
   assert.match(hook, /const startWork = useCallback\(\(\) => \{[\s\S]*?playSound\(playStart\);[\s\S]*?\}, \[clearTimer, playSound\]\);/);
 });
 
-test('focus totals use a compact one-decimal hour format', async () => {
-  assert.equal(formatHours(0), '0.0h');
-  assert.equal(formatHours(30), '0.5h');
-  assert.equal(formatHours(65), '1.1h');
-  assert.equal(formatHours(326), '5.4h');
+test('focus durations use minutes below one hour and one-decimal hours thereafter', async () => {
+  assert.equal(formatFocusDuration(0), '0m');
+  assert.equal(formatFocusDuration(30), '30m');
+  assert.equal(formatFocusDuration(59), '59m');
+  assert.equal(formatFocusDuration(60), '1.0h');
+  assert.equal(formatFocusDuration(65), '1.1h');
+  assert.equal(formatFocusDuration(326), '5.4h');
 
   const overview = await readFile(new URL('../src/components/Stats/StatsOverview.tsx', import.meta.url), 'utf8');
-  assert.match(overview, /formatHours\(activeData\.totalMinutes\)/);
-  assert.match(overview, /formatHours\(rd\.totalMinutes\)/);
+  assert.match(overview, /formatFocusDuration\(activeData\.totalMinutes\)/);
+  assert.match(overview, /formatFocusDuration\(rd\.totalMinutes\)/);
   assert.doesNotMatch(overview, /activeData\.totalMinutes\}m/);
+
+  const durationSurfaces = await Promise.all([
+    '../src/components/TodoList/TodoItem.tsx',
+    '../src/components/Timer/TaskAssignModal.tsx',
+    '../src/components/Settings/SettingsPanel.tsx',
+    '../src/components/Stats/DailyReport.tsx',
+    '../src/components/Stats/WeeklyChart.tsx',
+    '../src/components/Stats/CategoryChart.tsx',
+    '../src/components/Stats/HeatMap.tsx',
+    '../src/utils/reportInsights.ts',
+    '../src/hooks/useTimer.ts',
+  ].map(path => readFile(new URL(path, import.meta.url), 'utf8')));
+  durationSurfaces.forEach(source => assert.match(source, /formatFocusDuration/));
 });
 
 test('reset settles the session and clears cycle progress to group zero', async () => {

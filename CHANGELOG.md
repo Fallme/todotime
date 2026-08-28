@@ -21,6 +21,25 @@
 
 ---
 
+## 2026-08-28 — 全局统一专注时长的分钟与小时显示
+
+### 给人看（Human Summary）
+- **改了什么**：所有专注时长统一为同一规则：不足 1 小时显示分钟（如 `35m`），达到 1 小时后显示一位小数小时（如 `1.0h`、`5.4h`）。
+- **为什么**：此前任务累计、统计总计、图表提示和报告分析分别使用分钟、小数小时或中文混合格式，同一时长在不同位置读法不一致。
+- **影响范围**：任务卡累计时长、统计概览、图表坐标/提示/图例、周月报告及下载文本、报告分析、待分配汇总、计时完成提示、旧统计组件和开发者概况。计时设置与番茄门槛仍以分钟表达。
+
+### 给 AI 看（Technical Details）
+- **涉及文件**：
+  - `src/utils/dateUtils.ts` — 新增唯一展示入口 `formatFocusDuration(minutes)`：先取非负整数分钟，`<60` 返回 `Xm`，否则返回 `(minutes / 60).toFixed(1) + 'h'`；移除仅强制小时显示的旧工具。
+  - `src/components/TodoList/TodoItem.tsx`、`src/components/Timer/TaskAssignModal.tsx`、`src/hooks/useTimer.ts` — 任务累计、未分配总时长、补录/结算提示统一调用格式化函数。
+  - `src/components/Stats/StatsOverview.tsx`、`DailyReport.tsx`、`StatsPanel.tsx`、`WeeklyChart.tsx`、`CategoryChart.tsx`、`HeatMap.tsx`、`StreakCard.tsx` — 概览、报告、下载文本、图表刻度/tooltip/legend 与历史统计组件统一格式；图表内部数值仍使用分钟。
+  - `src/utils/reportInsights.ts`、`src/components/Settings/SettingsPanel.tsx` — 中英文报告分析及开发者概况的专注时长统一格式。
+  - `test/timerInteractions.test.ts`、`test/mobileLayout.test.ts`、`README.md`、`docs/FEATURES.md`、`docs/TEST_REPORT.md` — 补充阈值样例、全局接入断言与说明。
+- **接口 / 数据模型变化**：展示工具统一为 `formatFocusDuration(minutes: number): string`；无 API、存储、统计口径或同步模型变化。
+- **关键实现细节 / 注意事项**：0/30/59/60/65/326 分钟分别显示为 `0m`、`30m`、`59m`、`1.0h`、`1.1h`、`5.4h`。图表继续以分钟作为数据和比例计算单位，只在可见文字层转换；工作时长、补录输入和 15 分钟番茄门槛属于规则配置，继续明确写“分钟”。
+- **验证方式**：`npm test`（逻辑测试 43/43、ESLint、前端生产构建、API 类型检查）；`git diff --check`。
+- **后续待办 / 已知问题**：无。
+
 ## 2026-08-28 — 重置时清空组数并统一总时长小时格式
 
 ### 给人看（Human Summary）

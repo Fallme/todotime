@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { DayData } from '../../types';
 import { sumPomodoroCounts } from '../../utils/pomodoroRules';
+import { formatFocusDuration } from '../../utils/dateUtils';
 
 interface DailyReportProps {
   dayDataMap: Map<string, DayData>;
@@ -46,7 +47,7 @@ export function DailyReport({ dayDataMap }: DailyReportProps) {
     lines.push(`📅 ${title} (${report.daily[0]?.date} ~ ${report.daily[report.daily.length - 1]?.date})`);
     lines.push('');
     lines.push(`🍅 番茄总数: ${report.totalPomodoros}`);
-    lines.push(`⏱ 总专注: ${report.totalMinutes} 分钟 (${(report.totalMinutes / 60).toFixed(1)} 小时)`);
+    lines.push(`⏱ 总专注: ${formatFocusDuration(report.totalMinutes)}`);
     lines.push(`✅ 完成任务: ${report.totalTasks}`);
     lines.push(`📊 活跃天数: ${report.activeDays}/${report.days}`);
     lines.push(`📈 日均番茄: ${report.activeDays > 0 ? (report.totalPomodoros / report.days).toFixed(1) : 0}`);
@@ -54,7 +55,7 @@ export function DailyReport({ dayDataMap }: DailyReportProps) {
     lines.push('--- 每日明细 ---');
     report.daily.forEach(d => {
       if (d.pomodoros > 0 || d.tasksDone > 0) {
-        lines.push(`${d.date.slice(5)}: 🍅${d.pomodoros} ⏱${d.minutes}min ✅${d.tasksDone}任务`);
+        lines.push(`${d.date.slice(5)}: 🍅${d.pomodoros} ⏱${formatFocusDuration(d.minutes)} ✅${d.tasksDone}任务`);
       }
     });
     return lines.join('\n');
@@ -80,7 +81,7 @@ export function DailyReport({ dayDataMap }: DailyReportProps) {
           <span className="report-stat-label">🍅 总番茄</span>
         </div>
         <div className="report-stat">
-          <span className="report-stat-val">{(report.totalMinutes / 60).toFixed(1)}h</span>
+          <span className="report-stat-val">{formatFocusDuration(report.totalMinutes)}</span>
           <span className="report-stat-label">⏱ 总专注</span>
         </div>
         <div className="report-stat">

@@ -7,7 +7,7 @@ import {
   Title,
   Tooltip,
 } from 'chart.js';
-import { getWeekDayShort } from '../../utils/dateUtils';
+import { formatFocusDuration, getWeekDayShort } from '../../utils/dateUtils';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip);
 
@@ -39,7 +39,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         callbacks: {
           label: (ctx: unknown) => {
             const parsed = (ctx as { parsed: { y: number | null } }).parsed;
-            return `${parsed?.y ?? 0} 分钟`;
+            return formatFocusDuration(parsed?.y ?? 0);
           },
         },
       },
@@ -54,7 +54,7 @@ export function WeeklyChart({ data }: WeeklyChartProps) {
         grid: { color: 'var(--border)' },
         ticks: {
           color: 'var(--text-secondary)',
-          callback: (v: string | number) => `${v}m`,
+          callback: (v: string | number) => formatFocusDuration(Number(v)),
         },
       },
     },

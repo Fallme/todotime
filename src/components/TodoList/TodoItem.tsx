@@ -5,6 +5,7 @@ import { getCategoryColor } from '../../types';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { buildMonthlyRecurrence, buildWeeklyRecurrence, getTaskRecurrenceKind, getTaskRecurrenceLabel, getWeeklyRecurrenceDays } from '../../utils/taskRecurrence';
 import type { TaskRecurrenceKind } from '../../utils/taskRecurrence';
+import { formatFocusDuration } from '../../utils/dateUtils';
 import { MonthlyRecurrenceCalendar } from './MonthlyRecurrenceCalendar';
 
 function formatIsoTime(iso: string): string {
@@ -66,7 +67,7 @@ export function TodoItem({ todo, isSelected, categories, onToggle, onDelete, onS
   const recurrenceLabel = getTaskRecurrenceLabel(recurrence, language);
   const weeklyDays = getWeeklyRecurrenceDays(recurrence);
   const totalFocus = Math.max(0, Math.round(focusMinutes));
-  const focusText = `${(totalFocus / 60).toFixed(1)}h`;
+  const focusText = formatFocusDuration(totalFocus);
   const weekdayOptions = language === 'zh-CN'
     ? [{ day: 1, label: '一' }, { day: 2, label: '二' }, { day: 3, label: '三' }, { day: 4, label: '四' }, { day: 5, label: '五' }, { day: 6, label: '六' }, { day: 0, label: '日' }]
     : [{ day: 1, label: 'Mon' }, { day: 2, label: 'Tue' }, { day: 3, label: 'Wed' }, { day: 4, label: 'Thu' }, { day: 5, label: 'Fri' }, { day: 6, label: 'Sat' }, { day: 0, label: 'Sun' }];

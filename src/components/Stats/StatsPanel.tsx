@@ -1,6 +1,6 @@
 import { Flame, Clock, CheckCircle2, Target } from 'lucide-react';
 import type { UseStatsReturn } from '../../hooks/useStats';
-import { formatDuration } from '../../utils/dateUtils';
+import { formatFocusDuration } from '../../utils/dateUtils';
 
 interface StatsPanelProps {
   stats: UseStatsReturn;
@@ -16,7 +16,7 @@ export function StatsPanel({ stats }: StatsPanelProps) {
       </div>
       <div className="stat-card">
         <Clock size={24} />
-        <div className="stat-value">{formatDuration(stats.todayFocusMinutes)}</div>
+        <div className="stat-value">{formatFocusDuration(stats.todayFocusMinutes)}</div>
         <div className="stat-label">今日专注</div>
       </div>
       <div className="stat-card">

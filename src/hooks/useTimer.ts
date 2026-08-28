@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { TimerMode, PomodoroRecord, Category } from '../types';
 import { OTHER_CATEGORY_NAME } from '../types/index.ts';
-import { formatDate, generateId } from '../utils/dateUtils';
+import { formatDate, formatFocusDuration, generateId } from '../utils/dateUtils';
 import { getDeviceId, profileStorageKey, readProfileStorage } from '../utils/syncIdentity';
 import { completedMinutes, countsAsPomodoro, getNextCycle, getPomodoroCount, MIN_FOCUS_RECORD_MINUTES, MIN_POMODORO_MINUTES, shouldRecordFocus } from '../utils/pomodoroRules';
 import { initAudio, playStart, playEnterBreak, playCycleComplete, playPause, playResume, playEnd } from '../utils/sound';
@@ -162,8 +162,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     recordPomodoro(normalized);
     if (pomodoroCount > 0) setTotalPomodoros(count => count + pomodoroCount);
     showToast(pomodoroCount > 0
-      ? `已补录 ${normalized.duration} 分钟 · ${pomodoroCount} 个番茄`
-      : `已补录 ${normalized.duration} 分钟；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
+      ? `已补录 ${formatFocusDuration(normalized.duration)} · ${pomodoroCount} 个番茄`
+      : `已补录 ${formatFocusDuration(normalized.duration)}；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
   }, [recordPomodoro, showToast]);
 
   // Persist todayPomodoros to localStorage
@@ -318,7 +318,7 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
     if (countsAsPomodoro(elapsed)) {
       setTotalPomodoros(p => p + 1);
     } else {
-      showToast(`已记录 ${elapsed} 分钟；满 ${MIN_POMODORO_MINUTES} 分钟才计 1 个番茄`);
+      showToast(`已记录 ${formatFocusDuration(elapsed)}；满 ${MIN_POMODORO_MINUTES} 分钟才计 1 个番茄`);
     }
     startBreak(advanceCycle());
     if (requiresAssignment) {
@@ -475,8 +475,8 @@ export function useTimer(timerSettings: { workMinutes: number; shortBreakMinutes
           countsAsPomodoro: isPomodoro, completed: true, createdAt: endTime,
         });
         showToast(isPomodoro
-          ? `${elapsed} 分钟 · 1 个番茄 →「${task.title}」`
-          : `已记录 ${elapsed} 分钟 →「${task.title}」；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
+          ? `${formatFocusDuration(elapsed)} · 1 个番茄 →「${task.title}」`
+          : `已记录 ${formatFocusDuration(elapsed)} →「${task.title}」；未满 ${MIN_POMODORO_MINUTES} 分钟不计番茄`);
         if (prevPending.length > 0) setGroupPhase('settle');
       } else {
         recordPomodoro({

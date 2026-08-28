@@ -3,7 +3,7 @@ import { Bar, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarController, BarElement, ArcElement, Tooltip, Legend } from 'chart.js';
 import { getCategoryColor, OTHER_CATEGORY_NAME, type CategoryItem, type DayData, type PomodoroRecord, type Todo } from '../../types';
 import { X, Clock, CheckCircle2, BarChart3, TrendingUp, TrendingDown, Minus, RefreshCw, Download } from 'lucide-react';
-import { formatDate, formatDuration, formatHours } from '../../utils/dateUtils';
+import { formatDate, formatFocusDuration } from '../../utils/dateUtils';
 import { getPomodoroCount, sumPomodoroCounts } from '../../utils/pomodoroRules';
 import { generateReportInsights, type ReportInsight } from '../../utils/reportInsights';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -260,7 +260,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     lines.push(`日期: ${rd.daily[0]?.date} ~ ${rd.daily[rd.daily.length - 1]?.date}`);
     lines.push('');
     lines.push(`番茄: ${rd.totalPomodoros}个`);
-    lines.push(`专注时长: ${formatHours(rd.totalMinutes)}`);
+    lines.push(`专注时长: ${formatFocusDuration(rd.totalMinutes)}`);
     lines.push(`完成任务: ${rd.totalTasksCompleted}个`);
     lines.push(`活跃天数: ${rd.daily.filter(d => d.pomodoros > 0).length}天`);
     lines.push('');
@@ -270,7 +270,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     lines.push('--- 每日明细 ---');
     rd.daily.forEach(d => {
       if (d.pomodoros > 0 || d.tasksDone > 0) {
-        lines.push(`${d.date}: 番茄${d.pomodoros}个 ${d.minutes}分钟 任务${d.tasksDone}个`);
+        lines.push(`${d.date}: 番茄${d.pomodoros}个 ${formatFocusDuration(d.minutes)} 任务${d.tasksDone}个`);
       }
     });
     lines.push('');
@@ -278,7 +278,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     Object.entries(rd.categoryMinutes).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).forEach(([cat, mins]) => {
       const poms = rd.categoryPomodoros[cat] || 0;
       const tasks = rd.categoryTasks[cat] || 0;
-      lines.push(`${cat}: ${mins}分钟, ${poms}个番茄, ${tasks}个任务`);
+      lines.push(`${cat}: ${formatFocusDuration(mins)}, ${poms}个番茄, ${tasks}个任务`);
     });
     const blob = new Blob([lines.join('\n')], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
@@ -291,7 +291,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }, []);
 
-  const metricInfo = chartMetric === 'minutes' ? { label: t('focusDuration'), unit: language === 'zh-CN' ? '分钟' : 'min' } : chartMetric === 'pomodoros' ? { label: t('pomodoroCount'), unit: language === 'zh-CN' ? '个' : '' } : { label: t('completedTasks'), unit: language === 'zh-CN' ? '个' : '' };
+  const metricInfo = chartMetric === 'minutes' ? { label: t('focusDuration'), unit: '' } : chartMetric === 'pomodoros' ? { label: t('pomodoroCount'), unit: language === 'zh-CN' ? '个' : '' } : { label: t('completedTasks'), unit: language === 'zh-CN' ? '个' : '' };
   const periodLabel = period === 'day' ? t('today') : period === 'week' ? t('lastSevenDays') : t('lastMonth');
   const firstDate = activeData.daily[0]?.date ?? '';
   const lastDate = activeData.daily[activeData.daily.length - 1]?.date ?? '';
@@ -321,7 +321,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
     datasets: [
       {
         type: 'bar' as const,
-        label: `${t('focusDuration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: trendPoints.map(p => p.minutes), yAxisID: 'minutes',
+        label: t('focusDuration'), data: trendPoints.map(p => p.minutes), yAxisID: 'minutes',
         borderColor: rgba(durationColor, 0.6), backgroundColor: rgba(durationColor, 0.33), borderWidth: 1,
         borderRadius: 0, borderSkipped: false, maxBarThickness: isCompact ? 12 : 24, order: 3,
       },
@@ -353,7 +353,8 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
           title: (items: unknown) => trendPoints[(items as Array<{ dataIndex: number }>)[0]?.dataIndex]?.title ?? '',
           label: (ctx: unknown) => {
             const item = ctx as { dataset: { label?: string; yAxisID?: string }; parsed: { y: number } };
-            return ` ${item.dataset.label}: ${item.parsed.y}${item.dataset.yAxisID === 'minutes' ? '分钟' : '个'}`;
+            const value = item.dataset.yAxisID === 'minutes' ? formatFocusDuration(item.parsed.y) : `${item.parsed.y}个`;
+            return ` ${item.dataset.label}: ${value}`;
           },
         },
       },
@@ -363,7 +364,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         grid: { display: false },
         ticks: { color: '#999', font: { size: isCompact ? 8 : 10 }, maxRotation: 0, autoSkip: true, maxTicksLimit: isCompact ? 8 : 7 },
       },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0 }, title: { display: true, text: '分钟', color: rgba(durationAxisColor, 1), font: { size: 10 } } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'rgba(128,128,128,0.12)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0, callback: (value: string | number) => formatFocusDuration(Number(value)) }, title: { display: true, text: t('duration'), color: rgba(durationAxisColor, 1), font: { size: 10 } } },
       counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 }, title: { display: true, text: '番茄 / 任务', color: rgba(pomodoroColor, 1), font: { size: 10 } } },
     },
   };
@@ -380,7 +381,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   } : null;
   const pieOptions = {
     responsive: true, maintainAspectRatio: false, cutout: '55%', animation: { duration: 0 },
-    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}${metricInfo.unit} (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
+    plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; const value = chartMetric === 'minutes' ? formatFocusDuration(v) : `${v}${metricInfo.unit}`; return ` ${value} (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
   };
 
   // Report data
@@ -395,17 +396,20 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
   const combinedBarData = {
     labels: reportData.rd.daily.map(d => d.date.slice(5)),
     datasets: [
-      { label: `${t('duration')} (${language === 'zh-CN' ? '分钟' : 'min'})`, data: reportData.rd.daily.map(d => d.minutes), backgroundColor: rgba(durationColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
+      { label: t('duration'), data: reportData.rd.daily.map(d => d.minutes), backgroundColor: rgba(durationColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'minutes' },
       { label: t('pomodoros'), data: reportData.rd.daily.map(d => d.pomodoros), backgroundColor: rgba(pomodoroColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
       { label: t('tasks'), data: reportData.rd.daily.map(d => d.tasksDone), backgroundColor: rgba(tasksColor, 0.67), borderRadius: 0, borderSkipped: false as const, maxBarThickness: 14, yAxisID: 'counts' },
     ],
   };
   const combinedBarOpts = {
     responsive: true, maintainAspectRatio: false, animation: { duration: 0 },
-    plugins: { legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } } },
+    plugins: {
+      legend: { position: 'top' as const, labels: { boxWidth: 12, font: { size: 11 } } },
+      tooltip: { callbacks: { label: (ctx: unknown) => { const item = ctx as { dataset: { label?: string; yAxisID?: string }; parsed: { y: number } }; const value = item.dataset.yAxisID === 'minutes' ? formatFocusDuration(item.parsed.y) : `${item.parsed.y}个`; return ` ${item.dataset.label}: ${value}`; } } },
+    },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#999', font: { size: 9 }, maxRotation: 45 } },
-      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0 } },
+      minutes: { type: 'linear' as const, position: 'left' as const, beginAtZero: true, grid: { color: 'var(--border)' }, ticks: { color: rgba(durationAxisColor, 1), precision: 0, callback: (value: string | number) => formatFocusDuration(Number(value)) } },
       counts: { type: 'linear' as const, position: 'right' as const, beginAtZero: true, grid: { drawOnChartArea: false }, ticks: { color: rgba(pomodoroColor, 1), precision: 0 } },
     },
   };
@@ -430,7 +434,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
       {/* Unified summary (pomodoros / duration / completed) for the selected period */}
       <div className="stats-top-row">
         <div className="stats-top-item accent"><span className="stats-top-val">{activeData.totalPomodoros}</span><span className="stats-top-label">🍅 {t('pomodoros')}</span></div>
-        <div className="stats-top-item"><span className="stats-top-val">{formatHours(activeData.totalMinutes)}</span><span className="stats-top-label"><Clock size={12} /> {t('duration')}</span></div>
+        <div className="stats-top-item"><span className="stats-top-val">{formatFocusDuration(activeData.totalMinutes)}</span><span className="stats-top-label"><Clock size={12} /> {t('duration')}</span></div>
         <div className="stats-top-item"><span className="stats-top-val">{activeData.totalTasksCompleted}</span><span className="stats-top-label"><CheckCircle2 size={12} /> {t('completedTasks')}</span></div>
       </div>
 
@@ -461,7 +465,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                     onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleCat(c.label); } }}>
                     <span className="pie-dot" style={{ background: c.color }} />
                     <span>{c.label}</span>
-                    <span className="pie-legend-val">{Math.round(c.value / pieTotal * 100)}% ({c.value}{metricInfo.unit})</span>
+                    <span className="pie-legend-val">{Math.round(c.value / pieTotal * 100)}% ({chartMetric === 'minutes' ? formatFocusDuration(c.value) : `${c.value}${metricInfo.unit}`})</span>
                   </div>
                 );
               })}
@@ -498,7 +502,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
         } : null;
         const pieOpts = {
           responsive: true, maintainAspectRatio: false, cutout: '60%', animation: { duration: 0 },
-          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${v}分钟 (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
+          plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx: unknown) => { const v = (ctx as { parsed: number }).parsed; return ` ${formatFocusDuration(v)} (${visiblePieTotal > 0 ? Math.round(v / visiblePieTotal * 100) : 0}%)`; } } } },
         };
 
         // Completed tasks in period (deduplicated by task ID)
@@ -539,7 +543,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
               <div className="report-apple-stats">
                 <div className="report-apple-stat">
                   <span className="report-apple-stat-label">{t('focusDuration')}</span>
-                  <span className="report-apple-stat-val">{formatHours(rd.totalMinutes)}</span>
+                  <span className="report-apple-stat-val">{formatFocusDuration(rd.totalMinutes)}</span>
                   <span className={`report-apple-stat-diff ${diffText(rd.totalMinutes, pd.totalMinutes).cls}`}>
                     {diffText(rd.totalMinutes, pd.totalMinutes).icon} {diffText(rd.totalMinutes, pd.totalMinutes).text}
                   </span>
@@ -599,7 +603,7 @@ export function StatsOverview({ dayDataMap, todayPomodoros, categories, todos, r
                             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleReportCat(c.label); } }}>
                             <span className="report-pie-dot" style={{ background: c.color }} />
                             <span className="report-pie-name">{c.label}</span>
-                            <span className="report-pie-val">{formatDuration(c.value)} ({pieTotal > 0 ? Math.round(c.value / pieTotal * 100) : 0}%)</span>
+                            <span className="report-pie-val">{formatFocusDuration(c.value)} ({pieTotal > 0 ? Math.round(c.value / pieTotal * 100) : 0}%)</span>
                           </div>
                         );
                       })}

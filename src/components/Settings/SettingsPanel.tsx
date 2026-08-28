@@ -5,6 +5,7 @@ import { createSyncCode, isValidSyncCode, normalizeSyncCode } from '../../utils/
 import type { SyncCodeMode } from '../Auth/SyncCodeGate';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { checkDeveloperAccess, loadDeveloperOverview, type DeveloperOverview } from '../../services/github';
+import { formatFocusDuration } from '../../utils/dateUtils';
 
 interface SettingsPanelProps {
   settings: AppSettings;
@@ -143,12 +144,6 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
   const openDeveloperOverview = () => {
     setShowDeveloperOverview(true);
     if (!developerOverview) void refreshDeveloperOverview();
-  };
-
-  const formatMinutes = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const rest = minutes % 60;
-    return hours > 0 ? msg(`${hours}小时${rest ? `${rest}分` : ''}`, `${hours}h ${rest ? `${rest}m` : ''}`) : msg(`${minutes}分`, `${minutes}m`);
   };
 
   const formatMoment = (value: string) => value ? new Date(value).toLocaleString(language, { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) : msg('暂无', 'None');
@@ -322,7 +317,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
               <>
                 <div className="developer-summary-grid">
                   <div className="developer-summary-card"><Users size={17} /><span>{msg('用户', 'Users')}</span><strong>{developerOverview.totals.users}</strong><small>{msg(`近7天 ${developerOverview.totals.active7Days} 人活跃`, `${developerOverview.totals.active7Days} active in 7d`)}</small></div>
-                  <div className="developer-summary-card"><Clock3 size={17} /><span>{msg('累计专注', 'Focus')}</span><strong>{formatMinutes(developerOverview.totals.totalFocusMinutes)}</strong><small>{msg(`近30天 ${developerOverview.totals.active30Days} 人活跃`, `${developerOverview.totals.active30Days} active in 30d`)}</small></div>
+                  <div className="developer-summary-card"><Clock3 size={17} /><span>{msg('累计专注', 'Focus')}</span><strong>{formatFocusDuration(developerOverview.totals.totalFocusMinutes)}</strong><small>{msg(`近30天 ${developerOverview.totals.active30Days} 人活跃`, `${developerOverview.totals.active30Days} active in 30d`)}</small></div>
                   <div className="developer-summary-card"><span className="developer-summary-emoji">🍅</span><span>{msg('累计番茄', 'Pomodoros')}</span><strong>{developerOverview.totals.totalPomodoros}</strong><small>{msg(`${developerOverview.totals.totalTasks} 个任务`, `${developerOverview.totals.totalTasks} tasks`)}</small></div>
                   <div className="developer-summary-card"><MessageSquare size={17} /><span>{msg('反馈', 'Feedback')}</span><strong>{developerOverview.totals.feedback}</strong><small>{msg('按最新时间排列', 'Newest first')}</small></div>
                 </div>
@@ -337,7 +332,7 @@ export function SettingsPanel({ settings, onSave, onExport, onImport, onClear, o
                           <tr key={user.profileId}>
                             <td><code>{user.profileId.slice(0, 8)}</code>{user.isDeveloper && <em>{msg('开发者', 'Developer')}</em>}</td>
                             <td>{user.lastActiveDate || formatMoment(user.lastUpdatedAt)}</td>
-                            <td>{formatMinutes(user.totalFocusMinutes)}</td>
+                            <td>{formatFocusDuration(user.totalFocusMinutes)}</td>
                             <td>{user.totalPomodoros}</td>
                             <td>{user.completedTaskCount}/{user.taskCount}</td>
                             <td>{user.feedbackCount}</td>
