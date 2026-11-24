@@ -13,7 +13,7 @@ const MIGRATION_KEY = 'todotime_api_migrated_v1';
 const MIGRATION_RETRY_KEY = 'todotime_api_migration_retry_at_v1';
 const MIGRATION_TIMEOUT_MS = 3000;
 const MIGRATION_RETRY_MS = 60_000;
-const migrationInFlight = new Set<string>();
+const migrationInFlight = new Map<string, Promise<void>>();
 
 function migrationDone(code: string): boolean {
   try { return localStorage.getItem(`${MIGRATION_KEY}:${code}`) === '1'; }
@@ -44,13 +44,25 @@ async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Respon
   }
 }
 
-/** 非阻塞启动迁移；不等待旧 API，避免 Vercel 或网络异常拖慢正常读写。 */
-function scheduleMigration(code: string): void {
-  if (!code || migrationDone(code) || migrationInFlight.has(code) || migrationRetryPending(code)) return;
-  migrationInFlight.add(code);
-  migrateFromOldApi(code)
+/** 启动迁移并返回其 Promise；首次读写会等待它完成，避免旧数据未迁入就被覆盖。 */
+function scheduleMigration(code: string): Promise<void> | null {
+  if (!code || migrationDone(code) || migrationRetryPending(code)) return null;
+  const existing = migrationInFlight.get(code);
+  if (existing) return existing;
+  const task = migrateFromOldApi(code)
     .catch(() => {})
     .finally(() => { migrationInFlight.delete(code); });
+  migrationInFlight.set(code, task);
+  return task;
+}
+
+async function ensureMigrated(code: string): Promise<void> {
+  const task = scheduleMigration(code);
+  if (!task) return;
+  await Promise.race([
+    task,
+    new Promise<void>(resolve => setTimeout(resolve, MIGRATION_TIMEOUT_MS + 500)),
+  ]);
 }
 
 /** 首次切换到服务器存储时，从旧 GitHub 后端拉取一次数据并写入新 API。失败不阻塞使用。 */
@@ -154,7 +166,7 @@ export async function loadDeveloperOverview(syncCode: string): Promise<Developer
 }
 
 async function apiGet(path: string, syncCode: string): Promise<{ content: unknown; sha: string } | null> {
-  scheduleMigration(syncCode);
+  await ensureMigrated(syncCode);
   const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
     headers: syncHeaders(syncCode),
   });
@@ -164,6 +176,7 @@ async function apiGet(path: string, syncCode: string): Promise<{ content: unknow
 }
 
 async function apiPut(path: string, content: unknown, syncCode: string, sha?: string): Promise<string> {
+  await ensureMigrated(syncCode);
   const res = await fetch(`${API_BASE}/file`, {
     method: 'PUT', headers: syncHeaders(syncCode),
     body: JSON.stringify({ path, content, sha }),
