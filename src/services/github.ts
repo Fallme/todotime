@@ -2,8 +2,54 @@ import type { DayData, ConfigData, FeedbackEntry } from '../types';
 import { sumPomodoroCounts } from '../utils/pomodoroRules';
 import { mergeTodosById } from '../utils/todoMerge';
 
-const API_BASE = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '')
-  || '/api';
+const NEW_API_BASE = 'https://aimemo.online/todotime-api';
+const OLD_API_BASE = 'https://todotime-mauve.vercel.app/api';
+const configuredApiBase = (import.meta.env.VITE_API_BASE as string | undefined)?.replace(/\/$/, '');
+const API_BASE = configuredApiBase && !configuredApiBase.includes('todotime-mauve.vercel.app')
+  ? configuredApiBase
+  : NEW_API_BASE;
+
+const MIGRATION_KEY = 'todotime_api_migrated_v1';
+
+function migrationDone(code: string): boolean {
+  try { return localStorage.getItem(`${MIGRATION_KEY}:${code}`) === '1'; }
+  catch { return false; }
+}
+function markMigrationDone(code: string): void {
+  try { localStorage.setItem(`${MIGRATION_KEY}:${code}`, '1'); }
+  catch { /* storage unavailable: migration will be retried next time */ }
+}
+
+/** 首次切换到服务器存储时，从旧 GitHub 后端拉取一次数据并写入新 API。失败不阻塞使用。 */
+async function migrateFromOldApi(code: string): Promise<void> {
+  if (!code || migrationDone(code)) return;
+  try {
+    let allReadable = true;
+    for (const filePath of ['config.json', 'history.json', 'feedback.json']) {
+      let remote: { content: unknown; sha?: string } | null = null;
+      try {
+        const res = await fetch(`${OLD_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
+        if (res.status === 404) continue;
+        if (!res.ok) { allReadable = false; break; }
+        remote = await res.json() as { content: unknown; sha?: string };
+      } catch { allReadable = false; break; }
+      if (!remote) continue;
+      try {
+        // 服务器上已有数据时，绝不覆盖；仅补齐尚不存在的文件。
+        const existing = await fetch(`${NEW_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
+        if (existing.status === 200 || existing.status === 409) continue;
+        if (existing.status !== 404) { allReadable = false; break; }
+        const written = await fetch(`${NEW_API_BASE}/file`, {
+          method: 'PUT',
+          headers: syncHeaders(code),
+          body: JSON.stringify({ path: filePath, content: remote.content }),
+        });
+        if (!written.ok) { allReadable = false; break; }
+      } catch { allReadable = false; break; }
+    }
+    if (allReadable) markMigrationDone(code);
+  } catch { /* best-effort only */ }
+}
 
 export interface DeveloperUserSummary {
   profileId: string;
@@ -72,6 +118,7 @@ export async function loadDeveloperOverview(syncCode: string): Promise<Developer
 }
 
 async function apiGet(path: string, syncCode: string): Promise<{ content: unknown; sha: string } | null> {
+  await migrateFromOldApi(syncCode);
   const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
     headers: syncHeaders(syncCode),
   });
