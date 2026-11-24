@@ -10,6 +10,10 @@ const API_BASE = configuredApiBase && !configuredApiBase.includes('todotime-mauv
   : NEW_API_BASE;
 
 const MIGRATION_KEY = 'todotime_api_migrated_v1';
+const MIGRATION_RETRY_KEY = 'todotime_api_migration_retry_at_v1';
+const MIGRATION_TIMEOUT_MS = 3000;
+const MIGRATION_RETRY_MS = 60_000;
+const migrationInFlight = new Set<string>();
 
 function migrationDone(code: string): boolean {
   try { return localStorage.getItem(`${MIGRATION_KEY}:${code}`) === '1'; }
@@ -18,6 +22,35 @@ function migrationDone(code: string): boolean {
 function markMigrationDone(code: string): void {
   try { localStorage.setItem(`${MIGRATION_KEY}:${code}`, '1'); }
   catch { /* storage unavailable: migration will be retried next time */ }
+}
+function migrationRetryPending(code: string): boolean {
+  try {
+    const raw = localStorage.getItem(`${MIGRATION_RETRY_KEY}:${code}`);
+    return Boolean(raw && Number(raw) > Date.now());
+  } catch { return false; }
+}
+function markMigrationRetry(code: string): void {
+  try { localStorage.setItem(`${MIGRATION_RETRY_KEY}:${code}`, String(Date.now() + MIGRATION_RETRY_MS)); }
+  catch { /* storage unavailable: no cooldown */ }
+}
+
+async function fetchWithTimeout(url: string, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), MIGRATION_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/** 非阻塞启动迁移；不等待旧 API，避免 Vercel 或网络异常拖慢正常读写。 */
+function scheduleMigration(code: string): void {
+  if (!code || migrationDone(code) || migrationInFlight.has(code) || migrationRetryPending(code)) return;
+  migrationInFlight.add(code);
+  migrateFromOldApi(code)
+    .catch(() => {})
+    .finally(() => { migrationInFlight.delete(code); });
 }
 
 /** 首次切换到服务器存储时，从旧 GitHub 后端拉取一次数据并写入新 API。失败不阻塞使用。 */
@@ -28,7 +61,7 @@ async function migrateFromOldApi(code: string): Promise<void> {
     for (const filePath of ['config.json', 'history.json', 'feedback.json']) {
       let remote: { content: unknown; sha?: string } | null = null;
       try {
-        const res = await fetch(`${OLD_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
+        const res = await fetchWithTimeout(`${OLD_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
         if (res.status === 404) continue;
         if (!res.ok) { allReadable = false; break; }
         remote = await res.json() as { content: unknown; sha?: string };
@@ -36,10 +69,10 @@ async function migrateFromOldApi(code: string): Promise<void> {
       if (!remote) continue;
       try {
         // 服务器上已有数据时，绝不覆盖；仅补齐尚不存在的文件。
-        const existing = await fetch(`${NEW_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
+        const existing = await fetchWithTimeout(`${NEW_API_BASE}/file?path=${encodeURIComponent(filePath)}`, { headers: syncHeaders(code) });
         if (existing.status === 200 || existing.status === 409) continue;
         if (existing.status !== 404) { allReadable = false; break; }
-        const written = await fetch(`${NEW_API_BASE}/file`, {
+        const written = await fetchWithTimeout(`${NEW_API_BASE}/file`, {
           method: 'PUT',
           headers: syncHeaders(code),
           body: JSON.stringify({ path: filePath, content: remote.content }),
@@ -48,7 +81,10 @@ async function migrateFromOldApi(code: string): Promise<void> {
       } catch { allReadable = false; break; }
     }
     if (allReadable) markMigrationDone(code);
-  } catch { /* best-effort only */ }
+    else markMigrationRetry(code);
+  } catch {
+    markMigrationRetry(code);
+  }
 }
 
 export interface DeveloperUserSummary {
@@ -118,7 +154,7 @@ export async function loadDeveloperOverview(syncCode: string): Promise<Developer
 }
 
 async function apiGet(path: string, syncCode: string): Promise<{ content: unknown; sha: string } | null> {
-  await migrateFromOldApi(syncCode);
+  scheduleMigration(syncCode);
   const res = await fetch(`${API_BASE}/file?path=${encodeURIComponent(path)}`, {
     headers: syncHeaders(syncCode),
   });
